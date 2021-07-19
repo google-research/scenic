@@ -1,0 +1,161 @@
+"""Copybara config for Scenic.
+
+These files never end up in GitHub:
+* BUILD files
+* Filenames which contain '.google'
+* Directories named 'google'
+* Directories named 'g3doc'
+
+Test run:
+ # Alias for commands below
+ alias copybara="/google/data/ro/teams/copybara/copybara"
+ # Local google3 client to temporary directory:
+ copybara third_party/py/scenic/copy.bara.sky local .. \
+ --folder-dir=/tmp/scenic --ignore-noop
+
+Changes are automatically forwarded to Github (creating a PR and merging it)
+by the presubmit hook (see ./METADATA).
+"""
+
+load(
+ "//third_party/google_research/google/copybara/oss",
+ "add_apache_header",
+ "create_top_level_module",
+ "g3_common_file_exclusions",
+ "g3_common_top_level_files",
+ "leakr_check",
+ "scrub_google_internal_blocks",
+ "verify_apache_header",
+)
+load(
+ "//devtools/copybara/library/scrubbing",
+ "py_scrub",
+)
+load(
+ "//devtools/copybara/library/workflow",
+ "piper_sot_to_github",
+)
+
+python_module_name = "scenic"
+owner_mdb = "brain-frameworks"
+contact_email = "marvinritter@google.com"
+g3_root = "google3/third_party/py/scenic"
+github_repo_url = "https://github.com/google/CommonLoopUtils"
+default_author = "Scenic Authors <no-reply@google.com>"
+copyright_holder = "The Scenic Authors"
+# gob_urlgob_url = "rpc://team/brain-frameworks/clu"
+
+allowed_authors = {
+ "dehghani": "Mostafa Dehghani <dehghani@google.com>",
+ "agritsenko": "Alexey Gritsenko <agritsenko@google.com>",
+ "aarnab": "Anurag Arnab <aarnab@google.com>",
+ "mjlm": "Matthias Minderer <mjlm@google.com>",
+ "yitay": "Yi Tay <yitay@google.com>",
+}
+
+authoring_author = authoring.allowed(
+ default = default_author,
+ allowlist = allowed_authors.keys(),
+)
+
+# Files to keep private
+g3_excludes = (
+ g3_common_file_exclusions(g3_root) +
+ [
+ "**/*.google.*",
+ g3_root + "/g3doc/**",
+ ]
+)
+
+# Files to make public
+g3_files = glob(
+ include = [g3_root + "/**"],
+ exclude = g3_excludes,
+)
+
+# Python source code files
+g3_py_files = glob(
+ include = ["**.py"],
+ exclude = g3_excludes,
+)
+
+git_files = glob(["**"])
+
+# Files to keep at the top-level. Other files will be nested in a
+# scenic/ subdirectory.
+top_level_files = g3_common_top_level_files() + [
+ ".github/**",
+]
+
+import_transforms = [
+ core.replace(
+ before = "from google3.third_party.tensorboard",
+ after = "from tensorboard",
+ paths = g3_py_files,
+ ),
+]
+
+content_transforms = [
+ scrub_google_internal_blocks(),
+ py_scrub(),
+ # Scrub lines that deal with usage_logging.
+ core.replace(
+ before = "${x}",
+ after = "",
+ multiline = False,
+ regex_groups = {"x": ".*usage_logging.*"},
+ ),
+]
+
+license_transforms = [
+ add_apache_header(
+ copyright_holder = copyright_holder,
+ paths = g3_py_files,
+ ),
+ verify_apache_header(paths = g3_py_files),
+]
+
+# Directory structure
+directory_transforms = [
+ create_top_level_module(
+ strip_dir = g3_root,
+ module_name = python_module_name,
+ top_level_files = top_level_files,
+ ),
+]
+
+g3_to_github_transforms = (
+ content_transforms +
+ import_transforms +
+ license_transforms +
+ directory_transforms + [
+ leakr_check(),
+ ]
+)
+
+# Export all contents from the directory in google3 to a temp directory.
+# This is useful for testing the transformations and changes in the local
+# client. For pre-submit testing will should set up go/kokoro.
+core.workflow(
+ name = "local",
+ mode = "SQUASH",
+ origin = folder.origin(),
+ origin_files = g3_files,
+ destination = folder.destination(),
+ destination_files = git_files,
+ transformations = g3_to_github_transforms,
+ authoring = authoring_author,
+ ask_for_confirmation = False,
+)
+
+piper_sot_to_github(
+ google3_files = g3_files,
+ git_files = git_files,
+ url = github_repo_url,
+ default_author = default_author,
+ contact_email = contact_email,
+ transformations = g3_to_github_transforms,
+ allowed_authors = allowed_authors,
+ github_use_app = True,
+ owner_mdb = owner_mdb,
+)
