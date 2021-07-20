@@ -1,0 +1,713 @@
+"""Utility functions for Training."""
+
+import functools
+import os
+import time
+from typing import Any, Callable, Dict, Tuple, Sequence, Optional, Mapping, Union
+
+from absl import logging
+import flax
+from flax import jax_utils
+from flax import optim
+import flax.linen as nn
+from flax.training import checkpoints
+import jax
+import jax.numpy as jnp
+import ml_collections
+import numpy as np
+from scenic.debug_lib import debug_utils
+from scenic.model_lib import models
+from scenic.train_lib import optimizers
+from tensorflow.io import gfile
+
+# JAX team is working on type annotation for pytree:
+# https://github.com/google/jax/issues/1555
+PyTree = Union[Mapping[str, Mapping], Any]
+
+
+@flax.struct.dataclass
+class TrainState:
+  """Dataclass to keep track of state of training.
+
+  The state of training is structured as a flax.struct.dataclass, which enables
+  instances of this class to be passed into jax transformations like tree_map
+  and pmap.
+  """
+  global_step: Optional[int] = 0
+  optimizer: Optional[optim.Optimizer] = None
+  model_state: Optional[Any] = None
+  rng: Optional[jnp.ndarray] = None
+  accum_train_time: Optional[int] = 0
+
+  def __getitem__(self, item):
+    """Make TrainState a subscriptable object."""
+    return getattr(self, item)
+
+  def get(self, keyname: str, default: Optional[Any] = None) -> Any:
+    """Return the value for key if it exists otherwise the default."""
+    try:
+      return self[keyname]
+    except KeyError:
+      return default
+
+
+def initialize_model(
+    model_def: nn.Module, input_shape: Tuple[int],
+    config: ml_collections.ConfigDict, rng: jnp.ndarray,
+    model_input_dtype: Any) -> Tuple[PyTree, PyTree, int, Optional[float]]:
+  """Initializes parameters and model state.
+
+  Args:
+    model_def: Definition of a model.
+    input_shape: Shape of input.
+    config: Configurations of the initialization.
+    rng: Jax rng key.
+    model_input_dtype: Model input data type.
+
+  Returns:
+    Initial params, Init model_state, and number of trainable_params.
+  """
+  if config.get('batch_size') is not None:
+    device_batch_size = config.batch_size // jax.device_count()
+    shape = (device_batch_size,) + tuple(input_shape[1:])
+  else:
+    shape = input_shape
+  # We want all parameters to be created in host RAM, not on any device, they'll
+  # be sent there later as needed, otherwise we already encountered two
+  # situations where we allocate them twice.
+  @functools.partial(jax.jit, backend='cpu')
+  def _initialize_model(rng):
+    """Initialization function to be jitted."""
+    dummy_input = jnp.zeros(shape, model_input_dtype)
+    init_model_state, init_params = model_def.init(
+        rng, dummy_input, train=False, debug=False).pop('params')
+    # Set bias in the head to low value, such that loss is small initially.
+    if config.get('init_head_bias', None) is not None:
+      init_params = flax.core.unfreeze(init_params)
+      init_params['output_projection'] = optimizers.tree_map_with_names(
+          lambda p: jnp.full_like(p, config.init_head_bias),
+          init_params['output_projection'],
+          match_name_fn=lambda name: 'bias' in name)
+      init_params = flax.core.freeze(init_params)
+    return init_params, init_model_state
+
+  init_params, init_model_state = _initialize_model(rng)
+
+  # Count number of trainable parameters:
+  num_trainable_params = debug_utils.log_param_shapes(init_params)
+
+  # Count gflops:
+  count_flops = config.get('count_flops',
+                           ml_collections.ConfigDict({'count_flops': True}))
+  if count_flops:
+    count_flops_input_shape = (1,) + tuple(input_shape[1:])  # Use batch_size=1.
+    variables = {'params': init_params, **init_model_state}
+    flops = debug_utils.compute_flops(
+        flax_model_apply_fn=functools.partial(
+            model_def.apply, variables, train=False, debug=False),
+        input_shape=count_flops.get('input_shape', count_flops_input_shape),
+        fuse_multiply_add=count_flops.get('fuse_multiply_add', True))
+    gflops = flops / (10**9)
+  else:
+    gflops = None
+
+  return init_params, init_model_state, num_trainable_params, gflops
+
+
+def get_num_training_steps(
+    config: ml_collections.ConfigDict,
+    dataset_metadata: Dict[str, Any]) -> Tuple[int, Optional[int]]:
+  """Calculates the total number of training step and possibly steps_per_epoch.
+
+  The main raining loop is based on number of training steps. Thus, for datasets
+  that we want to train based on number of epochs, we need to calculate the
+  total number of training steps. This function looks for `num_training_steps`
+  in config, if it exists it returns that as the total step and `None` as
+  `steps_per_epoch`. If num_training_steps doesn't exist, then it looks for
+  `num_training_epochs` and given the size of training data calculates the total
+  steps and steps_per_epoch. In this computation, we assume that
+  drop_remainder=True.
+
+  Args:
+    config: Configuration of the experiment.
+    dataset_metadata: Meta-data that is generated by the dataset_builder.
+
+  Returns:
+    total_steps: Total number of training steps.
+    steps_per_epoch: Number of steps in every epoch.
+  """
+  # We either use num_training_epochs or num_training_steps.
+  steps_per_epoch = dataset_metadata.get('num_train_examples',
+                                         0) // config.batch_size
+  if config.get('num_training_steps'):
+    assert not config.get('num_training_epochs')
+    return config.num_training_steps, steps_per_epoch or None
+  else:
+    assert config.num_training_epochs and not config.get('num_training_steps')
+    return (steps_per_epoch * config.num_training_epochs), steps_per_epoch
+
+
+@functools.partial(jax.pmap, axis_name='x')
+def pmap_mean(x: PyTree) -> PyTree:
+  # An axis_name is passed to pmap which can then be used by pmean.
+  # In this case each device has its own version of the batch statistics and
+  # we average them.
+  return jax.lax.pmean(x, 'x')
+
+
+def sync_model_state_across_replicas(train_state: TrainState) -> TrainState:
+  """Sync the model_state (like batch statistics) across replicas.
+
+  Args:
+    train_state: TrainState; Current state of training.
+
+  Returns:
+    Updated state of training in which model_state is synced across replicas.
+  """
+  # TODO(dehghani): We simply do "mean" here and this doesn't work with
+  #   statistics like variance. (check the discussion in Flax for fixing this).
+  if jax.tree_leaves(train_state.model_state):
+    # If the model_state is not empty.
+    new_model_state = train_state.model_state.copy(
+        {'batch_stats': pmap_mean(train_state.model_state['batch_stats'])})
+    return train_state.replace(  # pytype: disable=attribute-error
+        model_state=new_model_state)
+  else:
+    return train_state
+
+
+def save_checkpoint(workdir: str,
+                    train_state: TrainState,
+                    max_to_keep: int = 3,
+                    overwrite: bool = False):
+  """Saves a checkpoint.
+
+  First syncs the model state across replicas, then it unreplicates it by taking
+  the train state of the first replica and saves it as a checkpoint.
+
+  Args:
+    workdir: Experiment directory for saving the checkpoint.
+    train_state: An instance of TrainState that holds the state of training.
+    max_to_keep: The number of checkpoints to keep.
+    overwrite: Overwrite existing checkpoint  if a checkpoint
+      at the current or a later step already exits (default: False).
+  """
+  if jax.host_id() == 0:
+    # Get train state from the first replica.
+    checkpoint_state = jax.device_get(jax_utils.unreplicate(train_state))
+    checkpoints.save_checkpoint(
+        workdir,
+        checkpoint_state,
+        int(checkpoint_state.global_step),
+        overwrite=overwrite,
+        keep=max_to_keep)
+
+
+def get_params_and_model_state_dict(
+    restored_train_state: PyTree) -> Tuple[PyTree, Optional[PyTree]]:
+  """Restores the params and model state.
+
+  This function also applies the conversion needed for pre-line checkpoints.
+
+  Args:
+    restored_train_state: A dictionary that contains a check-pointed TrainState.
+
+  Returns:
+    A tuple of restored params and restored models state. Note that these are
+    not frozen, and need to be frozen before passing them to the optimizer.
+  """
+  restored_params = restored_train_state['optimizer']['target']
+  restored_model_state = restored_train_state.get('model_state')
+  if 'params' in restored_params:  # Backward compatibility.
+    restored_params = restored_params['params']
+    restored_params = dict(checkpoints.convert_pre_linen(restored_params))
+    if restored_model_state:
+      restored_model_state = checkpoints.convert_pre_linen(
+          flax.traverse_util.unflatten_dict({
+              tuple(k.split('/')[1:]): v
+              for k, v in restored_model_state.items()
+          }))
+  return restored_params, restored_model_state
+
+
+def restore_checkpoint(checkpoint_path: str,
+                       train_state: Optional[TrainState] = None,
+                       assert_exist: bool = False,
+                       step: int = None) -> Tuple[TrainState, int]:
+  """Restores the last checkpoint.
+
+  First restores the checkpoint, which is an instance of TrainState that holds
+  the state of training, and then replicates it.
+
+  Args:
+    checkpoint_path: Directory for saving the checkpoint.
+    train_state: An instance of TrainState that holds the state of training.
+    assert_exist: bool; Assert that there is at least one checkpoint exists in
+      the given path.
+    step: Step number to load or None to load latest. If specified,
+      checkpoint_path must be a directory.
+
+  Returns:
+    Training state and an int which is the current step.
+  """
+  if assert_exist:
+    glob_path = os.path.join(checkpoint_path, 'checkpoint_*')
+    if not gfile.glob(glob_path):
+      raise ValueError('No checkpoint for the pretrained model is found in: '
+                       f'{checkpoint_path}')
+  restored_train_state = checkpoints.restore_checkpoint(checkpoint_path, None,
+                                                        step)
+
+  if restored_train_state:
+    (restored_params, restored_model_state
+    ) = get_params_and_model_state_dict(restored_train_state)
+    restored_params = flax.core.freeze(restored_params)
+    restored_model_state = flax.core.freeze(restored_model_state)
+    train_state = train_state or TrainState()
+    if train_state.optimizer:
+      new_optimizer = train_state.optimizer.replace(target=restored_params)
+    else:
+      new_optimizer = {'target': restored_params}
+    train_state = train_state.replace(  # pytype: disable=attribute-error
+        optimizer=new_optimizer,
+        model_state=restored_model_state,
+        global_step=int(restored_train_state['global_step']),
+        rng=restored_train_state['rng'],
+        accum_train_time=restored_train_state.get('accum_train_time', 0))
+  else:
+    train_state = train_state or TrainState()
+
+  return train_state, int(train_state.global_step)
+
+
+def build_and_load_trained_model(
+    pretrained_model_config: ml_collections.ConfigDict,
+    pretrained_dataset_meta_data: Dict[str, Any],
+    pretrained_checkpoint_path: str) -> TrainState:
+  """Given information from a pretrained model, load it into a train state.
+
+  Args:
+    pretrained_model_config: Configurations of the pretrained model.
+    pretrained_dataset_meta_data: Meta data information from the pretrained
+      dataset. Input shape and num classes are the only element we need here.
+    pretrained_checkpoint_path: Path to the checkpoints of the pretrained model.
+
+  Returns:
+    A TrainState loaded from the pretrained model parameters/state.
+  """
+  logging.info('Loading a pretrained %s model.',
+               pretrained_model_config.model_name)
+  # TODO(dehghani): add option for using the CitC snapshot of that XID/WID run
+  glob_path = os.path.join(pretrained_checkpoint_path, 'checkpoint_*')
+  if not gfile.glob(glob_path):
+    raise ValueError('No checkpoint for the pretrained model is found in: '
+                     f'{pretrained_checkpoint_path}')
+  # For the pretrained model.
+  rng = jax.random.PRNGKey(0)
+  model_cls = models.get_model_cls(pretrained_model_config.model_name)
+  model = model_cls(pretrained_model_config,
+                    pretrained_dataset_meta_data).flax_model
+  rng, init_rng = jax.random.split(rng)
+  params, model_state, _, _ = initialize_model(
+      model, pretrained_dataset_meta_data['input_shape'],
+      pretrained_model_config, init_rng, jnp.float32)
+  optimizer = jax.jit(
+      optimizers.get_optimizer(pretrained_model_config).create, backend='cpu')(
+          params)
+  rng, train_rng = jax.random.split(rng)
+  pretrained_state = TrainState(
+      global_step=0,
+      optimizer=optimizer,
+      model_state=model_state,
+      rng=train_rng)
+  pretrained_state, _ = restore_checkpoint(pretrained_checkpoint_path,
+                                           pretrained_state)
+  if int(pretrained_state.global_step) == 0:
+    raise ValueError('Seems the pretrained model is not loaded or the loaded '
+                     'model is not trained properly.')
+  return pretrained_state
+
+
+def bind_rng_to_host_device(rng: jnp.ndarray,
+                            axis_name: str,
+                            bind_to: Optional[str] = None) -> jnp.ndarray:
+  """Binds a rng to the host/device we are on.
+
+  Must be called from within a pmapped function. Note that when binding to
+  "device", we also bind the rng to hosts, as we fold_in the rng with axis_index
+  which is unique for devices across all hosts.
+
+  Args:
+    rng: A jax.random.PRNGKey.
+    axis_name: The axis of the devices we are binding rng across.
+    bind_to: Must be one of the 'host' or 'device'. None means no binding.
+
+  Returns:
+    jax.random.PRNGKey specialized to host/device.
+  """
+  if bind_to is None:
+    return rng
+  if bind_to == 'host':
+    return jax.random.fold_in(rng, jax.host_id())
+  elif bind_to == 'device':
+    return jax.random.fold_in(rng, jax.lax.axis_index(axis_name))
+  else:
+    raise ValueError(
+        "`bind_to` should be one of the `[None, 'host', 'device']`")
+
+
+def normalize_metrics_summary(metrics_summary: Dict[str, Tuple[float, int]],
+                              split: str) -> Dict[str, float]:
+  """Normalize the metrics in summary by its normalizer.
+
+  Args:
+    metrics_summary: Each value is a sum of a calculated metric over all
+      examples.
+    split: Split for which we normalize the metrics. Used for logging.
+
+  Returns:
+    Normalized metrics summary.
+
+  Raises:
+    TrainingDivergedError: Due to observing a NaN in the metrics.
+  """
+  # TODO(dehghani): Currently we only support metrics of the form 1/N sum
+  #   f(x_i). We may need a more general framework for metrics like
+  #   precision and recall
+  normalized_metrics_summary = {}
+  for key, val in metrics_summary.items():
+    normalized_metrics_summary[key] = val[0] / val[1]
+    if np.isnan(normalized_metrics_summary[key]):
+      raise TrainingDivergedError('NaN detected in {}'.format(f'{split}_{key}'))
+
+  return normalized_metrics_summary
+
+
+def stack_forest(forest: PyTree) -> PyTree:
+  """Transposes a list of dicts to dict of lists.
+
+  For example,
+  given
+  [{'a':1,'b':2}, {'a':3,'b':4}],
+  the output is:
+  {'a': ([1, 3]), 'b': ([2, 4])}
+
+  Args:
+    forest: a list of dicts
+
+  Returns:
+    a dict of lists.
+  """
+  stack_args = lambda *args: np.stack(args)
+  return jax.tree_multimap(stack_args, *forest)
+
+
+def unreplicate_and_get(x: Sequence[PyTree]) -> PyTree:
+  return jax.device_get(jax_utils.unreplicate(x))
+
+
+def log_eval_summary(step: int,
+                     eval_metrics: Sequence[Dict[str, Tuple[float, int]]],
+                     extra_eval_summary: Optional[Dict[str, Any]] = None,
+                     summary_writer: Any = None,
+                     metrics_normalizer_fn: Callable[
+                         [Dict[str, Tuple[float,
+                                          int]], str], Dict[str, float]] = None,
+                     prefix: str = 'valid',
+                     key_separator: str = '_') -> Dict[str, float]:
+  """Computes and logs eval metrics.
+
+  Args:
+    step: Current step.
+    eval_metrics: List of dictionaries of calculated metrics.
+    extra_eval_summary: A dict containing summaries that are already ready to be
+      logged, e.g. global metrics from eval set, like precision/recall.
+    summary_writer: Summary writer object.
+    metrics_normalizer_fn: Used for normalizing metrics. The api for
+      this function is: `new_metrics_dict = metrics_normalizer_fn( metrics_dict,
+        split)`. If set to None, we use the normalize_metrics_summary which uses
+        the normalizer paired with each metric to normalize it.
+    prefix: str; Prefix added to the name of the summaries writen by this
+      function.
+    key_separator: Separator added between the prefix and key.
+
+  Returns:
+    eval summary: A dictionary of metrics.
+  """
+  eval_metrics = stack_forest(eval_metrics)
+
+  # Compute the sum over all examples in all batches.
+  eval_metrics_summary = jax.tree_map(lambda x: x.sum(), eval_metrics)
+  # Normalize metrics by the total number of exampels.
+  metrics_normalizer_fn = metrics_normalizer_fn or normalize_metrics_summary
+  eval_metrics_summary = metrics_normalizer_fn(eval_metrics_summary, 'eval')
+  # If None, set to an empty dictionary.
+  extra_eval_summary = extra_eval_summary or {}
+
+  if jax.host_id() == 0:
+    message = ''
+    for key, val in eval_metrics_summary.items():
+      message += f'{key}: {val} | '
+    for key, val in extra_eval_summary.items():
+      message += f'{key}: {val} | '
+    logging.info('step: %d -- %s -- {%s}', step, prefix, message)
+
+    if summary_writer is not None:
+      for key, val in eval_metrics_summary.items():
+        summary_writer.scalar(f'{prefix}{key_separator}{key}', val, step)
+      for key, val in extra_eval_summary.items():
+        summary_writer.scalar(f'{prefix}{key_separator}{key}', val, step)
+      summary_writer.flush()
+
+  # Add extra_eval_summary to the returned eval_summary.
+  eval_metrics_summary.update(extra_eval_summary)
+  return eval_metrics_summary
+
+
+def log_train_summary(step: int,
+                      train_metrics: Sequence[Dict[str, Tuple[float, int]]],
+                      extra_training_logs: Optional[Sequence[Dict[str,
+                                                                  Any]]] = None,
+                      summary_writer=None,
+                      metrics_normalizer_fn: Callable[
+                          [Dict[str, Tuple[float, int]], str],
+                          Dict[str, float]] = None,
+                      prefix: str = 'train',
+                      write_summary_per_step: bool = True,
+                      key_separator: str = '_') -> Dict[str, float]:
+  """Computes and logs train metrics.
+
+  Args:
+    step: int; Current step.
+    train_metrics: List of dictionaries of calculated metrics.
+    extra_training_logs: List of dictionaries, containing additional
+      training logs, from every train step, e.g. learning rate, Time, num
+      parameters, etc.
+    summary_writer: Summary writer.
+    metrics_normalizer_fn: Used for normalizing metrics. The api for
+      this function is: `new_metrics_dict = metrics_normalizer_fn( metrics_dict,
+        split)`. If set to None, we use the normalize_metrics_summary which uses
+        the normzlizer paired with each metric to normalize it.
+    prefix: str; Prefix added to the name of the summaries writen by this
+      function.
+    write_summary_per_step: Whether to write a summary for each step.
+    key_separator: Separator added between the prefix and key.
+
+  Returns:
+    train summary: A dictionary of metrics.
+  """
+  ##### Prepare metrics:
+  # Get metrics from devices:
+  train_metrics = stack_forest(train_metrics)
+  # Compute the sum over all examples in all batches:
+  train_metrics_summary = jax.tree_map(lambda x: x.sum(), train_metrics)
+  # Normalize metrics by the total number of exampels:
+  metrics_normalizer_fn = metrics_normalizer_fn or normalize_metrics_summary
+  train_metrics_summary = metrics_normalizer_fn(train_metrics_summary, 'train')
+
+  ##### Prepare additional training logs:
+  # If None, set to an empty dictionary.
+  extra_training_logs = extra_training_logs or {}
+  train_logs = stack_forest(extra_training_logs)
+
+  if jax.host_id() == 0:
+    message = ''
+    # Metrics:
+    for key, val in train_metrics_summary.items():
+      message += f'{key}: {val} | '
+      if summary_writer is not None and not write_summary_per_step:
+        summary_writer.scalar(f'{prefix}{key_separator}{key}', val, step)
+    # Additional logs:
+    for key, val in train_logs.items():
+      message += f'{key}: {val.mean()} | '
+      if summary_writer is not None and not write_summary_per_step:
+        summary_writer.scalar(key, val.mean(), step)
+
+    logging.info('step: %d -- %s -- {%s}', step, prefix, message)
+
+    if summary_writer is not None and write_summary_per_step:
+      # Write per step metrics:
+      for key, vals in train_metrics.items():
+        for i, val in enumerate(zip(vals[0], vals[1])):
+          report_step = step - len(vals[0]) + i + 1
+          report_val = val[0] / val[1]
+          summary_writer.scalar(f'{prefix}{key_separator}{key}',
+                                report_val, report_step)
+
+      # Write per step additional logs:
+      for key, vals in train_logs.items():
+        for i, val in enumerate(vals):
+          report_step = step - len(vals) + i + 1
+          summary_writer.scalar(key, val, report_step)
+
+    if summary_writer is not None:
+      summary_writer.flush()
+  return train_metrics_summary
+
+
+class Chrono:
+  """Measures time and reports progress."""
+
+  def __init__(self,
+               first_step: int,
+               total_steps: int,
+               steps_per_epoch: int,
+               global_bs: int,
+               accum_train_time: int = 0):
+    self.first_step = first_step
+    self.total_steps = total_steps
+    self.steps_per_epoch = steps_per_epoch
+    self.global_bs = global_bs
+    self.accum_train_time = accum_train_time
+    self.start_time = None
+    self.prev_time = None
+    self.prev_step = None
+    self.pause_start = None
+    self.paused_time = 0
+
+  def tick(self, step: int, tb_summary_writer: Any):
+    """A chronometer tick."""
+    now = self.pause_start or time.time()
+
+    # We take the start as the first time `tick` is called, so we avoid
+    # measuring the overhead of compilation and don't include it in time
+    # estimates.
+    if None in (self.start_time, self.prev_time, self.prev_step):
+      self.start_time = self.prev_time = now
+      self.prev_step = step
+      return
+
+    def hms(s):
+      """Format time in hours/minutes/seconds."""
+      if s < 60:
+        return f'{s:.0f}s'
+      m, s = divmod(s, 60)
+      if m < 60:
+        return f'{m:.0f}m{s:.0f}s'
+      h, m = divmod(m, 60)
+      return f'{h:.0f}h{m:.0f}m'  # Seconds intentionally omitted.
+
+    # Progress note with 'global' full-program average timings.
+    dt = now - self.start_time  # Time since process start.
+    steps_done = step - self.first_step
+    steps_todo = self.total_steps - step
+    note = f'Steps:{step}/{self.total_steps} [{step/self.total_steps:.1%}]'
+    note += f'\nETA:{hms(dt / steps_done * steps_todo)}'
+    note += f'\nTotal time:{hms(dt / steps_done * self.total_steps)}'
+
+    # Measurement with micro-timings of current training steps speed.
+    dt = now - self.prev_time - self.paused_time  # Time between ticks.
+    ds = step - self.prev_step  # Steps between ticks.
+    ncores = jax.device_count()  # Global device count.
+    if tb_summary_writer is not None:
+      tb_summary_writer.scalar('img/sec/core',
+                               self.global_bs * ds / dt / ncores, step)
+      tb_summary_writer.scalar('img/sec',
+                               self.global_bs * ds / dt, step)
+    else:
+      logging.info('step: %d -- img/sec/core -- {%f}', step,
+                   self.global_bs * ds / dt / ncores)
+      logging.info('step: %d -- img/sec -- {%f}', step,
+                   self.global_bs * ds / dt)
+
+    # Accumulate (integrate) training time, good for plots.
+    self.accum_train_time += dt
+    core_hours = self.accum_train_time * ncores / 60 / 60
+    devtype = jax.devices()[0].device_kind
+    if tb_summary_writer is not None:
+      tb_summary_writer.scalar(f'core_hours_{devtype}', core_hours, step)
+    else:
+      logging.info('step: %d -- core_hours_{%s} -- {%f}', step, devtype,
+                   core_hours)
+
+    if devtype == 'TPU v2':  # If we are on JF, do approximate conversion to DF.
+      core_hours = core_hours / 1.2
+    if tb_summary_writer is not None:
+      tb_summary_writer.scalar('core_hours_approx_v3', core_hours, step)
+      if self.steps_per_epoch:
+        # Good for plot.
+        tb_summary_writer.scalar('epoch', step / self.steps_per_epoch, step)
+    else:
+      logging.info('step: %d -- core_hours_approx_v3 -- {%f}', step, core_hours)
+      if self.steps_per_epoch:
+        logging.info('step: %d -- epoch -- {%f}', step,
+                     step / self.steps_per_epoch)
+
+    self.prev_time = now
+    self.prev_step = step
+    self.paused_time = 0
+
+  def pause(self):
+    assert self.pause_start is None, 'Do not pause twice.'
+    if self.start_time:  # Only pause if started.
+      self.pause_start = time.time()
+
+  def resume(self):
+    if self.pause_start:
+      self.paused_time += time.time() - self.pause_start
+      self.pause_start = None
+
+
+class TrainingDivergedError(Exception):
+  pass
+
+
+def process_and_fetch_to_host(
+    pred_or_tgt: Union[jnp.ndarray, Dict[str,
+                                         jnp.ndarray]], batch_mask: jnp.ndarray
+) -> Union[Sequence[jnp.ndarray], Dict[str, jnp.ndarray]]:
+  """Used to collect predictions and targets of the whole valid/test set.
+
+  Args:
+    pred_or_tgt: A jnp-array or dict of arrays, each of shape `[n_dev, bs,
+      X,...,Y].
+    batch_mask: A nd-array of shape `[nun_devices, bs]`, where zero values
+      indicate padded examples.
+
+  Returns:
+    A list of length n_dev*bs of items, where each item is a dictionary with
+    same keys as `pred_or_tgt` & values are normal np-arrays of shape [X,...,Y].
+  """
+  def _split_mini_batchs(x):
+    # Fetch to host and filter out padded examples.
+    x = jax.device_get(x)[np.array(batch_mask).astype(bool)]
+    # Split minibatch of examples into a list of examples.
+    x_list = jnp.split(x, x.shape[0], axis=0)
+    # Squeeze out the dummy dimention.
+    return jax.tree_map(lambda x: jnp.squeeze(x, axis=0), x_list)
+
+  pred_or_tgt = jax.tree_map(_split_mini_batchs, pred_or_tgt)
+
+  if isinstance(pred_or_tgt, list):
+    # Pred_or_tgt was a single array, so just return the list:
+    return pred_or_tgt
+  else:
+    # Pred_or_tgt was dict of arrays, so convert dict of lists to list of dicts:
+    keys, values = zip(*pred_or_tgt.items())
+    return [dict(zip(keys, v)) for v in zip(*values)]
+
+
+def get_backbone_multioptimizer(
+    config: ml_collections.ConfigDict) -> optim.MultiOptimizer:
+  """Makes a Flax MultiOptimizer with a separate backbone optimizer."""
+  other_optim = optimizers.get_optimizer(config)
+  if config.get('backbone_training'):
+    backbone_optim = optimizers.get_optimizer(config.model.backbone.training)
+  else:
+    backbone_optim = other_optim
+  backbone_traversal = optim.ModelParamTraversal(
+      lambda path, param: 'backbone' in path)
+  other_traversal = optim.ModelParamTraversal(
+      lambda path, param: 'backbone' not in path)
+  return optim.MultiOptimizer((backbone_traversal, backbone_optim),
+                              (other_traversal, other_optim))
+
+
+@functools.partial(jax.pmap, axis_name='i')
+def _barrier(x):
+  return jax.lax.psum(x, axis_name='i')
+
+
+def barrier():
+  """MPI-like barrier."""
+  jax.device_get(_barrier(jnp.ones((jax.local_device_count(),))))

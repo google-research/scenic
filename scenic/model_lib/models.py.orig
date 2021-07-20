@@ -1,0 +1,107 @@
+"""Registry for the available models we can train."""
+
+from typing import Type
+
+from scenic.model_lib.base_models import base_model
+from scenic.projects.avit import model as avit_model
+from scenic.projects.baselines import axial_resnet
+from scenic.projects.baselines import bit_resnet
+from scenic.projects.baselines import fully_connected
+from scenic.projects.baselines import resnet
+from scenic.projects.baselines import simple_cnn
+from scenic.projects.baselines import unet
+from scenic.projects.baselines import vit
+from scenic.projects.fast_vit import xvit as xvit_model
+from scenic.projects.layout_vit import model as layout_vit
+from scenic.projects.omninet import model as omninet_model
+from scenic.projects.polyvit import model as polyvit_model
+from scenic.projects.vetr.models import model as vetr_model
+from scenic.projects.vetr.models import models_roi_based as vetr_model_roi
+from scenic.projects.vit_phenomena import model as vit_phenomena_model
+from scenic.projects.vit_plus import model as vit_plus_model
+from scenic.projects.vit_plus.zero_shot import model as vit_plus_zero_shot_model
+
+ALL_MODELS = {}
+
+CLASSIFICATION_MODELS = {
+    'fully_connected_classification':
+        fully_connected.FullyConnectedClassificationModel,
+    'simple_cnn_classification':
+        simple_cnn.SimpleCNNClassificationModel,
+    'axial_resnet_multilabel_classification':
+        axial_resnet.AxialResNetMultiLabelClassificationModel,
+    'resnet_classification':
+        resnet.ResNetClassificationModel,
+    'resnet_multilabel_classification':
+        resnet.ResNetMultiLabelClassificationModel,
+    'bit_resnet_classification':
+        bit_resnet.BitResNetClassificationModel,
+    'bit_resnet_multilabel_classification':
+        bit_resnet.BitResNetMultiLabelClassificationModel,
+    'vit_multilabel_classification':
+        vit.ViTMultiLabelClassificationModel,
+    'omninet_multilabel_classification':
+        omninet_model.OmniNetMultiLabelClassificationModel,
+    'xvit_multilabel_classification':
+        xvit_model.XViTMultiLabelClassificationModel,
+    'vit_phenomena':
+        vit_phenomena_model.ViTPhenomenaMultiLabelClassificationModel,
+}
+
+SEGMENTATION_MODELS = {
+    'simple_cnn_segmentation': simple_cnn.SimpleCNNSegmentationModel,
+    'unet_segmentation': unet.UNetSegmentationModel,
+}
+
+PROJECTS_MODELS = {
+    'layout_vit':
+        layout_vit.LayoutViTModel,
+    'vit_plus_detection':
+        vit_plus_model.ViTPlusDetectionModel,
+    'vit_plus_zero_shot_detection':
+        vit_plus_zero_shot_model.ViTPlusZeroShotDetectionModel,
+    'vit_plus_classification':
+        vit_plus_model.ViTPlusMultiLabelClassificationModel,
+    'vit_plus_classification_matching':
+        vit_plus_model.ViTPlusClassificationMatchingModel,
+    'avit_multilabel_classification':
+        avit_model.AVITMultilabelClassificationModel,
+    'avit_classification':
+        avit_model.AVITClassificationModel,
+    'avit_multihead_classification':
+        avit_model.AVITMultiHeadClassificationModel,
+    'vetr':
+        vetr_model.VeTRModel,
+    'polyvit':
+        polyvit_model.PolyVitModel,
+    'vetr_roi_multilabel':
+        vetr_model_roi.ROIBasedMultiLabelClassificationModel,
+}
+
+ALL_MODELS.update(CLASSIFICATION_MODELS)
+ALL_MODELS.update(SEGMENTATION_MODELS)
+
+
+def get_model_cls(model_name: str) -> Type[base_model.BaseModel]:
+  """Get the corresponding model class based on the model string.
+
+  API:
+  ```
+      model_builder= get_model_cls('fully_connected')
+      model = model_builder(config, ...)
+  ```
+
+  Args:
+    model_name: str; Name of the model, e.g. 'fully_connected'.
+
+  Returns:
+    The model architecture (a flax Model) along with its default config.
+  Raises:
+    ValueError if model_name is unrecognized.
+  """
+  if model_name in PROJECTS_MODELS:
+    return PROJECTS_MODELS[model_name]
+
+  if model_name not in ALL_MODELS.keys():
+    raise ValueError('Unrecognized model: {}'.format(model_name))
+  return ALL_MODELS[model_name]

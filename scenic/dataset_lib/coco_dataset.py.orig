@@ -1,0 +1,539 @@
+"""Data generators for the COCO dataset.
+
+For a detailed explanation of data format see
+https://cocodataset.org/#format-data
+
+This data loader supports the following tasks in this dataset:
+- Panoptic Segmentation, which combines semantic and instance segmentation
+  such that all pixels are assigned a class label and all object instances are
+  uniquely segmented.
+"""
+
+import functools
+
+from absl import logging
+from scenic.dataset_lib import dataset_utils
+import tensorflow as tf
+import tensorflow_datasets as tfds
+
+# computed from the training set by taking the per-channel mean/std-dev
+# over sample, height and width axes of all training samples
+MEAN_RGB = [0.485 * 255, 0.456 * 255, 0.406 * 255]
+STDDEV_RGB = [0.229 * 255, 0.224 * 255, 0.225 * 255]
+
+
+def get_coco_instance_masks(panoptic_image, object_ids):
+  """Constructs the instance mask for each object in the original image.
+
+  Args:
+    panoptic_image: tensor; A tensor in the shape of the original image, i.e.,
+      `[h, w, 3]`, which encodes panoptic information. Each pixel in this image
+      is an object and the id of the object is obtain by calculating the:
+        `channel_1 + channel_2 * 256 + channel_3 * 256^2`.
+    object_ids: tensor; A tensor of shape `[N]`,  where N is the number of
+      objects in the original image and contains ids of objects in the image.
+
+  Returns:
+    A tensor, instance_masks, of shape `[num_objects, height, width, 1]` that
+    contains values in {0,1} to indicate presence of the objects for each pixel.
+  """
+
+  #### number of objects in the image
+  num_objects = tf.shape(object_ids)[0]
+  object_ids_map = tf.reshape(object_ids, (num_objects, 1, 1))
+  object_ids_map = tf.cast(object_ids_map, dtype=tf.int32)
+
+  #### reconstruct object ids from the panoptic image
+  # per-pixel segment id
+  panoptic_image = tf.cast(panoptic_image, dtype=tf.int32)
+  # convert RGB from panoptic_image to object id
+  object_id_mask = (
+      panoptic_image[:, :, 0] + panoptic_image[:, :, 1] * 256 +
+      panoptic_image[:, :, 2] * 256 * 256)
+
+  # instance_masks contains values in {0,1} to indicate presence of this object
+  # for each pixel. instance_masks.shape = [num_objects, height, width]
+  instance_masks = tf.cast(
+      tf.equal(object_id_mask, object_ids_map), dtype=tf.int32)
+
+  #### add a channel dimension --> shape = [num_objects, height, width, 1]
+  instance_masks = tf.expand_dims(instance_masks, axis=-1)
+
+  return instance_masks
+
+
+def get_coco_segmentation_mask(instance_masks, object_labels):
+  """Construct the segmentation mask.
+
+  Args:
+    instance_masks: tensor; A tensor of shape `[num_objects, height, width, 1]`
+      that contains values in {0,1} to indicate presence of the objects for each
+      pixel, as returned by get_coco_instance_masks().
+    object_labels: tensor; A tensor of shape `[N]`,  where N is the number of
+      objects in the original image and contains labels of objects in the image.
+
+  Returns:
+    A tensor, segmentation_mask, of shape `[height, width]` that
+      contains labels (the object) for each pixel in the original image, with 0
+      indicating absence of any object and n indicating presence of
+      object_labels[n - 1]. If there are multiple labels for a pixel then
+      the greatest id will be returned.
+  """
+  # labels.shape = [num_objects].
+  # the labels tensor gives the label of the corresponding object. Note
+  # that the same type of object might occur in multiple places, leading to
+  # the same label occuring multiple time in the labels tensor
+  num_objects = tf.shape(object_labels)[0]
+  # transform classes to [1, 133] range
+  # the zero label will be used for unlabeled pixels
+  # note that "label" == "category_id" in the data format documentation,
+  # so these represent the actual class labels
+  object_labels = object_labels + 1
+  object_labels = tf.reshape(object_labels, (num_objects, 1, 1, 1))
+  object_labels = tf.cast(object_labels, dtype=tf.int32)
+
+  # if a pixel has zero values for all object masks it will have the zero
+  # label, meaning it is unlabeled
+  # these pixels should probably be masked out for the segmentation loss
+  segmentation_mask = tf.reduce_max(instance_masks * object_labels, axis=0)
+  # squeeze of the channel dimension (from `[h, w, 1]` to `[h, w]`).
+  segmentation_mask = tf.squeeze(segmentation_mask, axis=-1)
+
+  return segmentation_mask
+
+
+def random_flip_coco_image(image, instance_masks):
+  """Applies random horizontal flip on the image and the instance masks.
+
+  Args:
+    image: Input image to be flipped.
+    instance_masks: Instance masks associated with the input image, as returned
+      by get_coco_instance_masks().
+
+  Returns:
+    The image and instance masks with random horizontal flip applied on them.
+  """
+
+  def shared_flip(image, instance_masks):
+    return (tf.image.flip_left_right(image),
+            tf.image.flip_left_right(instance_masks))
+
+  prob_flip = tf.random.uniform(shape=(), minval=0, maxval=1., dtype=tf.float32)
+  image, instance_masks = tf.cond(
+      tf.greater(prob_flip, 0.5), lambda: shared_flip(image, instance_masks),
+      lambda: (image, instance_masks))
+  return image, instance_masks
+
+
+def maybe_pad_coco_image(image, instance_masks, target_size):
+  """Maybe pads the input image and the instance masks, given the target size.
+
+  Args:
+    image: Input image to be padded.
+    instance_masks: Instance masks associated with the input image, as returned
+      by get_coco_instance_masks().
+    target_size: tuple(int); a tuple of positive integers that determine the
+      height and the width of the target image.
+
+  Returns:
+    The image and instance masks with padding applied on them.
+  """
+  target_height, target_width = target_size
+  height, width = tf.shape(image)[0], tf.shape(image)[1]
+  # pad image if crop width or height does not fit inside the image.
+  pad_height, pad_width = height, width
+  offset_height, offset_width = 0, 0
+  if target_height > height:
+    offset_height = (target_height - height) // 2
+    pad_height = target_height
+  if target_width > width:
+    offset_width = (target_width - width) // 2
+    pad_width = target_width
+
+  image = tf.image.pad_to_bounding_box(
+      image=image,
+      offset_height=offset_height,
+      offset_width=offset_width,
+      target_height=pad_height,
+      target_width=pad_width)
+  instance_masks = tf.image.pad_to_bounding_box(
+      image=instance_masks,
+      offset_height=offset_height,
+      offset_width=offset_width,
+      target_height=pad_height,
+      target_width=pad_width)
+  return image, instance_masks
+
+
+def center_crop_coco_image(image, instance_masks, target_size):
+  """Center crop the input image and the instance masks, given the target size.
+
+  Args:
+    image: Input image to be cropped.
+    instance_masks: Instance masks associated with the input image.
+    target_size: tuple(int); a tuple of positive integers that determine the
+      height and the width of the target image.
+
+  Returns:
+    The image and instance masks with crop applied on them.
+  """
+  target_height, target_width = target_size
+  height, width = tf.shape(image)[0], tf.shape(image)[1]
+
+  offset_height = (height - target_height) // 2
+  offset_width = (width - target_width) // 2
+  image = tf.image.crop_to_bounding_box(
+      image,
+      offset_height=offset_height,
+      offset_width=offset_width,
+      target_height=target_height,
+      target_width=target_width)
+  instance_masks = tf.image.crop_to_bounding_box(
+      instance_masks,
+      offset_height=offset_height,
+      offset_width=offset_width,
+      target_height=target_height,
+      target_width=target_width)
+
+  return image, instance_masks
+
+
+def random_crop_coco_image(image, instance_masks, target_size):
+  """Random crop the input image and the instance masks, given the target size.
+
+  Args:
+    image: Input image to be cropped randomly.
+    instance_masks: Instance masks associated with the input image.
+    target_size: tuple(int); a tuple of positive integers that determine the
+      height and the width of the target image.
+
+  Returns:
+    The image and instance masks with crop applied on them.
+  """
+  target_height, target_width = target_size
+  height, width = tf.shape(image)[0], tf.shape(image)[1]
+  ### crop with fixed size and random offset
+  # random selection of crop offset
+  offset_height = tf.random.uniform(
+      shape=[], minval=0, maxval=height - target_height + 1, dtype=tf.int32)
+  offset_width = tf.random.uniform(
+      shape=[], minval=0, maxval=width - target_width + 1, dtype=tf.int32)
+  image = tf.image.crop_to_bounding_box(
+      image,
+      offset_height=offset_height,
+      offset_width=offset_width,
+      target_height=target_height,
+      target_width=target_width)
+  instance_masks = tf.image.crop_to_bounding_box(
+      instance_masks,
+      offset_height=offset_height,
+      offset_width=offset_width,
+      target_height=target_height,
+      target_width=target_width)
+  return image, instance_masks
+
+
+def preprocess_coco_example(example,
+                            target_size,
+                            train,
+                            center_crop_train=False,
+                            dtype=tf.float32):
+  """Performs preprocessing (to be cached).
+
+  Preprocessing and normalization is based on
+  https://github.com/facebookresearch/detr/blob/7b66548afa0b36f7b8e917266f410ae40aa49fb8/datasets/coco.py
+
+  Note that this preprocesing is done before caching, and random transformation
+  as data augmentation should not be done here (other wise it's not random!).
+
+  The preprocessing steps done here are: (data affected indicated in brackets)
+
+  0. Create instance_masks given panoptic_image and object_ids.
+  1. Normalize to [0,1] interval by dividing by 255. (image)
+  2. Normalize with mean and std (image)
+  3. Pad if necessary for cropping (image, instance_masks)
+  4. Crop to the target size:
+    - center crop for test/validation
+    - random crop for train if random_crop is augmentation otherwise center crop
+
+  Args:
+    example: dict; Example that has keys 'image', 'panoptic_image',
+      'panoptic_objects'.
+    target_size: tuple(int); a tuple of positive integers that determine the
+      height and the width of the target image.
+    train: bool; Whether to load the train or evaluation split.
+    center_crop_train: bool; If apply center crop on training data (similar to
+      test/validation data). This is because we want to skip (or do) cropping on
+      training images if we have (don't have)  random_crop as a data
+      augmentation applied later. we don't want any cropping here.
+    dtype: Tensorflow data type, Data type of the image.
+
+  Returns:
+    A dictionary with keys 'inputs' (the image) and
+      'label' (the segmentation mask).
+  """
+  image = tf.image.convert_image_dtype(example['image'], dtype=dtype)
+
+  ### normalize
+  if dtype not in [tf.int32, tf.int64, tf.uint32, tf.uint64]:
+    mean_rgb = tf.constant(MEAN_RGB, shape=[1, 1, 3], dtype=dtype)
+    std_rgb = tf.constant(STDDEV_RGB, shape=[1, 1, 3], dtype=dtype)
+    image = (image - mean_rgb) / std_rgb
+
+  ### maybe padd and crop
+  panoptic_image = example['panoptic_image']
+  object_ids = example['panoptic_objects']['id']
+  object_labels = example['panoptic_objects']['label']
+  # construct instance masks from panoptic image and object_ids
+  instance_masks = get_coco_instance_masks(panoptic_image, object_ids)
+
+  image, instance_masks = maybe_pad_coco_image(image, instance_masks,
+                                               target_size)
+
+  if not train or center_crop_train:
+    # on test/validation data, always apply the center crop but on train data
+    # apply center crop only when center_crop_train=True
+    image, instance_masks = center_crop_coco_image(image, instance_masks,
+                                                   target_size)
+
+  return {
+      'image': image,
+      'instance_masks': instance_masks,
+      'object_labels': object_labels
+  }
+
+
+def augment_coco_example(example,
+                         target_size,
+                         dtype=tf.float32,
+                         data_augmentations=()):
+  """Performs data augmentation.
+
+  Augmentation is based on
+  https://github.com/facebookresearch/detr/blob/7b66548afa0b36f7b8e917266f410ae40aa49fb8/datasets/coco.py
+
+  Augmentations steps are: (data affected indicated in brackets)
+
+  Crop with random offsets (image, instance_masks)
+  RandomHorizontalFlip (image, instance_masks)
+
+  Args:
+    example: dict; Example that has keys 'image', 'panoptic_image',
+      'panoptic_objects'.
+    target_size: tuple(int); a tuple of positive integers that determine the
+      height and the width of the target image.
+    dtype: Tensorflow data type, Data type of the output image.
+    data_augmentations: list(str); Types of data augmentation applied on
+      training data
+
+  Returns:
+    A dictionary with keys 'inputs' (the image) and
+      'label' (the segmentation mask).
+  """
+  image = tf.cast(example['image'], dtype=dtype)
+  instance_masks = example['instance_masks']
+  object_labels = example['object_labels']
+
+  if 'random_flip' in data_augmentations:
+    # random horizontal flip
+    image, instance_masks = random_flip_coco_image(image, instance_masks)
+  if 'random_crop' in data_augmentations:
+    # random cropping + padding if necessary
+    image, instance_masks = random_crop_coco_image(image, instance_masks,
+                                                   target_size)
+  image = tf.cast(image, dtype=dtype)
+  return {
+      'image': image,
+      'instance_masks': instance_masks,
+      'object_labels': object_labels
+  }
+
+
+def decode_coco_example(example, task):
+  """Given an instance and raw labels, creates the task <inputs, label> pair.
+
+  Args:
+    example: dict; Input image and raw labels, used to create task label.
+    task: str; Task for which the inputs,
+
+  Returns:
+    A dictionary of {'inputs': input image, 'label': task label}.
+  """
+  image = example['image']
+  instance_masks = example['instance_masks']
+  object_labels = example['object_labels']
+
+  if task == 'segmentation':
+    segmentation_mask = get_coco_segmentation_mask(instance_masks,
+                                                   object_labels)
+  else:
+    raise NotImplementedError(f"Currently '{task}' task is not supported.")
+  return {'inputs': image, 'label': segmentation_mask}
+
+
+def coco_load_split_from_tfds(batch_size,
+                              train,
+                              preprocess_example=None,
+                              augment_train_example=None,
+                              decode_example=None,
+                              shuffle_seed=0):
+  """Loads a split from the COCO dataset using TensorFlow Datasets.
+
+  Args:
+    batch_size: int; The batch size returned by the data pipeline.
+    train: bool; Whether to load the train or evaluation split.
+    preprocess_example: function; A function that given an example, train flag,
+      and dtype returns the preprocessed the example. Note that the
+      preprocessing is done BEFORE caching to re-use them.
+    augment_train_example: A function that given a train example and dtype
+      returns the augmented example. Note that this function is applied AFTER
+      caching and repeat to get true randomness.
+    decode_example: A function that given an example creates a <inputs, label>
+      pair.
+    shuffle_seed: int; Seed for shuffling the training data.
+
+  Returns:
+    A `tf.data.Dataset`, and dataset info.
+  """
+  # TODO(dehghani): consider renaming the decode_example and preprocess_example.
+  split = 'train' if train else 'validation'
+  ds, ds_info = tfds.load('coco/2017_panoptic', split=split, with_info=True)
+
+  # applying preprocessing before `ds.cache()` to re-use it
+  ds = ds.map(
+      preprocess_example, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+  if train:
+    # caching what we've done so far before repeating
+    ds = ds.cache()
+    # first repeat then batch
+    ds = ds.repeat()
+    ds = ds.shuffle(8 * batch_size, seed=shuffle_seed)
+    # augmentation should be done after repeat for true randomness
+    ds = ds.map(
+        augment_train_example, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    # create label for train split should be done after augmentation as
+    # augmentation may affect the lebels
+    ds = ds.map(
+        decode_example, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    ds = ds.batch(batch_size, drop_remainder=True)
+
+  else:
+    # create label for test/valid splits is done before caching to re-use them.
+    # note that for train, it's done after augmentation
+    ds = ds.map(
+        decode_example, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    # caching what we've done so far before repeating
+    ds = ds.cache()
+    # first batch then repeat
+    ds = ds.batch(batch_size, drop_remainder=False)
+    ds = ds.repeat()
+
+  ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+  return ds, ds_info
+
+
+def get_dataset(*,
+                task,
+                batch_size,
+                eval_batch_size,
+                num_shards,
+                dtype_str='float32',
+                shuffle_seed=0,
+                dataset_configs=None):
+  """Returns generators for the COCO panoptic 2017 train and validation set.
+
+  Args:
+    task: str; The task for which we create <inputs, label> pairs. The supported
+      tasks are from this list: ['segmentation'].
+    batch_size: int; Determines the train batch size.
+    eval_batch_size: int; Determines the evaluation batch size.
+    num_shards: int;  Number of shards --> batch shape: [num_shards, bs, ...].
+    dtype_str: dataset_utils.DATA_TYPE.key; Data type of the image (e.g.
+      'float32').
+    shuffle_seed: int; Seed for shuffling the training data.
+    dataset_configs: dict; Dataset specific configurations.
+
+  Returns:
+    A dataset_utils.Dataset() which includes a train_iter, a valid_iter,
+    a test_iter, and a dict of meta_data.
+  """
+  if task not in ['segmentation']:
+    raise NotImplementedError(f"Currently '{task}' task is not supported.")
+
+  dataset_configs = dataset_configs or {}
+  target_size = dataset_configs.get('target_size', (256, 256))
+  data_augmentations = dataset_configs.get('data_augmentations', [])
+  # Default data-augmentations are random left-right flipping followed by random
+  # cropping with possible padding before the cropping if the crop size is
+  # larger than the image.
+  data_augmentations.extend(['random_flip', 'random_crop'])
+  # TODO(dehghani): add mixup data augmentation.
+  for da in data_augmentations:
+    if da not in ['random_flip', 'random_crop']:
+      raise ValueError(f'Data augmentation {data_augmentations} is not '
+                       f'(yet) supported in the COCO dataset.')
+
+  dtype = dataset_utils.DATA_TYPE[dtype_str].tf_dtype
+  # prepare map functions for load_splits
+  preprocess_ex = functools.partial(
+      preprocess_coco_example,
+      target_size=target_size,
+      center_crop_train='random_crop' not in data_augmentations,
+      dtype=dtype)
+  decode_ex = functools.partial(decode_coco_example, task=task)
+  augment_ex = functools.partial(
+      augment_coco_example,
+      target_size=target_size,
+      dtype=dtype,
+      data_augmentations=data_augmentations)
+
+  logging.info('Loading train split of the COCO panoptic dataset.')
+  train_ds, train_ds_info = coco_load_split_from_tfds(
+      batch_size,
+      train=True,
+      preprocess_example=functools.partial(preprocess_ex, train=True),
+      augment_train_example=augment_ex,
+      decode_example=decode_ex,
+      shuffle_seed=shuffle_seed)
+
+  logging.info('Loading test split of the COCO panoptic dataset.')
+  eval_ds, eval_ds_info = coco_load_split_from_tfds(
+      eval_batch_size,
+      train=False,
+      preprocess_example=functools.partial(preprocess_ex, train=False),
+      decode_example=decode_ex)
+
+  maybe_pad_batches_train = functools.partial(
+      dataset_utils.maybe_pad_batch, train=True, batch_size=batch_size)
+  maybe_pad_batches_eval = functools.partial(
+      dataset_utils.maybe_pad_batch, train=False, batch_size=eval_batch_size)
+  shard_batches = functools.partial(dataset_utils.shard, n_devices=num_shards)
+
+  train_iter = iter(train_ds)
+  train_iter = map(dataset_utils.tf_to_numpy, train_iter)
+  train_iter = map(maybe_pad_batches_train, train_iter)
+  train_iter = map(shard_batches, train_iter)
+
+  eval_iter = iter(eval_ds)
+  eval_iter = map(dataset_utils.tf_to_numpy, eval_iter)
+  eval_iter = map(maybe_pad_batches_eval, eval_iter)
+  eval_iter = map(shard_batches, eval_iter)
+
+  input_shape = (-1,) + target_size + (3,)
+  meta_data = {
+      # labels take on values 0-133, but 0 = unlabeled pixel.,
+      'num_classes':
+          train_ds_info.features['panoptic_objects']['label'].num_classes,
+      'input_shape':
+          input_shape,
+      'num_train_examples':
+          train_ds_info.splits['train'].num_examples,
+      'num_eval_examples':
+          eval_ds_info.splits['validation'].num_examples,
+      'input_dtype':
+          dataset_utils.DATA_TYPE[dtype_str].jax_dtype,
+      'target_is_onehot':
+          False,
+  }
+  return dataset_utils.Dataset(train_iter, eval_iter, None, meta_data)

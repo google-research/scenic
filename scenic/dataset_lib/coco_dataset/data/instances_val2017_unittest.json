@@ -1,0 +1,86 @@
+{
+  "info": {
+    "description": "COCO 2017 Dataset",
+    "url": "http://cocodataset.org",
+    "version": "1.0",
+    "year": 2017,
+    "contributor": "COCO Consortium",
+    "date_created": "2017/09/01"
+  },
+  "licenses": [
+    {
+      "url": "http://creativecommons.org/licenses/by-nc-sa/2.0/",
+      "id": 1,
+      "name": "Attribution-NonCommercial-ShareAlike License"
+    },
+    {
+      "url": "http://creativecommons.org/licenses/by/2.0/",
+      "id": 4,
+      "name": "Attribution License"
+    }
+  ],
+  "images": [
+    {
+      "license": 4,
+      "file_name": "000000397133.jpg",
+      "coco_url": "http://images.cocodataset.org/val2017/000000397133.jpg",
+      "height": 427,
+      "width": 640,
+      "date_captured": "2013-11-14 17:02:52",
+      "flickr_url": "http://farm7.staticflickr.com/6116/6255196340_da26cf2c9e_z.jpg",
+      "id": 397133
+    },
+    {
+      "license": 1,
+      "file_name": "000000037777.jpg",
+      "coco_url": "http://images.cocodataset.org/val2017/000000037777.jpg",
+      "height": 230,
+      "width": 352,
+      "date_captured": "2013-11-14 20:55:31",
+      "flickr_url": "http://farm9.staticflickr.com/8429/7839199426_f6d48aa585_z.jpg",
+      "id": 37777
+    }
+  ],
+  "annotations": [
+    {
+      "segmentation": [],
+      "area": 1481.3806499999994,
+      "iscrowd": 0,
+      "image_id": 397133,
+      "bbox": [
+        217.62,
+        240.54,
+        38.99,
+        57.75
+      ],
+      "category_id": 44,
+      "id": 82445
+    },
+    {
+      "segmentation": [],
+      "area": 88.52115000000006,
+      "iscrowd": 0,
+      "image_id": 37777,
+      "bbox": [
+        102.49,
+        118.47,
+        7.9,
+        17.31
+      ],
+      "category_id": 64,
+      "id": 22328
+    }
+  ],
+  "categories": [
+    {
+      "supercategory": "kitchen",
+      "id": 44,
+      "name": "bottle"
+    },
+    {
+      "supercategory": "furniture",
+      "id": 64,
+      "name": "potted plant"
+    }
+  ]
+}

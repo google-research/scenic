@@ -1,0 +1,65 @@
+"""Registry for the available trainers."""
+
+from scenic.projects.avit import classification_trainer as avit_trainer
+from scenic.projects.seg_diff import trainer as seg_diff_trainer
+from scenic.projects.vetr import roi_trainer as vetr_roi_trainer
+from scenic.projects.vetr import trainer as vetr_trainer
+from scenic.projects.vit_plus import classification_matching_trainer as mvit_trainer
+from scenic.projects.vit_plus import classification_trainer as cvit_trainer
+from scenic.projects.vit_plus import detection_trainer as detvit_trainer
+from scenic.projects.vit_plus.zero_shot import detection_trainer as zdetvit_trainer
+from scenic.projects.vivit import classification_trainer as vivit_trainer
+from scenic.projects.vivit import inference_timer as vivit_timer
+from scenic.train_lib import classification_trainer
+from scenic.train_lib import segmentation_trainer
+from scenic.train_lib.fewshot import fewshot_trainer
+from scenic.train_lib.timer import inference_timer
+
+
+ALL_TRAINERS = {
+    'classification_trainer': classification_trainer.train,
+    'segmentation_trainer': segmentation_trainer.train,
+    'fewshot_trainer': fewshot_trainer.train,
+    'inference_timer': inference_timer.timeit,
+}
+
+PROJECTS_TRAINERS = {
+    'detvit_trainer': detvit_trainer.train,
+    'zero_shot_detvit_trainer': zdetvit_trainer.train,
+    'cvit_trainer': cvit_trainer.train,
+    'mvit_trainer': mvit_trainer.train,
+    'vetr_trainer': vetr_trainer.train,
+    'vetr_roi_trainer': vetr_roi_trainer.train,
+    'vivit_trainer': vivit_trainer.train,
+    'vivit_timer': vivit_timer.timeit,
+    'avit_trainer': avit_trainer.train,
+    'seg_diff_trainer': seg_diff_trainer.train,
+}
+
+
+def get_trainer(train_fn_name):
+  """Get the corresponding trainer function.
+
+  The returned train function has the following API:
+  ```
+    train_state, train_summary, eval_summary = train_fn(
+      rng, model_cls, dataset, config, workdir, summary_writer)
+  ```
+  Where the train_state is a checkpointable state of training and train_summary,
+  and eval_summary are python dictionary that contains metrics.
+
+  Args:
+    train_fn_name: str; Name of the train_fn_name, e.g.
+      'classification_trainer'.
+
+  Returns:
+    The train function.
+  Raises:
+    ValueError if train_fn_name is unrecognized.
+  """
+  if train_fn_name in PROJECTS_TRAINERS:
+    return PROJECTS_TRAINERS[train_fn_name]
+
+  if train_fn_name not in ALL_TRAINERS.keys():
+    raise ValueError('Unrecognized trainer: {}'.format(train_fn_name))
+  return ALL_TRAINERS[train_fn_name]

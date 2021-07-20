@@ -1,0 +1,69 @@
+"""Data generators for Scenic."""
+
+import functools
+
+from scenic.dataset_lib import cifar10_dataset
+from scenic.dataset_lib import cityscapes_dataset
+from scenic.dataset_lib import clevr_dataset
+from scenic.dataset_lib import fashion_mnist_dataset
+from scenic.dataset_lib import imagenet_dataset
+from scenic.dataset_lib import mnist_dataset
+from scenic.dataset_lib import oxford_pets_dataset
+from scenic.dataset_lib import svhn_dataset
+
+
+from scenic.projects.detr import input_pipeline_detection as detr_detection
+from scenic.projects.detr import input_pipeline_panoptic as detr_panoptic
+from scenic.projects.layout_vit.datasets import uicomplete_dataset
+from scenic.projects.vit_plus import input_pipeline_detection as vitplus_detection
+
+ALL_DATASETS = {
+    'mnist':
+        mnist_dataset.get_dataset,
+    'imagenet':
+        imagenet_dataset.get_dataset,
+    'imagenet21k':
+        imagenet21k_dataset.get_dataset,
+    'cifar10':
+        cifar10_dataset.get_dataset,
+    'fashion_mnist':
+        fashion_mnist_dataset.get_dataset,
+    'svhn':
+        svhn_dataset.get_dataset,
+    'clevr_count_all':
+        functools.partial(clevr_dataset.get_dataset, task='count_all'),
+    'clevr_count_cylinders':
+        functools.partial(clevr_dataset.get_dataset, task='count_cylinders'),
+    'clevr_closest_object_distance':
+        functools.partial(
+            clevr_dataset.get_dataset, task='closest_object_distance'),
+    'cityscapes':
+        cityscapes_dataset.get_dataset,
+    'oxford_pets':
+        oxford_pets_dataset.get_dataset,
+    'uicomplete':
+        uicomplete_dataset.get_dataset,
+    'coco_detr_detection':
+        detr_detection.get_dataset,
+    'coco_detr_panoptic':
+        detr_panoptic.get_dataset,
+    'vitplus_detection':
+        vitplus_detection.get_dataset,
+}
+
+DO_NOT_RUN_GENERAL_DATASET_TESTS = [
+]
+
+
+def get_dataset(dataset_name):
+  """Maps dataset name to a dataset_builder.
+
+  Args:
+    dataset_name: string; Name of the dataset.
+
+  Returns:
+    A dataset builder.
+  """
+  if dataset_name not in ALL_DATASETS.keys():
+    raise ValueError('Unrecognized dataset: {}'.format(dataset_name))
+  return ALL_DATASETS[dataset_name]
