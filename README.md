@@ -41,7 +41,6 @@ were either developed using Scenic, or have been reimplemented in Scenic:
 
 ### Published papers using *Scenic*
 * [ViViT: A Video Vision Transformer](https://arxiv.org/abs/2103.15691)
-[//]: # (* [Long Range Arena: A Benchmark for Efficient Transformers](https://arxiv.org/pdf/2011.04006.pdf))
 * [OmniNet: Omnidirectional Representations from Transformers](https://arxiv.org/abs/2103.01075)
 * [TokenLearner: What Can 8 Learned Tokens Do for Images and Videos?](https://arxiv.org/abs/2106.11297)
 * [Attention Bottlenecks for Multimodal Fusion](https://arxiv.org/abs/2107.00135)
