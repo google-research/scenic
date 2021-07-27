@@ -843,7 +843,8 @@ def dice_loss(inputs: jnp.ndarray,
   # Downsample targets to match prediction:
   # TODO(mjlm): Check if it would be better to upsample predictions.
   # For now, we downsample targets to save memory.
-  targets = jax.image.resize(targets, shape=[b, m, h, w], method=interpolation)
+  targets = jax.image.resize(
+      targets, shape=[b, m, h, w], method=interpolation, antialias=True)
 
   # TODO(mjlm): Also try softmax instead of sigmoid:
   # As in MaX-DeepLab:
