@@ -83,6 +83,19 @@ def train_step(
     Updated state of training, computed metrics, and learning rate for logging.
   """
   new_rng, rng = jax.random.split(train_state.rng)
+
+  if config.get('mixup') and config.mixup.alpha:
+    mixup_rng, rng = jax.random.split(rng, 2)
+    mixup_rng = train_utils.bind_rng_to_host_device(
+        mixup_rng,
+        axis_name='batch',
+        bind_to=config.mixup.get('bind_to', 'device'))
+    batch = dataset_utils.mixup(
+        batch,
+        config.mixup.alpha,
+        config.mixup.get('image_format', 'NHWC'),
+        rng=mixup_rng)
+
   # Bind the rng to the host/device we are on.
   dropout_rng = train_utils.bind_rng_to_host_device(
       rng, axis_name='batch', bind_to='device')
