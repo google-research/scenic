@@ -34,7 +34,7 @@ setup(
     author_email="no-reply@google.com",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    url="http://github.com/google-research/Scenic",
+    url="http://github.com/google-research/scenic",
     license="Apache 2.0",
     packages=find_packages(),
     include_package_data=True,
