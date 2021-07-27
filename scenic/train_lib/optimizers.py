@@ -14,9 +14,9 @@
 
 """Defines different optimizers."""
 
+import dataclasses
 from typing import Any, Callable, Generator, List, Tuple
 
-import dataclasses
 import flax
 from flax import optim as optimizers
 import jax

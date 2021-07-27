@@ -81,8 +81,10 @@ def resize_pil(image_or_batch: np.ndarray,
     resample = Image.BILINEAR
   elif method == 'nearest':
     resample = Image.NEAREST
+  elif method == 'lanczos':
+    resample = Image.LANCZOS
   else:
-    NotImplementedError(f'Method not implemented: {method}')
+    raise NotImplementedError(f'Method not implemented: {method}')
 
   batch_dims = image_or_batch.shape[:num_batch_dims]
   image_dims = image_or_batch.shape[num_batch_dims:]

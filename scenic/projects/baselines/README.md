@@ -43,11 +43,11 @@ start the training. Baselines make use of Scenic's default binary `main.py`.
 ## Getting started
 The best way to get started is to train a model yourself!
 
-Here's how you can train a ViT (small) model on ImageNet-21k:
+Here's how you can train a ViT model on ImageNet:
 
 ```
 python main.py -- \
-  --config=projects/baselines/configs/imagenet21k/imagenet21k_vit_small_config.py \
+  --config=projects/baselines/configs/imagenet/imagenet_vit_config.py \
   --workdir=./
 ```
 

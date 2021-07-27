@@ -14,11 +14,11 @@
 
 """Tests for masked layers."""
 
+import dataclasses
 from typing import Any, Callable, Dict, Sequence, Tuple, Type, Union
 
 from absl.testing import absltest
 from absl.testing import parameterized
-import dataclasses
 import flax.linen as nn
 from jax import random
 import jax.numpy as jnp

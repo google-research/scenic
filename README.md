@@ -118,12 +118,13 @@ cd scenic
 pip install .
 ```
 
-and run training for ViT-S/16 on ImageNet-21k
+and run training for ViT on ImageNet:
 
 ```
 python main.py -- \
-  --config=projects/baselines/configs/imagenet21k/imagenet21k_vit_small_config.py \
+  --config=projects/baselines/configs/imagenet/imagenet_vit_config.py \
   --workdir=./
 ```
 
 _Disclaimer: This is not an official Google product._
+
