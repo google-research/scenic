@@ -1,4 +1,4 @@
-## What is **Scenic**?
+# Scenic
 
 *Scenic* is a codebase with a focus on research around attention-based models
 for computer vision. Scenic has been successfully used to develop
@@ -11,10 +11,10 @@ multi-host) vision models; and (ii) a number of *projects* containing fully
 fleshed out problem-specific training and evaluation loops using these
 libraries.
 
-Scenic is developed in JAX and uses
+Scenic is developed in [JAX](https://github.com/google/jax) and uses
 [Flax](https://github.com/google/flax).
 
-### What we offer
+## What we offer
 Among others *Scenic* provides
 
 * Boilerplate code for launching experiments, summary writing, logging,
@@ -24,33 +24,14 @@ Among others *Scenic* provides
 * Input-pipelines for popular vision datasets;
 * Baseline models, including strong non-attentional baselines.
 
-Furthermore, a core of active users / Scenic owners
-
-* Ensures that the code and (selected) models remain well-tested, correct and
-  efficient. Scenic implementations are carefully chosen and optimised for TPUs.
-* Helps setting up new projects.
-* Is available to provide tips and pointers via code reviews.
-* Offers an easy vehicle for open sourcing. *Scenic* is (almost) open source.
-  This makes open sourcing projects within *Scenic* especially easy.
-
 
 ## Papers using *Scenic*
 Scenic can be used to reproduce the results from the following papers, which
 were either developed using Scenic, or have been reimplemented in Scenic:
 
-
-### Published papers using *Scenic*
-* [ViViT: A Video Vision Transformer](https://arxiv.org/abs/2103.15691)
-* [OmniNet: Omnidirectional Representations from Transformers](https://arxiv.org/abs/2103.01075)
-* [TokenLearner: What Can 8 Learned Tokens Do for Images and Videos?](https://arxiv.org/abs/2106.11297)
-* [Attention Bottlenecks for Multimodal Fusion](https://arxiv.org/abs/2107.00135)
-
-
-### Papers re-implemented in *Scenic*
 * [An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929)
 * [MLP-Mixer: An all-MLP Architecture for Vision](https://arxiv.org/abs/2105.01601)
 * [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385)
-* [End-to-End Object Detection with Transformers](https://arxiv.org/abs/2005.12872)
 * [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597)
 
 
@@ -101,12 +82,10 @@ configs for an existing model to redefining models, training loop, logging, etc.
 * See `projects/baselines/README.md` for a walk-through baseline models and
   instructions on how to run the code.
 * If you would like to to contribute to *Scenic*, please check out the
-  [Philisophy](#philosophy) and [Code structure](#code_structure) sections.
-  Should your contribution be a part of the shared libraries, come talk to us
-  and / or send us a CL.
-* Ready to start hosting your project within *Scenic*? Send us a CL creating the
-  project directory. It should specify the OWNERS of the project and contain a
-  README.
+  [Philisophy](#philosophy), [Code structure](#code_structure) and
+  [Contributing](CONTRIBUTING.md) sections.
+  Should your contribution be a part of the shared libraries, please send us a
+  pull request!
 
 
 ### Quick start

@@ -4,7 +4,7 @@ Scenic is a platform used for developing new methods and ideas by Google
 researchers, mostly around attention-based models for computer vision or
 multi-modal applications. We encourage forking the repository and continued
 development. We welcome suggestions and contributions to improving Scenic.
-There are  a few small guidelines you need to follow.
+There are a few small guidelines you need to follow.
 
 ## Contributor License Agreement
 
