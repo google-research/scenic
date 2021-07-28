@@ -63,8 +63,8 @@ def get_config():
   config.data_dtype_str = 'float32'
 
   # Logging.
-  config.write_summary = True  # write TB and/or XM summary
-  config.write_xm_measurements = True  # write XM measurements
+  config.write_summary = True  # Write TB and/or XM summary
+  config.write_xm_measurements = True  # Write XM measurements
   config.xprof = True  # Profile using xprof
   config.checkpoint = True  # do checkpointing
   config.debug_train = False  # debug mode during training
