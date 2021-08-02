@@ -18,12 +18,12 @@ def get_config(runlocal=''):
 
   config = ml_collections.ConfigDict()
   config.experiment_name = 'imagenet-vit'
-  # dataset
+  # Dataset.
   config.dataset_name = 'imagenet'
   config.data_dtype_str = 'float32'
   config.dataset_configs = ml_collections.ConfigDict()
 
-  # model
+  # Model.
   config.model_name = 'vit_multilabel_classification'
   config.model = ml_collections.ConfigDict()
   config.model.hidden_size = 768
@@ -38,7 +38,7 @@ def get_config(runlocal=''):
   config.model.dropout_rate = 0.1
   config.model_dtype_str = 'float32'
 
-  # training
+  # Training.
   config.trainer_name = 'fewshot_trainer'
   config.optimizer = 'adam'
   config.optimizer_configs = ml_collections.ConfigDict()
@@ -55,7 +55,7 @@ def get_config(runlocal=''):
   config.rng_seed = 42
   config.init_head_bias = -10.0
 
-  # learning rate
+  # Learning rate.
   steps_per_epoch = _IMAGENET_TRAIN_SIZE // config.batch_size
   total_steps = config.num_training_epochs * steps_per_epoch
   base_lr = 3e-3
@@ -67,7 +67,7 @@ def get_config(runlocal=''):
   config.lr_configs.warmup_steps = 10_000
   config.lr_configs.base_learning_rate = base_lr
 
-  # logging
+  # Logging.
   config.write_summary = True  # write TB and/or XM summary
   config.write_xm_measurements = True  # write XM measurements
   config.xprof = True  # Profile using xprof

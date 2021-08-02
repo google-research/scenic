@@ -21,7 +21,7 @@ def get_config(runlocal=''):
 
   config = ml_collections.ConfigDict()
   config.experiment_name = 'imagenet-regularized_vit'
-  # dataset
+  # Dataset.
   config.dataset_name = 'bit'
   config.data_dtype_str = 'float32'
   config.dataset_configs = ml_collections.ConfigDict()

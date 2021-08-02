@@ -11,16 +11,16 @@ def get_config():
   """Returns the base experiment configuration for MNIST."""
   config = ml_collections.ConfigDict()
   config.experiment_name = 'mnist'
-  # dataset
+  # Dataset.
   config.dataset_name = 'mnist'
   config.dataset_configs = ml_collections.ConfigDict()
   config.data_dtype_str = 'float32'
 
-  # model
+  # Model.
   config.model_name = 'fully_connected_classification'
   config.model_dtype_str = 'float32'
   config.hid_sizes = [64, 64]
-  # training
+  # Training.
   config.trainer_name = 'classification_trainer'
 
   config.lr_configs = ml_collections.ConfigDict()
@@ -37,7 +37,7 @@ def get_config():
   config.num_training_epochs = 10
   config.batch_size = 128
   config.rng_seed = 0
-  # logging
+  # Logging.
   config.write_summary = True  # write TB and/or XM summary
   config.write_xm_measurements = True  # write XM measurements
   config.xprof = True  # Profile using xprof
