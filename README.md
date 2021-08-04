@@ -2,8 +2,8 @@
 
 *Scenic* is a codebase with a focus on research around attention-based models
 for computer vision. Scenic has been successfully used to develop
-classification, segmentation and detection models for multiple modalities
-including images, video, audio and multimodal combinations of them.
+classification, segmentation, and detection models for multiple modalities
+including images, video, audio, and multimodal combinations of them.
 
 More precisely, *Scenic* is a (i) set of shared light-weight libraries solving
 tasks commonly encountered tasks when training large-scale (i.e. multi-device,
@@ -48,34 +48,35 @@ upstreamed to Scenic's shared libraries.
 ## Code structure
 Shared libraries provided by *Scenic*  are split into:
 
-* `dataset_lib` : Implements IO pipelines for loading and pre-processing data
+* `dataset_lib`: Implements IO pipelines for loading and pre-processing data
   for common Computer Vision tasks and benchmarks. All pipelines are designed to
-  be scalable and support multi-host and multi-device setups, taking care
+  be scalable and support multi-host and multi-device setups, taking care of
   dividing data among multiple hosts, incomplete batches, caching, pre-fetching,
   etc.
-* `model_lib` : Provides (i) several abstract model interfaces (e.g.
+* `model_lib`: Provides (i) several abstract model interfaces (e.g.
   `ClassificationModel` or `SegmentationModel` in `model_lib.base_models`) with
   task-specific losses and metrics; (ii) neural network layers in
   `model_lib.layers`, focusing on efficient implementation of attention and
   transfomer layers; and (iii) accelerator-friedly implementations of bipartite
   matching algorithms in `model_lib.matchers`.
-* `train_lib` : Provides tools for constructing training loops and implements
+* `train_lib`: Provides tools for constructing training loops and implements
   several example trainers (classification trainer and segmentation trainer).
-* `common_lib` : Utilities that do not belong anywhere else.
+* `common_lib`: Utilities that do not belong anywhere else.
 
 
 ### Projects
 Models built on top of *Scenic* exist as separate projects. Model-specific code
-such as configs, layers, losses, networks or training and evaluation loops exist
-as a seprate project.
+such as configs, layers, losses, network architectures, or training and
+evaluation loops exist as separate projects.
 
 Common baselines such as a ResNet or a Visual Transformer (ViT) are implemented
 in the `projects/baselines` project. Forking this directory is a good starting
 point for new projects.
 
-There is no one-fits-all recipe for how much code should be re-used by project.
-Project can fall anywhere on the wide spectrum of code re-use: from defining new
-configs for an existing model to redefining models, training loop, logging, etc.
+There is no one-fits-all recipe for how much code should be re-used by projects.
+Projects can fall anywhere on the wide spectrum of code re-use: from defining
+new configs for an existing model to redefining models, training loop, logging,
+etc.
 
 
 ## Getting started
@@ -89,7 +90,7 @@ configs for an existing model to redefining models, training loop, logging, etc.
 
 
 ### Quick start
-Checkout the code from Github
+Download the code from GitHub
 
 ```
 git clone https://github.com/google-research/scenic.git
@@ -106,4 +107,3 @@ python main.py -- \
 ```
 
 _Disclaimer: This is not an official Google product._
-
