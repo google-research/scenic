@@ -67,7 +67,7 @@ def apply_weights(output: jnp.ndarray, weights: jnp.ndarray) -> jnp.ndarray:
       weights,
       shape=desired_weights_shape,
       broadcast_dimensions=tuple(range(weights.ndim)))
-  # scale the outputs with weights
+  # Scale the outputs with weights.
   return output * weights
 
 
@@ -133,7 +133,7 @@ def weighted_top_one_correctly_classified(
         (str(logits.shape), str(multi_hot_targets.shape)))
 
   top1_idx = jnp.argmax(logits, axis=-1)
-  # extracts the label at the highest logit index for each inputs
+  # Extracts the label at the highest logit index for each inputs.
   top1_correct = jnp.take_along_axis(
       multi_hot_targets, top1_idx[:, None], axis=-1)[:, 0]
   if weights is not None:
@@ -297,11 +297,11 @@ def weighted_unnormalized_softmax_cross_entropy(
         'Incorrect shapes. Got shape %s logits and %s one_hot_targets' %
         (str(logits.shape), str(one_hot_targets.shape)))
 
-  # optionally apply label smoothing
+  # Optionally apply label smoothing.
   if label_smoothing is not None:
     one_hot_targets = apply_label_smoothing(one_hot_targets, label_smoothing)
 
-  # optionally apply label weights
+  # Optionally apply label weights.
   if label_weights is not None:
     one_hot_targets *= label_weights
 
@@ -352,7 +352,7 @@ def weighted_unnormalized_sigmoid_cross_entropy(
         'Incorrect shapes. Got shape %s logits and %s multi_hot_targets' %
         (str(logits.shape), str(multi_hot_targets.shape)))
 
-  # optionally apply label smoothing
+  # Optionally apply label smoothing.
   if label_smoothing is not None:
     multi_hot_targets = apply_label_smoothing(multi_hot_targets,
                                               label_smoothing)
@@ -474,6 +474,69 @@ def weighted_l1_loss(x: jnp.ndarray,
     return abs_diff
   elif reduction == 'mean':
     return abs_diff.mean()
+
+
+############################## Regression Loss #################################
+
+
+def mean_squared_error(
+    logits: jnp.ndarray,
+    target: jnp.ndarray,
+    weights: Optional[jnp.ndarray] = None) -> jnp.ndarray:
+  """Compute weighted mean squared error given logits and targets.
+
+  Args:
+    logits: Output of model in shape [batch, ..., num_classes].
+    target: Vector of shape [batch, ..., num_heads].
+    weights: None or array of shape [batch x ...]
+      (rank of one_hot_targets -1). This is the weight to apply to the loss
+      computed for each example in the batch. Can be used to ignore padded
+      examples in the batch.
+
+  Returns:
+    The mean squared error of the examples in the given batch.
+  """
+  if logits.ndim != target.ndim:
+    raise ValueError(
+        'Incorrect shapes. Got shape %s logits and %s labels' %
+        (str(logits.shape), str(target.shape)))
+
+  error = target - logits
+  loss = jnp.square(error)
+
+  if weights is not None:
+    loss = apply_weights(loss, weights)
+  return jnp.mean(loss)
+
+
+def mean_absolute_error(
+    logits: jnp.ndarray,
+    target: jnp.ndarray,
+    weights: Optional[jnp.ndarray] = None) -> jnp.ndarray:
+  """Compute weighted mean absolute error given logits and targets.
+
+  Args:
+    logits: Output of model in shape [batch, ..., num_classes].
+    target: Vector of shape [batch, ..., num_heads].
+    weights: None or array of shape [batch x ...]
+      (rank of one_hot_targets -1). This is the weight to apply to the loss
+      computed for each example in the batch. Can be used to ignore padded
+      examples in the batch.
+
+  Returns:
+    The mean absolute error of the examples in the given batch.
+  """
+  if logits.ndim != target.ndim:
+    raise ValueError(
+        'Incorrect shapes. Got shape %s logits and %s target' %
+        (str(logits.shape), str(target.shape)))
+
+  error = target - logits
+  loss = jnp.absolute(error)
+
+  if weights is not None:
+    loss = apply_weights(loss, weights)
+  return jnp.mean(loss)
 
 
 ############################## Focal Loss ######################################
