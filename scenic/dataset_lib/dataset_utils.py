@@ -462,8 +462,8 @@ def _get_data_range(builder, split, host_id, host_count):
   # sets that would take forever.
 
   # Canonicalize read instruction `ri` to absolute one.
-  name2len = {k: v.num_examples for k, v in builder.info.splits.items()}
-  abs_ri = tfds.core.ReadInstruction.from_spec(split).to_absolute(name2len)
+  abs_ri = tfds.core.ReadInstruction.from_spec(split).to_absolute(
+      builder.info.splits)
 
   # Shard each read instruction individually. Usually there's only one, but
   # when doing things like `train[:800]+validation[:200]`, there are more.
