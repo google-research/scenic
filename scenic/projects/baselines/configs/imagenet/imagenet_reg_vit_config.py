@@ -50,12 +50,24 @@ def get_config(runlocal=''):
   config.model_name = 'vit_multilabel_classification'
   config.model = ml_collections.ConfigDict()
 
-  config.model.hidden_size = {'Ti': 192, 'S': 384, 'B': 768, 'L': 1024}[version]
+  config.model.hidden_size = {'Ti': 192,
+                              'S': 384,
+                              'B': 768,
+                              'L': 1024,
+                              'H': 1280}[version]
   config.model.patches = ml_collections.ConfigDict()
   config.model.patches.size = [int(patch), int(patch)]
-  config.model.num_heads = {'Ti': 3, 'S': 6, 'B': 12, 'L': 16}[version]
-  config.model.mlp_dim = {'Ti': 768, 'S': 1536, 'B': 3072, 'L': 4096}[version]
-  config.model.num_layers = {'Ti': 12, 'S': 12, 'B': 12, 'L': 24}[version]
+  config.model.num_heads = {'Ti': 3, 'S': 6, 'B': 12, 'L': 16, 'H': 16}[version]
+  config.model.mlp_dim = {'Ti': 768,
+                          'S': 1536,
+                          'B': 3072,
+                          'L': 4096,
+                          'H': 5120}[version]
+  config.model.num_layers = {'Ti': 12,
+                             'S': 12,
+                             'B': 12,
+                             'L': 24,
+                             'H': 32}[version]
   config.model.representation_size = None
   config.model.classifier = 'token'
   config.model.attention_dropout_rate = 0.0
@@ -64,7 +76,7 @@ def get_config(runlocal=''):
   config.model_dtype_str = 'float32'
 
   # Training.
-  config.trainer_name = 'fewshot_trainer'
+  config.trainer_name = 'classification_trainer'
   config.optimizer = 'adam'
   config.optimizer_configs = ml_collections.ConfigDict()
   config.optimizer_configs.beta1 = 0.9
