@@ -318,7 +318,7 @@ def load_split_from_tfds_builder(builder,
       base_split_name, unit='abs', from_=host_start, to=host_end)
   ds = builder.as_dataset(split=data_range, shuffle_files=False)
   options = tf.data.Options()
-  options.experimental_threading.private_threadpool_size = 48
+  options.threading.private_threadpool_size = 48
   ds = ds.with_options(options)
 
   # Applying preprocessing before `ds.cache()` to re-use it.
@@ -560,8 +560,8 @@ def make_pipeline(data,
   assert cache in ('loaded', 'batched', False, None)
 
   options = tf.data.Options()
-  options.experimental_threading.private_threadpool_size = 48
-  options.experimental_threading.max_intra_op_parallelism = 1
+  options.threading.private_threadpool_size = 48
+  options.threading.max_intra_op_parallelism = 1
   data = data.with_options(options)
 
   if cache == 'loaded':

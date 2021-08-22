@@ -74,7 +74,7 @@ def input_spec_to_jax_shape_dtype_struct(
     batch_size: Optional[int] = None) -> jax.ShapeDtypeStruct:
   """Parse an input specs into a jax.ShapeDtypeStruct."""
   spec = tuple(spec)
-  if len(spec) == 2 and isinstance(spec[0], collections.Iterable):
+  if len(spec) == 2 and isinstance(spec[0], collections.abc.Iterable):
     shape = (batch_size,) + tuple(spec[0][1:]) if batch_size else spec[0]
     dtype = spec[1]
   else:

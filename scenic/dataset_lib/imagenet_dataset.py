@@ -257,7 +257,7 @@ def imagenet_load_split(batch_size,
           'image': tfds.decode.SkipDecoding(),
       })
   options = tf.data.Options()
-  options.experimental_threading.private_threadpool_size = 48
+  options.threading.private_threadpool_size = 48
   ds = ds.with_options(options)
 
   ds = ds.cache()
