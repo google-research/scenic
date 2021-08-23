@@ -424,7 +424,7 @@ def weighted_sigmoid_cross_entropy(
     The mean cross entropy of the examples in the given batch as a scalar.
   """
   if weights is not None:
-    normalization = weights.sum()
+    normalization = weights.sum() + 1e-9
   else:
     normalization = np.prod(multi_hot_targets.shape[:-1])
 
