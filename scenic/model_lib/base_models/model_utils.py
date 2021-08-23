@@ -476,6 +476,52 @@ def weighted_l1_loss(x: jnp.ndarray,
     return abs_diff.mean()
 
 
+def weighted_box_l1_loss(
+    pred: jnp.ndarray,
+    tgt: jnp.ndarray,
+    weights: Optional[jnp.ndarray] = None,
+    reduction: Optional[str] = None,
+    inexact: bool = False) -> jnp.ndarray:
+  """L1 loss for bounding box with optional reduction specified.
+
+  Args:
+    pred: Input array of any shape.
+    tgt: Input array of shape broadcastable to that of x.
+    weights: Weights to apply to the loss.
+    reduction: Type of reduction, which is from [None, 'mean'].
+    inexact: If True, inexact loss is calculated (pred must be strictly within
+      the target).
+
+  Returns:
+    reduction(jnp.abs(src - tgt)). 'mean' reduction takes the global mean. To
+    use customized normalization use 'none' reduction and scale loss in the
+    caller.
+  """
+  if pred.shape[-1] != 4:
+    raise ValueError(
+        f'The last dimension of predicion bounding boxes shape must be 4.'
+        f' Got shape {pred.shape}.'
+    )
+  if tgt.shape[-1] != 4:
+    raise ValueError(
+        f'The last dimension of target bounding boxes shape must be 4.'
+        f' Got shape {tgt.shape}.'
+    )
+  if inexact:
+    xy1, xy2 = jnp.split(pred - tgt, 2, axis=-1)
+    xy1 = jnp.minimum(xy1, 0.)
+    xy2 = jnp.maximum(xy2, 0.)
+    abs_diff = jnp.abs(jnp.concatenate([xy1, xy2], axis=-1))
+  else:
+    abs_diff = jnp.abs(pred - tgt)
+  if weights is not None:
+    abs_diff = apply_weights(abs_diff, weights)
+  if not reduction:
+    return abs_diff
+  elif reduction == 'mean':
+    return abs_diff.mean()
+
+
 ############################## Regression Loss #################################
 
 
@@ -707,7 +753,7 @@ def box_iou(boxes1: Array,
     all_pairs: Whether to compute IoU between all pairs of boxes or not.
   Returns:
     If all_pairs == True, returns the pairwise IoU cost matrix of shape
-    [bs, n, m].  If all_pairs == False, returns the IoU between corresponding
+    [bs, n, m]. If all_pairs == False, returns the IoU between corresponding
     boxes. The shape of the return value is then [bs, n].
   """
 
@@ -800,11 +846,11 @@ def generalized_box_iou(boxes1: Array,
     rb = np_backbone.maximum(boxes1[..., :, 2:], boxes2[..., :,
                                                         2:])  # [bs, n, 2]
 
-  # now to compute the covering box's area
+  # Now to compute the covering box's area
   wh = (rb - lt).clip(0.0)  # Either [bs, n, 2] or [bs, n, m, 2]
   area = wh[..., 0] * wh[..., 1]  # Either [bs, n] or [bs, n, m]
 
-  # finally generalized IoU from IoU, union, and area
+  # Finally generalized IoU from IoU, union, and area
   # somehow the pytorch implementation does not use + 1e-6 to avoid 1/0 cases
   return iou - (area - union) / (area + 1e-6)
 
