@@ -392,6 +392,7 @@ class MlpBlock(nn.Module):
   mlp_dim: int
   out_dim: Optional[int] = None
   dropout_rate: float = 0.1
+  use_bias: bool = True
   kernel_init: Initializer = nn.initializers.xavier_uniform()
   bias_init: Initializer = nn.initializers.normal(stddev=1e-6)
   activation_fn: Callable[[jnp.ndarray], jnp.ndarray] = nn.gelu
@@ -405,6 +406,7 @@ class MlpBlock(nn.Module):
     x = nn.Dense(
         self.mlp_dim,
         dtype=self.dtype,
+        use_bias=self.use_bias,
         kernel_init=self.kernel_init,
         bias_init=self.bias_init,
         precision=self.precision)(
@@ -414,6 +416,7 @@ class MlpBlock(nn.Module):
     output = nn.Dense(
         actual_out_dim,
         dtype=self.dtype,
+        use_bias=self.use_bias,
         kernel_init=self.kernel_init,
         bias_init=self.bias_init,
         precision=self.precision)(
