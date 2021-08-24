@@ -72,7 +72,6 @@ class MixerBlock(nn.Module):
             x, deterministic=deterministic)
 
     x = jnp.swapaxes(x, 1, 2)
-    x = nn.Dropout(rate=self.dropout_rate)(x, deterministic)
     x *= 1.0 - self.get_stochastic_depth_mask(x, deterministic)
     x = self.combine_branches(x, inputs)
 
@@ -85,7 +84,6 @@ class MixerBlock(nn.Module):
         name='channel_mixing')(
             y, deterministic=deterministic)
 
-    y = nn.Dropout(rate=self.dropout_rate)(y, deterministic)
     y *= 1.0 - self.get_stochastic_depth_mask(y, deterministic)
     return self.combine_branches(y, x)
 
