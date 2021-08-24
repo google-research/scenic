@@ -204,26 +204,14 @@ class ViT(nn.Module):
   @nn.compact
   def __call__(self, x: jnp.ndarray, *, train: bool, debug: bool = False):
 
-    n, h, w, c = x.shape
-    if self.patches.get('grid') is not None:
-      gh, gw = self.patches.grid
-      fh, fw = h // gh, w // gw
-    else:
-      fh, fw = self.patches.size
-      gh, gw = h // fh, w // fw
-    if self.hidden_size:  # We can merge s2d+emb into a single conv.
-      x = nn.Conv(
-          self.hidden_size, (fh, fw),
-          strides=(fh, fw),
-          padding='VALID',
-          name='embedding')(
-              x)
-    else:
-      # This path often results in excessive padding.
-      x = jnp.reshape(x, [n, gh, fh, gw, fw, c])
-      x = jnp.transpose(x, [0, 1, 3, 2, 4, 5])
-      x = jnp.reshape(x, [n, gh, gw, -1])
-
+    fh, fw = self.patches.size
+    # Extracting patches and then embedding is in fact a single convolution.
+    x = nn.Conv(
+        self.hidden_size, (fh, fw),
+        strides=(fh, fw),
+        padding='VALID',
+        name='embedding')(
+            x)
     n, h, w, c = x.shape
     x = jnp.reshape(x, [n, h * w, c])
 
@@ -295,7 +283,7 @@ class ViTMultiLabelClassificationModel(MultiLabelClassificationModel):
                 dropout_rate=0.,
                 attention_dropout_rate=0.,
                 hidden_size=16,
-                patches={'grid': (4, 4)},
+                patches={'size': (4, 4)},
                 classifier='gap',
                 data_dtype_str='float32')
     })
