@@ -129,12 +129,14 @@ class BitResNet(nn.Module):
       lower that number by swapping strides with dilation in later stages. This
       is common in cases where stride 32 is too large, e.g., in dense prediciton
       tasks.
+    gap: When num_output's is provided, whether to do GAP before projection.
   """
 
   num_outputs: Optional[int] = 1000
   width_factor: int = 1
   num_layers: int = 50
   max_output_stride: int = 32
+  gap: bool = True  # Only used when num_outputs is provided.
 
   @nn.compact
   def __call__(self,
@@ -192,7 +194,8 @@ class BitResNet(nn.Module):
 
     if self.num_outputs:
       # Head.
-      x = jnp.mean(x, axis=(1, 2))
+      if self.gap:
+        x = jnp.mean(x, axis=(1, 2))
       x = nn_layers.IdentityLayer(name='pre_logits')(x)
       x = nn.Dense(
           self.num_outputs,
