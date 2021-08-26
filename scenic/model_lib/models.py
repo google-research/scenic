@@ -20,6 +20,7 @@ from scenic.model_lib.base_models import base_model
 from scenic.projects.baselines import axial_resnet
 from scenic.projects.baselines import bit_resnet
 from scenic.projects.baselines import fully_connected
+from scenic.projects.baselines import hybrid_vit
 from scenic.projects.baselines import mixer
 from scenic.projects.baselines import resnet
 from scenic.projects.baselines import simple_cnn
@@ -45,6 +46,8 @@ CLASSIFICATION_MODELS = {
         bit_resnet.BitResNetMultiLabelClassificationModel,
     'vit_multilabel_classification':
         vit.ViTMultiLabelClassificationModel,
+    'hybrid_vit_multilabel_classification':
+        hybrid_vit.HybridViTMultiLabelClassificationModel,
     'mixer_multilabel_classification':
         mixer.MixerMultiLabelClassificationModel,
 }
