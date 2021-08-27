@@ -476,6 +476,57 @@ def weighted_l1_loss(x: jnp.ndarray,
     return abs_diff.mean()
 
 
+def weighted_box_l1_loss(
+    pred: jnp.ndarray,
+    tgt: jnp.ndarray,
+    weights: Optional[jnp.ndarray] = None,
+    reduction: Optional[str] = None,
+    tight: bool = True,
+) -> jnp.ndarray:
+  """L1 loss for bounding box with optional reduction specified.
+
+  Args:
+    pred: Prediction boxes of shape (..., 4), where the last dimension has form
+        (x_min, y_min, x_max, y_max).
+    tgt: Target boxes of shape (..., 4), where the last dimension has form
+        (x_min, y_min, x_max, y_max).
+    weights: Weights to apply to the loss.
+    reduction: Type of reduction, which is from [None, 'mean'].
+    tight: If True, returns the vanilla L1 loss on the bounding box coordinates.
+        If False, returns loose bounding-box L1 loss, where prediction edges
+        only generate loss when they stretch outside the target box, but not
+        when they are within it.
+
+  Returns:
+    reduction(jnp.abs(src - tgt)). 'mean' reduction takes the global mean. To
+    use customized normalization use 'none' reduction and scale loss in the
+    caller.
+  """
+  if pred.shape[-1] != 4:
+    raise ValueError(
+        f'The last dimension of the prediction boxes must be 4.'
+        f' Got shape {pred.shape}.'
+    )
+  if tgt.shape[-1] != 4:
+    raise ValueError(
+        f'The last dimension of the target boxes must be 4.'
+        f' Got shape {tgt.shape}.'
+    )
+  if tight:
+    abs_diff = jnp.abs(pred - tgt)
+  else:
+    xy1, xy2 = jnp.split(pred - tgt, 2, axis=-1)
+    xy1 = jnp.minimum(xy1, 0.)
+    xy2 = jnp.maximum(xy2, 0.)
+    abs_diff = jnp.abs(jnp.concatenate([xy1, xy2], axis=-1))
+  if weights is not None:
+    abs_diff = apply_weights(abs_diff, weights)
+  if not reduction:
+    return abs_diff
+  elif reduction == 'mean':
+    return abs_diff.mean()
+
+
 ############################## Regression Loss #################################
 
 
@@ -707,11 +758,11 @@ def box_iou(boxes1: Array,
     all_pairs: Whether to compute IoU between all pairs of boxes or not.
   Returns:
     If all_pairs == True, returns the pairwise IoU cost matrix of shape
-    [bs, n, m].  If all_pairs == False, returns the IoU between corresponding
+    [bs, n, m]. If all_pairs == False, returns the IoU between corresponding
     boxes. The shape of the return value is then [bs, n].
   """
 
-  # first compute box areas. These will be used later for computing the union
+  # First, compute box areas. These will be used later for computing the union.
   wh1 = boxes1[..., 2:] - boxes1[..., :2]
   area1 = wh1[..., 0] * wh1[..., 1]  # [bs, n]
 
@@ -719,8 +770,8 @@ def box_iou(boxes1: Array,
   area2 = wh2[..., 0] * wh2[..., 1]  # [bs, m]
 
   if all_pairs:
-    # compute pairwise top-left and bottom-right corners of the intersection
-    # of the boxes
+    # Compute pairwise top-left and bottom-right corners of the intersection
+    # of the boxes.
     lt = np_backbone.maximum(boxes1[..., :, None, :2],
                              boxes2[..., None, :, :2])  # [bs, n, m, 2].
     rb = np_backbone.minimum(boxes1[..., :, None, 2:],
@@ -736,8 +787,8 @@ def box_iou(boxes1: Array,
     iou = intersection / (union + 1e-6)
 
   else:
-    # compute top-left and bottom-right corners of the intersection between
-    # corresponding boxes
+    # Compute top-left and bottom-right corners of the intersection between
+    # corresponding boxes.
     assert boxes1.shape[1] == boxes2.shape[1], (
         'Different number of boxes when all_pairs is False')
     lt = np_backbone.maximum(boxes1[..., :, :2],
@@ -752,7 +803,7 @@ def box_iou(boxes1: Array,
     # union = sum of areas - intersection.
     union = area1 + area2 - intersection
 
-    # somehow the pytorch implementation does not use + 1e-6 to avoid 1/0 cases
+    # Somehow the PyTorch implementation does not use +1e-6 to avoid 1/0 cases.
     iou = intersection / (union + 1e-6)
 
   return iou, union
@@ -778,16 +829,16 @@ def generalized_box_iou(boxes1: Array,
     If all_pairs == True, returns a [bs, n, m] pairwise matrix, of generalized
     ious. If all_pairs == False, returns a [bs, n] matrix of generalized ious.
   """
-  # degenerate boxes gives inf / nan results, so do an early check
+  # Degenerate boxes gives inf / nan results, so do an early check.
   # TODO(b/166344282): Figure out how to enable asserts on inputs with jitting:
-  #  assert (boxes1[:, :, 2:] >= boxes1[:, :, :2]).all()
-  #  assert (boxes2[:, :, 2:] >= boxes2[:, :, :2]).all()
+  # assert (boxes1[:, :, 2:] >= boxes1[:, :, :2]).all()
+  # assert (boxes2[:, :, 2:] >= boxes2[:, :, :2]).all()
   iou, union = box_iou(
       boxes1, boxes2, np_backbone=np_backbone, all_pairs=all_pairs)
 
-  # generalized iou has an extra term which takes into account the area of
+  # Generalized IoU has an extra term which takes into account the area of
   # the box containing both of these boxes. The following code is very similar
-  # to that for computing intersection but the min-max are flipped
+  # to that for computing intersection but the min and max are flipped.
   if all_pairs:
     lt = np_backbone.minimum(boxes1[..., :, None, :2],
                              boxes2[..., None, :, :2])  # [bs, n, m, 2]
@@ -800,12 +851,12 @@ def generalized_box_iou(boxes1: Array,
     rb = np_backbone.maximum(boxes1[..., :, 2:], boxes2[..., :,
                                                         2:])  # [bs, n, 2]
 
-  # now to compute the covering box's area
-  wh = (rb - lt).clip(0.0)  # Either [bs, n, 2] or [bs, n, m, 2]
-  area = wh[..., 0] * wh[..., 1]  # Either [bs, n] or [bs, n, m]
+  # Now, compute the covering box's area.
+  wh = (rb - lt).clip(0.0)  # Either [bs, n, 2] or [bs, n, m, 2].
+  area = wh[..., 0] * wh[..., 1]  # Either [bs, n] or [bs, n, m].
 
-  # finally generalized IoU from IoU, union, and area
-  # somehow the pytorch implementation does not use + 1e-6 to avoid 1/0 cases
+  # Finally, compute generalized IoU from IoU, union, and area.
+  # Somehow the PyTorch implementation does not use +1e-6 to avoid 1/0 cases.
   return iou - (area - union) / (area + 1e-6)
 
 

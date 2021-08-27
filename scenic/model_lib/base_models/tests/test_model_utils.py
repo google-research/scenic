@@ -256,13 +256,31 @@ class LossTest(parameterized.TestCase):
 
     out1 = model_utils.weighted_l1_loss(x, y, reduction=None)
     out1_target = jnp.array([[0.4, 1.6], [1.9, 1.0]], dtype=jnp.float32)
-
-    self.assertSequenceAlmostEqual(out1.flatten(), out1_target.flatten(),
-                                   places=5)
+    self.assertSequenceAlmostEqual(
+        out1.flatten(), out1_target.flatten(), places=5)
 
     out2 = model_utils.weighted_l1_loss(x, y, reduction='mean').item()
-    out2_target = 4.9 / 4.0
+    out2_target = 4.9 / 4
     self.assertAlmostEqual(out2, out2_target, places=5)
+
+  def test_weighted_box_l1_loss(self):
+    """Test weighted_box_l1_loss against manually specified targets."""
+    x1 = jnp.array([[0.1, 0.3, 0.9, 0.8]], dtype=jnp.float32)
+    y1 = jnp.array([[0.5, 0.1, 0.9, 0.7]], dtype=jnp.float32)
+
+    out1 = model_utils.weighted_box_l1_loss(x1, y1)
+    out1_target = jnp.array([[0.4, 0.2, 0, 0.1]], dtype=jnp.float32)
+    self.assertSequenceAlmostEqual(
+        out1.flatten(), out1_target.flatten(), places=5)
+
+    out2 = model_utils.weighted_box_l1_loss(x1, y1, reduction='mean').item()
+    out2_target = jnp.mean(out1_target).item()
+    self.assertAlmostEqual(out2, out2_target, places=5)
+
+    out3 = model_utils.weighted_box_l1_loss(x1, y1, tight=False)
+    out3_target = jnp.array([[0.4, 0.0, 0.0, 0.1]], dtype=jnp.float32)
+    self.assertSequenceAlmostEqual(
+        out3.flatten(), out3_target.flatten(), places=5)
 
   def test_weighted_unnormalized_sigmoid_cross_entropy(self):
     """Tests weighted_unnormalized_sigmoid_cross_entropy."""
