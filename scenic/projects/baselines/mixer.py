@@ -1,6 +1,6 @@
 """Implementation of MLP-Mixer model."""
 
-from typing import Sequence
+from typing import Optional, Sequence
 
 import flax.linen as nn
 import jax
@@ -19,6 +19,8 @@ class MixerBlock(nn.Module):
     sequence_mlp_dim: Hidden dimension of the token (sequence) mixing MLP.
     dropout_rate: Dropout rate.
     stochastic_depth: The layer dropout rate (= stochastic depth).
+    layer_scale: The scalar value used to initialise layer_scale. If None,
+      layer_scale is not used.
 
   Returns:
     Output after mixer block.
@@ -27,6 +29,7 @@ class MixerBlock(nn.Module):
   sequence_mlp_dim: int
   dropout_rate: float = 0.0
   stochastic_depth: float = 0.0
+  layer_scale: Optional[float] = None
 
   def get_stochastic_depth_mask(self, x: jnp.ndarray,
                                 deterministic: bool) -> jnp.ndarray:
@@ -60,6 +63,10 @@ class MixerBlock(nn.Module):
     if inputs.ndim != 3:
       raise ValueError('Input should be of shape `[batch, tokens, channels]`.')
 
+    if self.layer_scale is not None:
+      layerscale_init = nn_layers.get_constant_initializer(
+          self.layer_scale)
+
     # Token mixing part, provides between-patches communication.
     x = nn.LayerNorm()(inputs)
     x = jnp.swapaxes(x, 1, 2)
@@ -70,6 +77,8 @@ class MixerBlock(nn.Module):
         activation_fn=nn.gelu,
         name='token_mixing')(
             x, deterministic=deterministic)
+    if self.layer_scale is not None:
+      x = nn_layers.Affine(scale_init=layerscale_init, use_bias=False)(x)
 
     x = jnp.swapaxes(x, 1, 2)
     x *= 1.0 - self.get_stochastic_depth_mask(x, deterministic)
@@ -83,6 +92,8 @@ class MixerBlock(nn.Module):
         activation_fn=nn.gelu,
         name='channel_mixing')(
             y, deterministic=deterministic)
+    if self.layer_scale is not None:
+      x = nn_layers.Affine(scale_init=layerscale_init, use_bias=False)(x)
 
     y *= 1.0 - self.get_stochastic_depth_mask(y, deterministic)
     return self.combine_branches(y, x)
@@ -110,6 +121,7 @@ class Mixer(nn.Module):
   sequence_mlp_dim: int
   dropout_rate: float = 0.0
   stochastic_depth: float = 0.0
+  layer_scale: Optional[float] = None
 
   @nn.compact
   def __call__(self,
@@ -134,6 +146,7 @@ class Mixer(nn.Module):
           sequence_mlp_dim=self.sequence_mlp_dim,
           dropout_rate=self.dropout_rate,
           stochastic_depth=p,
+          layer_scale=self.layer_scale,
           name=f'mixerblock_{i}')(
               x, deterministic=not train)
     x = nn.LayerNorm(name='pre_logits_norm')(x)
@@ -160,6 +173,7 @@ class MixerMultiLabelClassificationModel(MultiLabelClassificationModel):
         sequence_mlp_dim=self.config.model.sequence_mlp_dim,
         dropout_rate=self.config.model.get('dropout_rate', 0.1),
         stochastic_depth=self.config.model.get('stochastic_depth', 0.0),
+        layer_scale=self.config.model.get('layer_scale', None)
     )
 
   def default_flax_model_config(self) -> ml_collections.ConfigDict:

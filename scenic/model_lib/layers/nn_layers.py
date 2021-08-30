@@ -14,10 +14,16 @@
 
 """Common neural network modules."""
 
+from typing import Callable, Iterable
+
 import flax.linen as nn
 import jax
 from jax.nn import initializers
 import jax.numpy as jnp
+import numpy as np
+
+# Inputs are PRNGKey, input shape and dtype.
+Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
 
 
 class Residual(nn.Module):
@@ -184,3 +190,38 @@ class IdentityLayer(nn.Module):
   @nn.compact
   def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
     return x
+
+
+def get_constant_initializer(constant: float) -> Initializer:
+  """Returns an initializer that initializes everything to a given constant."""
+
+  def init_fn(unused_key: jnp.ndarray,
+              shape: Iterable[int],
+              dtype: jnp.dtype = np.float32) -> np.ndarray:
+    return constant * np.ones(shape, dtype=dtype)
+
+  return init_fn
+
+
+class Affine(nn.Module):
+  """Affine transformation layer.
+
+  Described in:
+  Touvron et al, "ResMLP: Feedforward networks for image classification
+  with data-efficient training", 2021.
+
+  Performs an affine transformation on the final dimension of the input tensor.
+  """
+  bias_init: Initializer = nn.initializers.zeros
+  scale_init: Initializer = nn.initializers.ones
+  use_bias: bool = True
+
+  @nn.compact
+  def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
+    n = x.shape[-1]
+    scale = self.param('scale', self.scale_init, (n,))
+    if self.use_bias:
+      bias = self.param('bias', self.bias_init, (n,))
+    else:
+      bias = 0.0
+    return scale * x + bias

@@ -23,8 +23,9 @@ class MixerTest(parameterized.TestCase):
       ('with_dropout_without_stochastic_depth', 0.1, 0.0),
       ('without_dropout_with_stochastic_depth', 0.0, 0.1),
       ('with_dropout_with_stochastic_depth', 0.1, 0.1),
+      ('with_dropout_stochastic_depth_layer_scale', 0.1, 0.1, 0.1)
   )
-  def test_mixer_block(self, dropout_rate, stochastic_depth):
+  def test_mixer_block(self, dropout_rate, stochastic_depth, layer_scale=None):
     """Tests MixerBlock."""
     rng = random.PRNGKey(0)
     x = jnp.ones((4, 16, 32))
@@ -33,7 +34,8 @@ class MixerTest(parameterized.TestCase):
         channels_mlp_dim=32,
         sequence_mlp_dim=32,
         dropout_rate=dropout_rate,
-        stochastic_depth=stochastic_depth)
+        stochastic_depth=stochastic_depth,
+        layer_scale=layer_scale)
     mixer_block_vars = mixer_block().init(rng, x, deterministic=True)
     y = mixer_block().apply(mixer_block_vars, x, deterministic=True)
     # Test outputs shape.
