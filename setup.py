@@ -29,7 +29,7 @@ tests_require = [
 setup(
     name="scenic",
     version="0.0.1",
-    description=("A Jax Library for Computer Vision Research & Applications."),
+    description=("A Jax Library for Computer Vision Research and Beyond."),
     author="Scenic Authors",
     author_email="no-reply@google.com",
     long_description=open("README.md").read(),
