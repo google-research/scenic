@@ -77,10 +77,10 @@ class MixerBlock(nn.Module):
         activation_fn=nn.gelu,
         name='token_mixing')(
             x, deterministic=deterministic)
+    x = jnp.swapaxes(x, 1, 2)
     if self.layer_scale is not None:
       x = nn_layers.Affine(scale_init=layerscale_init, use_bias=False)(x)
 
-    x = jnp.swapaxes(x, 1, 2)
     x *= 1.0 - self.get_stochastic_depth_mask(x, deterministic)
     x = self.combine_branches(x, inputs)
 
