@@ -311,7 +311,9 @@ def load_split_from_tfds_builder(builder,
   augment_train_example = augment_train_example or (lambda ex: ex)
   shuffle_buffer_size = shuffle_buffer_size  or (8 * batch_size)
 
-  # Each host is responsible for a fixed subset of data/
+  # Download dataset:
+  builder.download_and_prepare()
+  # Each host is responsible for a fixed subset of data.
   base_split_name, host_start, host_end = get_data_range(
       builder, split, jax.process_index(), jax.process_count())
   data_range = tfds.core.ReadInstruction(

@@ -101,8 +101,8 @@ pip install .
 and run training for ViT on ImageNet:
 
 ```
-python main.py -- \
-  --config=projects/baselines/configs/imagenet/imagenet_vit_config.py \
+python scenic/main.py -- \
+  --config=scenic/projects/baselines/configs/imagenet/imagenet_vit_config.py \
   --workdir=./
 ```
 

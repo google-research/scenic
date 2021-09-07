@@ -28,6 +28,7 @@ import tensorflow_datasets as tfds
 
 TRAIN_IMAGES = 1281167
 EVAL_IMAGES = 50000
+NUM_CLASSES = 1000
 
 IMAGE_SIZE = 224
 CROP_PADDING = 32
@@ -249,11 +250,11 @@ def imagenet_load_split(batch_size,
       image = preprocess_for_eval(example['image'], dtype, image_size)
     return {'inputs': image, 'label': example['label']}
 
-  ds, ds_info = tfds.load(
-      'imagenet2012:5.*.*',
-      split=split,
-      with_info=True,
-      decoders={
+  dataset_builder = tfds.builder('imagenet2012:5.*.*')
+  # Download dataset:
+  builder.download_and_prepare()
+  ds = dataset_builder.as_dataset(
+      split=split, decoders={
           'image': tfds.decode.SkipDecoding(),
       })
   options = tf.data.Options()
@@ -274,7 +275,7 @@ def imagenet_load_split(batch_size,
     ds = ds.repeat()
 
   ds = ds.prefetch(prefetch_buffer_size)
-  return ds, ds_info
+  return ds
 
 
 @datasets.add_dataset('imagenet')
@@ -317,7 +318,7 @@ def get_dataset(*,
   dtype = getattr(tf, dtype_str)
 
   logging.info('Loading train split of the ImageNet dataset.')
-  train_ds, ds_info = imagenet_load_split(
+  train_ds = imagenet_load_split(
       batch_size,
       train=True,
       dtype=dtype,
@@ -334,7 +335,7 @@ def get_dataset(*,
     train_ds = dataset_utils.distribute(train_ds, dataset_service_address)
 
   logging.info('Loading test split of the ImageNet dataset.')
-  eval_ds, _ = imagenet_load_split(eval_batch_size, train=False, dtype=dtype)
+  eval_ds = imagenet_load_split(eval_batch_size, train=False, dtype=dtype)
 
   maybe_pad_batches_train = functools.partial(
       dataset_utils.maybe_pad_batch, train=True, batch_size=batch_size)
@@ -354,11 +355,10 @@ def get_dataset(*,
   eval_iter = map(shard_batches, eval_iter)
   eval_iter = jax_utils.prefetch_to_device(eval_iter, prefetch_buffer_size)
 
-  num_classes = ds_info.features['label'].num_classes
   input_shape = (-1, IMAGE_SIZE, IMAGE_SIZE, 3)
 
   meta_data = {
-      'num_classes': num_classes,
+      'num_classes': NUM_CLASSES,
       'input_shape': input_shape,
       'num_train_examples': TRAIN_IMAGES,
       'num_eval_examples': EVAL_IMAGES,

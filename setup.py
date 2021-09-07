@@ -44,7 +44,7 @@ setup(
         "flax",
         "ml-collections",
         "tensorflow",
-        "tensorflow-datasets",
+        "tfds-nightly",
         "ott-jax",
         "immutabledict",
         "numpy",
