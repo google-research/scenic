@@ -63,6 +63,3 @@ def get_config():
   return config
 
 
-def get_hyper(hyper):
-  """Defines the hyper-parameters sweeps for doing grid search."""
-  return hyper.product([])
