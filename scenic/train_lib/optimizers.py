@@ -14,6 +14,7 @@
 
 """Defines different optimizers."""
 
+import collections
 import dataclasses
 from typing import Any, Callable, Generator, List, Tuple
 
@@ -191,6 +192,35 @@ def tree_map_with_names(
   names_and_vals, tree_def = tree_flatten_with_names(param_tree)
   vals = [f(v) if match_name_fn(name) else v for name, v in names_and_vals]
   return tree_def.unflatten(vals)
+
+
+def recover_tree(keys: List[str], values: jnp.ndarray):
+  """Recovers a tree as a nested dict from flat names and values.
+
+  This function is useful to analyze checkpoints that are saved by our programs
+  without need to access the exact source code of the experiment. In particular,
+  it can be used to extract an reuse various subtrees of the scheckpoint, e.g.
+  subtree of parameters.
+
+  Args:
+    keys: A list of keys, where '/' is used as separator between nodes.
+    values: A list of leaf values.
+
+  Returns:
+    A nested tree-like dict.
+  """
+  tree = {}
+  sub_trees = collections.defaultdict(list)
+  for k, v in zip(keys, values):
+    if '/' not in k:
+      tree[k] = v
+    else:
+      k_left, k_right = k.split('/', 1)
+      sub_trees[k_left].append((k_right, v))
+  for k, kv_pairs in sub_trees.items():
+    k_subtree, v_subtree = zip(*kv_pairs)
+    tree[k] = recover_tree(k_subtree, v_subtree)
+  return tree
 
 
 def tree_map_with_names_values(
