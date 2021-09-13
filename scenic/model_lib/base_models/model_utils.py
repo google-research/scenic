@@ -14,6 +14,7 @@
 
 """Utilities for models."""
 
+import functools
 from typing import Optional, Any, Tuple, Union
 
 import flax.linen as nn
@@ -685,7 +686,7 @@ def focal_sigmoid_cross_entropy(
 ############################## Misc ######################################
 
 
-@jax.partial(jax.vmap, in_axes=[0, 0], out_axes=0)
+@functools.partial(jax.vmap, in_axes=[0, 0], out_axes=0)
 def simple_gather(x: jnp.ndarray, idx: jnp.ndarray) -> jnp.ndarray:
   """Gathers `x` using the indices in `idx`.
 
