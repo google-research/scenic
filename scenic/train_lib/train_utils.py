@@ -351,6 +351,107 @@ def sync_model_state_across_replicas(train_state: TrainState) -> TrainState:
     return train_state
 
 
+def accumulate_grads_microbatched(
+    compute_gradient_fn: Callable[
+        [TrainState, Dict[str, jnp.ndarray], jnp.ndarray], Tuple[Any,
+                                                                 jnp.ndarray]],
+    metrics_fn: Callable[[jnp.ndarray, Dict[str, jnp.ndarray]],
+                         Dict[str, Tuple[float, int]]], train_state: TrainState,
+    batch: Dict[str, jnp.ndarray], dropout_rng: jnp.ndarray,
+    accum_steps: Optional[int]
+) -> Tuple[Optional[jnp.ndarray], Dict[str, Tuple[float, int]], jnp.ndarray]:
+  """Accumulate gradients over multiple steps.
+
+  This enables training with larger effective batch sizes.
+  Note that currently, gradient accumulation is not supported when the
+  `model_state` is in used, e.g., for models that have batch normalization and
+  store batch statistics in the `model_state`.
+
+  Args:
+    compute_gradient_fn: Gradient function (e.g., `jax.value_and_grad(
+      training_loss_fn, ...)
+    metrics_fn: A metrics function that given logits and batch of data,
+      calculates the metrics as well as the loss.
+    train_state: An instance of TrainState that has parameters of the model,
+      state of the model, etc.
+    batch: A single batch of data. The buffer of this argument can be donated to
+      the computation.
+    dropout_rng: JAX rng key used for dropout.
+    accum_steps: Number of accumulating steps (number of micro batches). When
+      set to None or =<1, no accumulation is done.
+
+  Returns:
+    A tuple of model_state (e.g., batch statistics), calculated metrics, and
+      computed gradients.
+  """
+  params = train_state.optimizer.target
+  if accum_steps and accum_steps > 1:
+    batch_size = next(iter(batch.values())).shape[0]
+    microbatch_size = batch_size // accum_steps
+    if batch_size % accum_steps != 0:
+      logging.error('Bad accum_steps %d for batch size %d', accum_steps,
+                    batch_size)
+    logging.info('Using microbatches: %d microbatches, %d size', accum_steps,
+                 microbatch_size)
+
+    def get_microbatch(batch: Dict[str, jnp.ndarray],
+                       idx: int) -> Dict[str, jnp.ndarray]:
+      """Fetch microbatch slice from the given batch."""
+      offset = idx * microbatch_size
+      length = microbatch_size
+      starts = {k: [offset] + [0] * (b.ndim - 1) for k, b in batch.items()}
+      limits = {k: [length] + list(b.shape[1:]) for k, b in batch.items()}
+      return {
+          k: jax.lax.dynamic_slice(b, starts[k], limits[k])
+          for k, b in batch.items()
+      }
+
+    def per_microbatch_compute_gradient_fn(
+        loop_cnt: int, loop_state: Tuple[jnp.ndarray, jnp.ndarray,
+                                         Dict[str, Tuple[float, int]]]
+    ) -> Tuple[jnp.ndarray, jnp.ndarray, Dict[str, Tuple[float, int]]]:
+      dropout_rng, grad_accum, metrics_acc = loop_state
+      dropout_rng, sub_dropout_rng = jax.random.split(dropout_rng)
+      mbatch = get_microbatch(batch, loop_cnt)
+      (train_cost,
+       (_, mlogits)), grad = compute_gradient_fn(params, mbatch,
+                                                 sub_dropout_rng)
+      del train_cost
+      metrics = metrics_fn(mlogits, mbatch)
+      # Accumulate gradients and metrics.
+      grad = jax.tree_multimap(jnp.add, grad_accum, grad)
+      metrics = jax.tree_multimap(jnp.add, metrics, metrics_acc)
+      return dropout_rng, grad, metrics
+
+    # Initialize gradient accumulation loop state.
+    dropout_rng, sub_dropout_rng = jax.random.split(dropout_rng)
+    init_mbatch = get_microbatch(batch, 0)
+    (init_train_cost,
+     (model_state,
+      init_logits)), grad_init = compute_gradient_fn(params, init_mbatch,
+                                                     sub_dropout_rng)
+    if jax.tree_leaves(model_state):
+      # If the model_state is not empty.
+      raise ValueError('Gradient accumulation is not supported when the '
+                       'model_state is in used (e.g. models w/ batch norm).')
+
+    metrics_init = metrics_fn(init_logits, init_mbatch)
+    del init_train_cost, init_logits, init_mbatch
+
+    # Run gradient accumulation loop.
+    loop_init = (dropout_rng, grad_init, metrics_init)
+    _, grad_acc, metrics_acc = jax.lax.fori_loop(
+        1, accum_steps, per_microbatch_compute_gradient_fn, loop_init)
+    return model_state, metrics_acc, grad_acc
+  else:
+    (train_cost, (model_state,
+                  logits)), grad = compute_gradient_fn(params, batch,
+                                                       dropout_rng)
+    del train_cost
+    metrics = metrics_fn(logits, batch)
+    return model_state, metrics, grad
+
+
 def save_checkpoint(workdir: str,
                     train_state: TrainState,
                     max_to_keep: int = 3,
