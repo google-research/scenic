@@ -31,6 +31,10 @@ import jax.numpy as jnp
 import numpy as np
 
 
+def _absolute_dims(rank: int, dims: Iterable[int]):
+  return tuple([rank + dim if dim < 0 else dim for dim in dims])
+
+
 def avg_pool(
     inputs: jnp.ndarray,
     window_shape: Tuple[int, ...],
@@ -228,9 +232,7 @@ class BatchNorm(nn.Module):
         'use_running_average', self.use_running_average, use_running_average)
     x = jnp.asarray(x, jnp.float32)
     axis = self.axis if isinstance(self.axis, tuple) else (self.axis,)
-    # pylint: disable=protected-access
-    axis = nn.normalization._absolute_dims(x.ndim, axis)
-    # pylint: enable=protected-access
+    axis = _absolute_dims(x.ndim, axis)
     feature_shape = tuple(d if i in axis else 1 for i, d in enumerate(x.shape))
     reduced_feature_shape = tuple(d for i, d in enumerate(x.shape) if i in axis)
     reduction_axis = tuple(i for i in range(x.ndim) if i not in axis)
