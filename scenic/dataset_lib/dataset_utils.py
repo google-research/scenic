@@ -15,6 +15,7 @@
 """Common utils for used by different dataset builders."""
 
 import collections
+import functools
 from typing import Any, Dict, Optional
 
 from absl import logging
@@ -24,7 +25,6 @@ import jax.numpy as jnp
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
-
 
 Dataset = collections.namedtuple(
     # Each instance of the Dataset has three iterators, train_iter, valid_iter,
@@ -309,7 +309,7 @@ def load_split_from_tfds_builder(builder,
   # Prepare map functions.
   preprocess_example = preprocess_example or (lambda ex: ex)
   augment_train_example = augment_train_example or (lambda ex: ex)
-  shuffle_buffer_size = shuffle_buffer_size  or (8 * batch_size)
+  shuffle_buffer_size = shuffle_buffer_size or (8 * batch_size)
 
   # Download dataset:
   builder.download_and_prepare()
@@ -547,6 +547,8 @@ def get_dataset_tfds(dataset, split, shuffle_files=True, data_dir=None):
       decoders={'image': tfds.decode.SkipDecoding()})
 
 
+
+
 def make_pipeline(data,
                   preprocess_fn,
                   batch_size,
@@ -574,6 +576,10 @@ def make_pipeline(data,
 
   if shuffle_buffer_size is not None:
     data = data.shuffle(shuffle_buffer_size)
+
+  if n_images_as_video:
+    preprocess_fn = functools.partial(create_video,
+                                      preprocess_fn, n_images_as_video)
 
   data = data.map(
       preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -615,7 +621,8 @@ def get_data(dataset,
              data_dir=None,
              ignore_errors=False,
              shuffle_files=True,
-             dataset_service_address=None):
+             dataset_service_address=None,
+             n_images_as_video: Optional[int] = None):
   """API kept for backwards compatibility."""
   data = get_dataset_tfds(
       dataset=dataset,
@@ -635,11 +642,15 @@ def get_data(dataset,
       shuffle_buffer_size=shuffle_buffer_size,
       repeat_after_batching=repeat_after_batching,
       ignore_errors=ignore_errors,
-      dataset_service_address=dataset_service_address)
+      dataset_service_address=dataset_service_address,
+      n_images_as_video=n_images_as_video)
 
 
-def inception_crop_with_mask(
-    image, mask, resize_size=None, area_min=5, area_max=100):
+def inception_crop_with_mask(image,
+                             mask,
+                             resize_size=None,
+                             area_min=5,
+                             area_max=100):
   """Applies the same inception-style crop to an image and a mask tensor.
 
   Inception-style crop is a random image crop (its size and aspect ratio are
@@ -658,7 +669,8 @@ def inception_crop_with_mask(
     Cropped image and mask tensors.
   """
   begin, size, _ = tf.image.sample_distorted_bounding_box(
-      tf.shape(image), tf.zeros([0, 0, 4], tf.float32),
+      tf.shape(image),
+      tf.zeros([0, 0, 4], tf.float32),
       area_range=(area_min / 100, area_max / 100),
       min_object_covered=0,  # Don't enforce a minimum area.
       use_image_if_no_bounding_boxes=True)
@@ -667,28 +679,26 @@ def inception_crop_with_mask(
   image_cropped = tf.slice(image, begin, size)
   image_cropped.set_shape([None, None, image.shape[-1]])
   if resize_size:
-    image_cropped = tf.image.resize(
-        image_cropped, resize_size, tf.image.ResizeMethod.BILINEAR)
+    image_cropped = tf.image.resize(image_cropped, resize_size,
+                                    tf.image.ResizeMethod.BILINEAR)
 
   # Process mask:
   mask_cropped = tf.slice(mask, begin, size)
   mask_cropped.set_shape([None, None, mask.shape[-1]])
   if resize_size:
-    mask_cropped = tf.image.resize(
-        mask_cropped, resize_size, tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+    mask_cropped = tf.image.resize(mask_cropped, resize_size,
+                                   tf.image.ResizeMethod.NEAREST_NEIGHBOR)
 
   return image_cropped, mask_cropped
 
 
-def distribute(
-    dataset: tf.data.Dataset, dataset_service_address: str,
-    processing_mode: str = 'parallel_epochs') -> tf.data.Dataset:
+def distribute(dataset: tf.data.Dataset,
+               dataset_service_address: str,
+               processing_mode: str = 'parallel_epochs') -> tf.data.Dataset:
   dataset_id = tf.data.experimental.service.register_dataset(
-      service=dataset_service_address,
-      dataset=dataset
-  )
-  logging.info('tfds service: process %d got id %d',
-               jax.process_index(), dataset_id)
+      service=dataset_service_address, dataset=dataset)
+  logging.info('tfds service: process %d got id %d', jax.process_index(),
+               dataset_id)
   return tf.data.experimental.service.from_dataset_id(
       processing_mode=processing_mode,
       service=dataset_service_address,
