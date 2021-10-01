@@ -28,8 +28,8 @@ def idx2permutation(row_ind, col_ind):
   """Constructs a permutation matrix from the column and row indices of ones."""
   bs, dim = row_ind.shape[:2]
   perm = jnp.zeros(shape=(bs, dim, dim), dtype='float32')
-  perm = jax.vmap(jax.ops.index_update, (0, 0, None))(
-      perm, (row_ind, col_ind), 1.)
+  perm = jax.vmap((lambda x, idx, y: x.at[idx].set(y)),
+                  (0, 0, None))(perm, (row_ind, col_ind), 1.)
   return perm
 
 

@@ -178,7 +178,7 @@ class MatchingTest(parameterized.TestCase):
     # Create fake predictions and targets
     key, subkey = jax.random.split(key)
     # set probabilities for class 0 higher than others
-    p_logits = jax.ops.index_update(jnp.ones(self.num_classes), 0, 5.)
+    p_logits = jnp.ones(self.num_classes).at[0].set(5.)
     p = jax.nn.softmax(p_logits)
     tgt_labels = jax.random.choice(
         subkey,
@@ -187,7 +187,7 @@ class MatchingTest(parameterized.TestCase):
         replace=True,
         p=p)
     # Ensure last target is dummy empty target.
-    tgt_labels = jax.ops.index_update(tgt_labels, jax.ops.index[:, -1], 0)
+    tgt_labels = tgt_labels.at[:, -1].set(0)
     onehot_tgt_labels = jax.nn.one_hot(tgt_labels, self.num_classes)
 
     key, subkey = jax.random.split(key)
@@ -252,7 +252,7 @@ class MatchingTest(parameterized.TestCase):
           p=None))
     tgt_labels = jnp.stack(tgt_labels)
     # Ensure last target is dummy empty target.
-    tgt_labels = jax.ops.index_update(tgt_labels, jax.ops.index[:, -1], 0)
+    tgt_labels = tgt_labels.at[:, -1].set(0)
     onehot_tgt_labels = jax.nn.one_hot(tgt_labels, self.num_classes)
 
     onehot_targets = self.onehot_targets.copy()

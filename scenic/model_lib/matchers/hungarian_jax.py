@@ -63,7 +63,7 @@ def hungarian_single(cost):
 
       # Update potentials
       indices = jnp.where(used, parent, n + 1)  # deliberately out of bounds
-      u = jax.ops.index_add(u, indices, delta)
+      u = u.at[indices].add(delta)
       v = jnp.where(used, v - delta, v)
       minv = jnp.where(jnp.logical_not(used_slice), minv - delta, minv)
 
