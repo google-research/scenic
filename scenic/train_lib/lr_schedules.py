@@ -63,7 +63,7 @@ def piecewise_constant_scheduler(step, decay_events, decay_factors):
     Scaling factor applied to the learning rate on the given step.
   """
   boundaries = jnp.array(decay_events)
-  factors = [1.0] + decay_factors
+  factors = jnp.array([1.0] + decay_factors)
   index = jnp.sum(boundaries < step)
   ratio = jnp.take(factors, index)
   return ratio
