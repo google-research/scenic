@@ -71,6 +71,9 @@ python scenic/main.py -- \
   --workdir=./
 ```
 
+[Here](https://colab.research.google.com/github/scenic/scenic/common_lib/colabs/scenic_playground.ipynb)
+is also a minimal colab to train a simple feed forward model using Scenic.
+
 <a name="code_structure"></a>
 ## Scenic component design
 Scenic is designed to propose different levels of abstraction, to support
