@@ -1,8 +1,8 @@
-## Scenic Model
-
+<a name="base_model"></a>
+## Scenic `BaseModel`
 A solution usually has several parts: data/task pipeline, model architecture,
 losses and metrics, training and evaluation, etc. Given that much of research
-done in Scenic is trying out different architectures, scenic introduces the
+done in Scenic is trying out different architectures, Scenic introduces the
 concept of `model`, to facilitate plug-in/plug-out experiments. A Scenic model
 is defined as the network architecture plus the losses that are used to update
 the weights of the network as well as metrics that are used to evaluate the

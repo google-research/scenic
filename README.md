@@ -1,5 +1,4 @@
 # Scenic
-
 *Scenic* is a codebase with a focus on research around attention-based models
 for computer vision. Scenic has been successfully used to develop
 classification, segmentation, and detection models for multiple modalities
@@ -22,12 +21,12 @@ Among others *Scenic* provides
 * Optimized training and evaluation loops, losses, metrics, bi-partite matchers,
   etc;
 * Input-pipelines for popular vision datasets;
-* Baseline models, including strong non-attentional baselines.
+* [Baseline models](projects/baselines), including strong non-attentional baselines.
 
 
-## Papers using *Scenic*
-Scenic can be used to reproduce the results from the following papers, which
-were either developed using Scenic, or have been reimplemented in Scenic:
+## SOTA models and baselines in *Scenic*
+There some baselines and SOTA models in Scenic which were either developed
+using Scenic, or have been reimplemented in Scenic:
 
 * [An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929)
 * [MLP-Mixer: An all-MLP Architecture for Vision](https://arxiv.org/abs/2105.01601)
@@ -44,41 +43,7 @@ functionality proves to be widely useful across many models and tasks it may be
 upstreamed to Scenic's shared libraries.
 
 
-<a name="code_structure"></a>
-## Code structure
-Shared libraries provided by *Scenic*  are split into:
-
-* `dataset_lib`: Implements IO pipelines for loading and pre-processing data
-  for common Computer Vision tasks and benchmarks. All pipelines are designed to
-  be scalable and support multi-host and multi-device setups, taking care of
-  dividing data among multiple hosts, incomplete batches, caching, pre-fetching,
-  etc.
-* `model_lib`: Provides (i) several abstract model interfaces (e.g.
-  `ClassificationModel` or `SegmentationModel` in `model_lib.base_models`) with
-  task-specific losses and metrics; (ii) neural network layers in
-  `model_lib.layers`, focusing on efficient implementation of attention and
-  transfomer layers; and (iii) accelerator-friedly implementations of bipartite
-  matching algorithms in `model_lib.matchers`.
-* `train_lib`: Provides tools for constructing training loops and implements
-  several example trainers (classification trainer and segmentation trainer).
-* `common_lib`: Utilities that do not belong anywhere else.
-
-
-### Projects
-Models built on top of *Scenic* exist as separate projects. Model-specific code
-such as configs, layers, losses, network architectures, or training and
-evaluation loops exist as separate projects.
-
-Common baselines such as a ResNet or a Visual Transformer (ViT) are implemented
-in the `projects/baselines` project. Forking this directory is a good starting
-point for new projects.
-
-There is no one-fits-all recipe for how much code should be re-used by projects.
-Projects can fall anywhere on the wide spectrum of code re-use: from defining
-new configs for an existing model to redefining models, training loop, logging,
-etc.
-
-
+<a name="getting_start"></a>
 ## Getting started
 * See `projects/baselines/README.md` for a walk-through baseline models and
   instructions on how to run the code.
@@ -105,5 +70,58 @@ python scenic/main.py -- \
   --config=scenic/projects/baselines/configs/imagenet/imagenet_vit_config.py \
   --workdir=./
 ```
+
+<a name="code_structure"></a>
+## Scenic component design
+Scenic is designed to propose different levels of abstraction, to support
+hosting projects that only require changing hyper-parameters by defining config
+files, to those that need customization on the input pipeline, model
+architecture, losses and metrics, and the training loop. To make this happen,
+the code in Scenic is organized as either _project-level_ code,
+which refers to customized code for specific projects or baselines or
+_library-level_ code, which refers to common functionalities and general
+patterns that are adapted by the majority of projects. The project-level
+code lives in the `projects` directory.
+
+![Scenic component design](scenic.png)
+
+### Library-level code
+The goal is to keep the library-level code minimal and well-tested and to avoid
+introducing extra abstractions to support minor use-cases. Shared libraries
+provided by *Scenic* are split into:
+
+*   `dataset_lib`: Implements IO pipelines for loading and pre-processing data
+    for common Computer Vision tasks and benchmarks (see "Tasks and Datasets"
+    section). All pipelines are designed to be scalable and support multi-host
+    and multi-device setups, taking care dividing data among multiple hosts,
+    incomplete batches, caching, pre-fetching, etc.
+*   `model_lib` : Provides
+    *   several abstract model interfaces (e.g. `ClassificationModel` or
+        `SegmentationModel` in `model_lib.base_models`) with task-specific
+        losses and metrics;
+    *   neural network layers in `model_lib.layers`, focusing on efficient
+        implementation of attention and transformer layers;
+    *   accelerator-friendly implementations of bipartite matching
+        algorithms in `model_lib.matchers`.
+*   `train_lib`: Provides tools for constructing training loops and implements
+    several optimized trainers (classification trainer and segmentation trainer)
+    that can be forked for customization.
+*   `common_lib`: General utilities, like logging and debugging modules,
+    functionalities for processing raw data, etc.
+
+### Project-level code
+Scenic supports the development of customized solutions for customized tasks and
+data via the concept of "project". There is no one-fits-all recipe for how much
+code should be re-used by a project. Projects can consist of only configs and
+use the common models, trainers, task/data that live in library-level code, or
+they can simply fork any of the mentioned functionalities and redefine, layers,
+losses, metrics, logging methods, tasks, architectures, as well as training and
+evaluation loops. The modularity of library-level code makes it flexible for
+projects to fall placed on any spot in the "run-as-is" to "fully-customized"
+spectrum.
+
+Common baselines such as a ResNet and Vision Transformer (ViT) are implemented
+in the [`projects/baselines`](projects/baselines) project. Forking models in
+this directory is a good starting point for new projects.
 
 _Disclaimer: This is not an official Google product._
