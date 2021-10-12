@@ -44,11 +44,13 @@ class ResidualUnit(nn.Module):
     strides: Downsampling stride.
     dilation: Kernel dilation.
     bottleneck: If True, the block is a bottleneck block.
+    gn_num_groups: Number of groups in GroupNorm layer.
   """
   nout: int
   strides: Tuple[int, ...] = (1, 1)
   dilation: Tuple[int, ...] = (1, 1)
   bottleneck: bool = True
+  gn_num_groups: int = 32
 
   @nn.compact
   def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
@@ -62,22 +64,26 @@ class ResidualUnit(nn.Module):
                          self.strides,
                          use_bias=False,
                          name='conv_proj')(residual)
-      residual = nn.GroupNorm(epsilon=1e-4, name='gn_proj')(residual)
+      residual = nn.GroupNorm(num_groups=self.gn_num_groups, epsilon=1e-4,
+                              name='gn_proj')(residual)
 
     if self.bottleneck:
       x = StdConv(features, (1, 1), use_bias=False, name='conv1')(x)
-      x = nn.GroupNorm(epsilon=1e-4, name='gn1')(x)
+      x = nn.GroupNorm(num_groups=self.gn_num_groups, epsilon=1e-4,
+                       name='gn1')(x)
       x = nn.relu(x)
 
     x = StdConv(features, (3, 3), self.strides, kernel_dilation=self.dilation,
                 use_bias=False, name='conv2')(x)
-    x = nn.GroupNorm(epsilon=1e-4, name='gn2')(x)
+    x = nn.GroupNorm(num_groups=self.gn_num_groups, epsilon=1e-4, name='gn2')(x)
     x = nn.relu(x)
 
     last_kernel = (1, 1) if self.bottleneck else (3, 3)
     x = StdConv(nout, last_kernel, use_bias=False, name='conv3')(x)
-    x = nn.GroupNorm(
-        epsilon=1e-4, name='gn3', scale_init=nn.initializers.zeros)(x)
+    x = nn.GroupNorm(num_groups=self.gn_num_groups,
+                     epsilon=1e-4,
+                     name='gn3',
+                     scale_init=nn.initializers.zeros)(x)
     x = nn.relu(residual + x)
 
     return x
@@ -92,6 +98,7 @@ class ResNetStage(nn.Module):
     first_stride: Downsampling stride.
     first_dilation: Kernel dilation.
     bottleneck: If True, the bottleneck block is used.
+    gn_num_groups: Number of groups in group norm layer.
   """
 
   block_size: int
@@ -99,6 +106,7 @@ class ResNetStage(nn.Module):
   first_stride: Tuple[int, ...]
   first_dilation: Tuple[int, ...] = (1, 1)
   bottleneck: bool = True
+  gn_num_groups: int = 32
 
   @nn.compact
   def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
@@ -106,11 +114,13 @@ class ResNetStage(nn.Module):
                      strides=self.first_stride,
                      dilation=self.first_dilation,
                      bottleneck=self.bottleneck,
+                     gn_num_groups=self.gn_num_groups,
                      name='unit1')(x)
     for i in range(1, self.block_size):
       x = ResidualUnit(self.nout,
                        strides=(1, 1),
                        bottleneck=self.bottleneck,
+                       gn_num_groups=self.gn_num_groups,
                        name=f'unit{i + 1}')(x)
     return x
 
@@ -120,7 +130,8 @@ class BitResNet(nn.Module):
 
   Attributes:
     num_outputs: Num output classes. If None, a dict of intermediate feature
-      maps is returned.
+      maps is returned
+    gn_num_groups: Number groups in the group norm layer..
     width_factor: Width multiplier for each of the ResNet stages.
     num_layers: Number of layers (see `BLOCK_SIZE_OPTIONS` for stage
       configurations).
@@ -132,6 +143,7 @@ class BitResNet(nn.Module):
   """
 
   num_outputs: Optional[int] = 1000
+  gn_num_groups: int = 32
   width_factor: int = 1
   num_layers: int = 50
   max_output_stride: int = 32
@@ -164,7 +176,8 @@ class BitResNet(nn.Module):
 
     # Root block.
     x = StdConv(width, (7, 7), (2, 2), use_bias=False, name='conv_root')(x)
-    x = nn.GroupNorm(epsilon=1e-4, name='gn_root')(x)
+    x = nn.GroupNorm(num_groups=self.gn_num_groups, epsilon=1e-4,
+                     name='gn_root')(x)
     x = nn.relu(x)
     x = nn.max_pool(x, (3, 3), strides=(2, 2), padding='SAME')
     representations = {'stem': x}
@@ -175,6 +188,7 @@ class BitResNet(nn.Module):
         width,
         first_stride=(1, 1),
         bottleneck=bottleneck,
+        gn_num_groups=self.gn_num_groups,
         name='block1')(x)
     stride = 4
     for i, block_size in enumerate(blocks[1:], 1):
@@ -185,6 +199,7 @@ class BitResNet(nn.Module):
           first_stride=(2, 2) if not max_stride_reached else (1, 1),
           first_dilation=(2, 2) if max_stride_reached else (1, 1),
           bottleneck=bottleneck,
+          gn_num_groups=self.gn_num_groups,
           name=f'block{i + 1}')(x)
       if not max_stride_reached:
         stride *= 2
@@ -227,6 +242,7 @@ class BitResNetClassificationModel(ClassificationModel):
   def build_flax_model(self) -> nn.Module:
     return BitResNet(
         num_outputs=self.dataset_meta_data['num_classes'],
+        gn_num_groups=self.config.get('gn_num_groups', 32),
         width_factor=self.config.get('width_factor', 1),
         num_layers=self.config.num_layers)
 
@@ -240,6 +256,7 @@ class BitResNetMultiLabelClassificationModel(MultiLabelClassificationModel):
   def build_flax_model(self) -> nn.Module:
     return BitResNet(
         num_outputs=self.dataset_meta_data['num_classes'],
+        gn_num_groups=self.config.get('gn_num_groups', 32),
         width_factor=self.config.get('width_factor', 1),
         num_layers=self.config.num_layers)
 
