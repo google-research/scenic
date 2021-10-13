@@ -51,6 +51,7 @@ setup(
         "clu",
         "sklearn",
         "pycocotools",
+        "dmvr @ git+git://github.com/deepmind/dmvr",
     ],
     tests_require=tests_require,
     extras_require=dict(test=tests_require),
