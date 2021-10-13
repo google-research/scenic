@@ -1,7 +1,8 @@
-# Scenic
-<div style="text-align: right">
-<img align="left" src="https://raw.githubusercontent.com/google-research/scenic/main/images/scenic_logo.jpg" width="150" alt="scenic logo"></img>
+<div align="center">
+<img src="https://raw.githubusercontent.com/google-research/scenic/main/images/scenic_logo.jpg" width="150" alt="scenic logo"></img>
 </div>
+
+# Scenic
 *Scenic* is a codebase with a focus on research around attention-based models
 for computer vision. Scenic has been successfully used to develop
 classification, segmentation, and detection models for multiple modalities
