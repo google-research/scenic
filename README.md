@@ -102,7 +102,7 @@ patterns that are adapted by the majority of projects. The project-level
 code lives in the `projects` directory.
 
 <div align="center">
-<img src="https://raw.githubusercontent.com/google-research/scenic/main/images/scenic_design.jpg" width="700" alt="scenic design"></img>
+<img src="https://raw.githubusercontent.com/google-research/scenic/main/images/scenic_design.jpg" width="900" alt="scenic design"></img>
 </div>
 
 ### Library-level code
