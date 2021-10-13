@@ -1,5 +1,5 @@
 <div align="center">
-<img src="https://raw.githubusercontent.com/google-research/scenic/main/images/scenic_logo.jpg" width="200" alt="logo"></img>
+<img src="https://raw.githubusercontent.com/google-research/scenic/main/images/scenic_logo.jpg" width="150" alt="scenic logo"></img>
 </div>
 
 # Scenic
@@ -101,7 +101,9 @@ _library-level_ code, which refers to common functionalities and general
 patterns that are adapted by the majority of projects. The project-level
 code lives in the `projects` directory.
 
-![Scenic component design](images/scenic_design.jpg)
+<div align="center">
+<img src="https://raw.githubusercontent.com/google-research/scenic/main/images/scenic_design.jpg" width="700" alt="scenic design"></img>
+</div>
 
 ### Library-level code
 The goal is to keep the library-level code minimal and well-tested and to avoid
