@@ -1,3 +1,7 @@
+<div align="center">
+<img src="https://raw.githubusercontent.com/google-research/scenic/main/images/scenic_logo.jpg" width="200" alt="logo"></img>
+</div>
+
 # Scenic
 *Scenic* is a codebase with a focus on research around attention-based models
 for computer vision. Scenic has been successfully used to develop
@@ -25,14 +29,25 @@ Among others *Scenic* provides
 
 
 ## SOTA models and baselines in *Scenic*
-There some baselines and SOTA models in Scenic which were either developed
+There some SOTA models and baselines in Scenic which were either developed
 using Scenic, or have been reimplemented in Scenic:
 
+Projects that were developed in Scenic:
+* [ViViT: A Video Vision Transformer](https://arxiv.org/abs/2103.15691)
+* [OmniNet: Omnidirectional Representations from Transformers](https://arxiv.org/abs/2103.01075)
+* [TokenLearner: What Can 8 Learned Tokens Do for Images and Videos?](https://arxiv.org/abs/2106.11297)
+* [Exploring the Limits of Large Scale Pre-training](https://arxiv.org/abs/2110.02095)
+
+More information can be found in [projects](projects).
+
+Baselines that were reproduced in Scenic:
 * [An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929)
+* [End-to-End Object Detection with Transformers](https://arxiv.org/abs/2005.12872)
 * [MLP-Mixer: An all-MLP Architecture for Vision](https://arxiv.org/abs/2105.01601)
 * [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385)
 * [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597)
 
+More information can be found in [baseline models](projects/baselines).
 
 <a name="philosophy"></a>
 ## Philosophy
@@ -86,7 +101,7 @@ _library-level_ code, which refers to common functionalities and general
 patterns that are adapted by the majority of projects. The project-level
 code lives in the `projects` directory.
 
-![Scenic component design](scenic.png)
+![Scenic component design](images/scenic_design.jpg)
 
 ### Library-level code
 The goal is to keep the library-level code minimal and well-tested and to avoid
