@@ -18,6 +18,7 @@ from scenic.model_lib.matchers.common import cpu_matcher
 from scenic.model_lib.matchers.common import slicer
 from scenic.model_lib.matchers.greedy import greedy_matcher
 from scenic.model_lib.matchers.hungarian import hungarian_matcher
+from scenic.model_lib.matchers.hungarian_cover import hungarian_cover_tpu_matcher
 from scenic.model_lib.matchers.hungarian_jax import hungarian_scan_tpu_matcher
 from scenic.model_lib.matchers.hungarian_jax import hungarian_tpu_matcher
 from scenic.model_lib.matchers.lazy import lazy_matcher
