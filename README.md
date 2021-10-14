@@ -1,6 +1,6 @@
 # Scenic
 <div style="text-align: left">
-<img align="right" src="https://raw.githubusercontent.com/google-research/scenic/main/images/scenic_logo.jpg" width="200" alt="scenic logo"></img>
+<img align="right" src="https://raw.githubusercontent.com/google-research/scenic/main/images/scenic_logo.png" width="200" alt="scenic logo"></img>
 </div>
 *Scenic* is a codebase with a focus on research around attention-based models
 for computer vision. Scenic has been successfully used to develop
@@ -16,6 +16,13 @@ libraries.
 Scenic is developed in [JAX](https://github.com/google/jax) and uses
 [Flax](https://github.com/google/flax).
 
+### Contents
+* [What we offer](#what-we-offer)
+* [SOTA models and baselines in Scenic](#sota-models-and-baselines-in-scenic)
+* [Philosophy](#philosophy)
+* [Getting started](#getting-started)
+* [Scenic component design](#scenic-component-design)
+
 ## What we offer
 Among others *Scenic* provides
 
@@ -24,7 +31,7 @@ Among others *Scenic* provides
 * Optimized training and evaluation loops, losses, metrics, bi-partite matchers,
   etc;
 * Input-pipelines for popular vision datasets;
-* [Baseline models](projects/baselines), including strong non-attentional baselines.
+* [Baseline models](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines), including strong non-attentional baselines.
 
 
 ## SOTA models and baselines in *Scenic*
@@ -34,10 +41,11 @@ using Scenic, or have been reimplemented in Scenic:
 Projects that were developed in Scenic:
 * [ViViT: A Video Vision Transformer](https://arxiv.org/abs/2103.15691)
 * [OmniNet: Omnidirectional Representations from Transformers](https://arxiv.org/abs/2103.01075)
+* [Attention Bottlenecks for Multimodal Fusion](https://arxiv.org/abs/2107.00135)
 * [TokenLearner: What Can 8 Learned Tokens Do for Images and Videos?](https://arxiv.org/abs/2106.11297)
 * [Exploring the Limits of Large Scale Pre-training](https://arxiv.org/abs/2110.02095)
 
-More information can be found in [projects](projects).
+More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects).
 
 Baselines that were reproduced in Scenic:
 * [An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929)
@@ -46,7 +54,7 @@ Baselines that were reproduced in Scenic:
 * [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385)
 * [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597)
 
-More information can be found in [baseline models](projects/baselines).
+More information can be found in [baseline models](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines).
 
 <a name="philosophy"></a>
 ## Philosophy
@@ -140,7 +148,8 @@ projects to fall placed on any spot in the "run-as-is" to "fully-customized"
 spectrum.
 
 Common baselines such as a ResNet and Vision Transformer (ViT) are implemented
-in the [`projects/baselines`](projects/baselines) project. Forking models in
-this directory is a good starting point for new projects.
+in the [`projects/baselines`](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines)
+project. Forking models in this directory is a good starting point for new
+projects.
 
 _Disclaimer: This is not an official Google product._
