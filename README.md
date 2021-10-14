@@ -31,7 +31,8 @@ Among others *Scenic* provides
 * Optimized training and evaluation loops, losses, metrics, bi-partite matchers,
   etc;
 * Input-pipelines for popular vision datasets;
-* [Baseline models](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines), including strong non-attentional baselines.
+* [Baseline models](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines#scenic-baseline-models),
+including strong non-attentional baselines.
 
 
 ## SOTA models and baselines in *Scenic*
@@ -45,7 +46,7 @@ Projects that were developed in Scenic:
 * [TokenLearner: What Can 8 Learned Tokens Do for Images and Videos?](https://arxiv.org/abs/2106.11297)
 * [Exploring the Limits of Large Scale Pre-training](https://arxiv.org/abs/2110.02095)
 
-More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects).
+More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 
 Baselines that were reproduced in Scenic:
 * [An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929)
@@ -54,7 +55,7 @@ Baselines that were reproduced in Scenic:
 * [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385)
 * [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597)
 
-More information can be found in [baseline models](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines).
+More information can be found in [baseline models](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines#scenic-baseline-models).
 
 <a name="philosophy"></a>
 ## Philosophy
