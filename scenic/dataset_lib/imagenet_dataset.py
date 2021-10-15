@@ -252,7 +252,7 @@ def imagenet_load_split(batch_size,
 
   dataset_builder = tfds.builder('imagenet2012:5.*.*')
   # Download dataset:
-  builder.download_and_prepare()
+  dataset_builder.download_and_prepare()
   ds = dataset_builder.as_dataset(
       split=split, decoders={
           'image': tfds.decode.SkipDecoding(),
