@@ -28,6 +28,9 @@ from scenic.model_lib.base_models import model_utils
 _CLASSIFICATION_METRICS = immutabledict({
     'accuracy':
         (model_utils.weighted_correctly_classified, model_utils.num_examples),
+    'accuracy_top_5': (functools.partial(
+        model_utils.weighted_topk_correctly_classified,
+        k=5), model_utils.num_examples),
     'loss': (model_utils.weighted_unnormalized_softmax_cross_entropy,
              model_utils.num_examples)
 })
