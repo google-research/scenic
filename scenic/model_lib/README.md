@@ -9,7 +9,7 @@ the weights of the network as well as metrics that are used to evaluate the
 output of the network. This is implemented as `BaseModel`.
 
 `BaseModel` is an abstract class with three members: `get_metrics_fn`,
-`loss_fn`, and a `build_flax_model`.
+`loss_fn`, and a `build_flax_model`. 
 
 `get_metrics_fn` returns a callable function, `metric_fn`, that calculates the
 metrics and returns a dictionary. The metric function computes `f(x_i, y_i)` on
