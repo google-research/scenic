@@ -80,8 +80,8 @@ def _run_main(argv, *, main):
   logging.info('JAX host: %d / %d', jax.process_index(), jax.process_count())
   logging.info('JAX devices: %r', jax.devices())
 
-  # Add a note so that we can tell which Borg task is which JAX host.
-  # (Borg task 0 is not guaranteed to be host 0)
+  # Add a note so that we can tell which task is which JAX host.
+  # (task 0 is not guaranteed to be host 0)
   platform.work_unit().set_task_status(
       f'host_id: {jax.process_index()}, host_count: {jax.process_count()}')
   platform.work_unit().create_artifact(platform.ArtifactType.DIRECTORY,
