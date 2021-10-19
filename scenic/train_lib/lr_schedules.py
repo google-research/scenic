@@ -179,10 +179,9 @@ def compound_lr_scheduler(config):
   * cosine_decay: Cyclic cosine decay.
 
   For instance, `config['factors'] = 'constant*linear_warmup'` combines
-  constant
-  learning rate schadule with linear warmup. This requires to have related
-  config
-  that are: config['warmup_steps'] and config['base_learning_rate'].
+  constant learning rate schadule with linear warmup. This requires to 
+  have related config that are: config['warmup_steps'] and
+  config['base_learning_rate'].
 
   Args:
     config: Relevant config based on the chosen factors.
