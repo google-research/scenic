@@ -17,6 +17,7 @@
 """
 
 
+from typing import Optional
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -99,24 +100,39 @@ def sample_best_permutation(key, coupling, cost, num_trials=10):
   return out_perm
 
 
-def sinkhorn_matcher(cost, rng=None, epsilon=0.01, num_iters=1000,
-                     num_permutations=100):
+def sinkhorn_matcher(cost: jnp.ndarray,
+                     rng: Optional[jnp.ndarray] = None,
+                     epsilon: float = 0.001,
+                     init: float = 50,
+                     decay: float = 0.9,
+                     num_iters: int = 1000,
+                     num_permutations: int = 100,
+                     threshold: float = 1e-2,
+                     chg_momentum_from: int = 100):
   """Computes Sinkhorn Matching on cost matrix for a batch of datapoints.
 
   Args:
-    cost: jnp.ndarray; Cost matrix for the matching of shape [B, N, N].
-    rng: jax.random.PRNGKey; Random generator for sampling.
-    epsilon: float; the level of entropic regularization wanted.
-    num_iters: int; the number of Sinkhorn iterations.
-    num_permutations: int; The number of random permutations to sample for
+    cost: Cost matrix for the matching of shape [B, N, N].
+    rng: Random generator for sampling.
+    epsilon: Level of entropic regularization wanted.
+    init: Multiplier for epsilon decay at the first iteration.
+    decay: How much to decay epsilon between two iterations.
+    num_iters: Number of Sinkhorn iterations.
+    num_permutations: Number of random permutations to sample for
       selecting the best.
+    threshold: Convergence threshold for Sinkhorn algorithm.
+    chg_momentum_from: Iteration from which to trigger the momemtum in Sinkhorn.
 
   Returns:
     An assignment of size [B, 2, N].
   """
   def coupling_fn(c):
-    geom = geometry.Geometry(cost_matrix=c, epsilon=epsilon)
-    return transport.Transport(geom, max_iterations=num_iters).matrix
+    geom = geometry.Geometry(
+        cost_matrix=c, epsilon=epsilon, init=init, decay=decay)
+    return transport.Transport(geom,
+                               max_iterations=num_iters,
+                               chg_momentum_from=chg_momentum_from,
+                               threshold=threshold).matrix
 
   coupling = jax.vmap(coupling_fn)(cost)
 
