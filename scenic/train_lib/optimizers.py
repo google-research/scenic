@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Defines different optimizers."""
+"""Defines different optimizers.
+
+Many of these were originally implemented by: Lucas Beyer, Alex Kolesnikov,
+Xiaohua Zhai and other collaborators from Brain ZRH.
+"""
 
 import dataclasses
 from typing import Any, Callable, Generator, List, Tuple

@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Common utils for used by different dataset builders."""
+"""Common utils for used by different dataset builders.
+
+Many of these were originally implemented by: Lucas Beyer, Alex Kolesnikov,
+Xiaohua Zhai and other collaborators from Brain ZRH.
+"""
 
 import collections
 from typing import Any, Dict, Optional
