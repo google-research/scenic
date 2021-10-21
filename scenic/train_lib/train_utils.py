@@ -840,7 +840,8 @@ class Chrono:
     core_hours = self.accum_train_time * ncores / 60 / 60
     devtype = jax.devices()[0].device_kind
     core_hours_approx_v3 = core_hours
-    if devtype == 'TPU v2':  # If we are on JF, do approximate conversion to DF.
+    if devtype == 'TPU v2':
+      # Do approximate conversion to TPU V3.
       core_hours_approx_v3 /= 1.2
 
     writer.write_scalars(
