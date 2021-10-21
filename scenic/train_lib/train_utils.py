@@ -777,7 +777,11 @@ def log_train_summary(step: int,
 
 
 class Chrono:
-  """Measures time and reports progress."""
+  """Measures time and reports progress.
+
+  This class is originally implemented by: Lucas Beyer, Alex Kolesnikov,
+  Xiaohua Zhai and other collaborators from Brain ZRH.
+  """
 
   def __init__(self,
                first_step: int,
