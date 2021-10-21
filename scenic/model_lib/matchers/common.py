@@ -35,6 +35,10 @@ def slicer(cost, n_present_col, matching_fn):
     Matchings of shape [batch, 2, n_col].
   """
   batch, n_row, n_col = cost.shape
+  if n_row < n_col:
+    raise ValueError(
+        f'Slicer requires that n_row ({n_row}) >= n_col ({n_col}).')
+
   eye = np.eye(n_row, dtype=np.bool)
   matches = []
   for i in range(batch):
