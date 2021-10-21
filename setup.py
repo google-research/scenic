@@ -50,6 +50,7 @@ setup(
         "numpy",
         "clu",
         "sklearn",
+        "seaborn",
         "pycocotools",
         "dmvr @ git+git://github.com/deepmind/dmvr",
     ],
