@@ -22,6 +22,7 @@ Scenic is developed in [JAX](https://github.com/google/jax) and uses
 * [Philosophy](#philosophy)
 * [Getting started](#getting-started)
 * [Scenic component design](#scenic-component-design)
+* [Citing Scenic](#citing-scenic)
 
 ## What we offer
 Among others *Scenic* provides
@@ -152,5 +153,18 @@ Common baselines such as a ResNet and Vision Transformer (ViT) are implemented
 in the [`projects/baselines`](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines)
 project. Forking models in this directory is a good starting point for new
 projects.
+
+
+## Citing Scenic
+If you use Scenic, you can cite our [white paper](https://arxiv.org/abs/2110.11403).
+Here is an example BibTeX entry:
+```
+@article{dehghani2021scenic,
+  author={Mostafa Dehghani and Alexey Gritsenko and Anurag Arnab and Matthias Minderer and Yi Tay},
+  title={{Scenic}: A {JAX} Library for Computer Vision Research and Beyond},
+  year={2021},
+  journal={arXiv preprint arXiv:2110.11403},
+}
+```
 
 _Disclaimer: This is not an official Google product._
