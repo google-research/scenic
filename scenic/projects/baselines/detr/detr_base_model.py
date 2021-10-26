@@ -73,7 +73,7 @@ def compute_cost(
     cost_class = jax.vmap(jnp.take, (0, 0, None))(cost_class, tgt_labels, 1)
 
   cost = class_loss_coef * cost_class
-  cost_upper_bound = max_cost_class
+  cost_upper_bound = class_loss_coef * max_cost_class
 
   if out_bbox is not None:
     # [B, N, M, 4]
