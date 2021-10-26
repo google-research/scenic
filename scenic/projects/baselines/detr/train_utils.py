@@ -314,24 +314,17 @@ def get_detr_optimizer(config):
   else:
     backbone_optim = other_optim
 
-  if config.get('freeze_body', False):
-    # For panoptic segmentation training:
-    backbone_traversal = optimizers.ModelParamTraversal(
-        lambda path, param: 'backbone' in path and 'body' not in path)
-    other_traversal = optimizers.ModelParamTraversal(
-        lambda path, param: 'backbone' not in path and 'body' not in path)
-  else:
-    def is_bn(path):
-      # For DETR we need to skip the BN affine transforms as well.
-      names = ['/bn1/', '/bn2/', '/bn3/', '/init_bn/', '/proj_bn/']
-      for s in names:
-        if s in path:
-          return True
-      return False
-    backbone_traversal = optimizers.ModelParamTraversal(
-        lambda path, param: ('backbone' in path) and (not is_bn(path)))
-    other_traversal = optimizers.ModelParamTraversal(
-        lambda path, param: 'backbone' not in path)
+  def is_bn(path):
+    # For DETR we need to skip the BN affine transforms as well.
+    names = ['/bn1/', '/bn2/', '/bn3/', '/init_bn/', '/proj_bn/']
+    for s in names:
+      if s in path:
+        return True
+    return False
+  backbone_traversal = optimizers.ModelParamTraversal(
+      lambda path, param: ('backbone' in path) and (not is_bn(path)))
+  other_traversal = optimizers.ModelParamTraversal(
+      lambda path, param: 'backbone' not in path)
 
   return MultiOptimizerWithLogging((backbone_traversal, backbone_optim),
                                    (other_traversal, other_optim))

@@ -888,7 +888,6 @@ class DETR(nn.Module):
     backbone_num_filters: Num filters in the ResNet backbone.
     backbone_num_layers: Num layers in the ResNet backbone.
     aux_loss: If train with auxiliary loss.
-    panoptic: Whether the model will include panoptic segmentation.
     dropout_rate:Dropout rate.
     attention_dropout_rate:Attention dropout rate.
     dtype: Data type of the computation (default: float32).
@@ -907,7 +906,6 @@ class DETR(nn.Module):
   backbone_num_filters: int = 64
   backbone_num_layers: int = 50
   aux_loss: bool = False
-  panoptic: bool = False
   dropout_rate: float = 0.0
   attention_dropout_rate: float = 0.0
   dtype: jnp.dtype = jnp.float32
@@ -970,7 +968,7 @@ class DETR(nn.Module):
     x = x.reshape(bs, h * w, self.hidden_dim)
     transformer_input = x
 
-    return_intermediate = self.aux_loss or self.panoptic
+    return_intermediate = self.aux_loss
     transformer = DETRTransformer(
         num_queries=self.num_queries,
         query_emb_size=self.query_emb_size,
@@ -1042,7 +1040,6 @@ class DETRModel(detr_base_model.ObjectDetectionWithMatchingModel):
         backbone_num_filters=self.config.get('backbone_num_filters', 64),
         backbone_num_layers=self.config.get('backbone_num_layers', 50),
         aux_loss=self.config.get('aux_loss', False),
-        panoptic=self.config.get('panoptic', False),
         dropout_rate=self.config.get('dropout_rate', 0.0),
         attention_dropout_rate=self.config.get('attention_dropout_rate', 0.0),
         dtype=jnp.float32)
@@ -1062,6 +1059,5 @@ class DETRModel(detr_base_model.ObjectDetectionWithMatchingModel):
             backbone_num_filters=32,
             backbone_num_layers=1,
             aux_loss=False,
-            panoptic=False,
             dropout_rate=0.0,
             attention_dropout_rate=0.0))

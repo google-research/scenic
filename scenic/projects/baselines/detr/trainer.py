@@ -281,8 +281,6 @@ def train_and_evaluate(
     bb_train_state = flax_restore_checkpoint(bb_checkpoint_path, target=None)
 
     model_prefix_path = ['backbone']
-    if 'backbone' not in train_state.optimizer.target:  # Panoptic model.
-      model_prefix_path = ['body', 'backbone']
     train_state = pretrain_utils.init_from_pretrain_state(
         train_state, bb_train_state, model_prefix_path=model_prefix_path)
 
