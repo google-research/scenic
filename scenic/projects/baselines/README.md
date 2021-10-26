@@ -47,5 +47,5 @@ We share checkpoints of models from the following papers, trained on ImageNet:
 | BiTResNet50      | ImageNet |       -        |  77.0 |  [Link](https://storage.googleapis.com/scenic-bucket/baselines/BiTResNet50_ImageNet1k) |
 
 ### DETR
-Please check [DETR directory](detr) for more information and pre-trained
-checkpoints.
+Please check [DETR directory](detr) for more information and link to download
+pretrained checkpoints.
