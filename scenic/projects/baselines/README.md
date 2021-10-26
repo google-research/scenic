@@ -6,6 +6,8 @@ They include:
 
  * [Vision Transformer](https://arxiv.org/abs/2010.11929) (ViT) for image
   classification. [[Official Implementation](https://github.com/google-research/vision_transformer#vision-transformer)]
+ * [Detection Transformer](https://arxiv.org/abs/2005.12872) (DETR) for object
+    detectin. [[Official PyTorch Implementation](https://github.com/facebookresearch/detr)]
  * [MLP-Mixer](https://arxiv.org/abs/2105.01601) an all-MLP model for image
   classification. [[Official Implementation](https://github.com/google-research/vision_transformer#mlp-mixer)]
  * [Residual Networks](https://arxiv.org/abs/1512.03385) (ResNet) for image classification.
@@ -43,3 +45,7 @@ We share checkpoints of models from the following papers, trained on ImageNet:
 |-------|:-:|:-:|:-:|:-:|
 | ResNet50         | ImageNet |       -        |  76.1 |  [Link](https://storage.googleapis.com/scenic-bucket/baselines/ResNet50_ImageNet1k) |
 | BiTResNet50      | ImageNet |       -        |  77.0 |  [Link](https://storage.googleapis.com/scenic-bucket/baselines/BiTResNet50_ImageNet1k) |
+
+### DETR
+Please check [DETR directory](detr) for more information and pre-trained
+checkpoints.
