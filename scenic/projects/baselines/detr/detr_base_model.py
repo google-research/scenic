@@ -414,6 +414,31 @@ class BaseModelWithMatching(base_model.BaseModel):  # pytype: disable=ignored-ab
       metrics_dict: Individual loss terms with and without weighting for
         logging purposes.
     """
+    # Append a padding instance to the inputs. Those are not guaranteed by the
+    # input pipeline to always be present.
+    batch = batch.copy()
+    batch['label'] = batch['label'].copy()
+
+    # Append a class label.
+    if self.dataset_meta_data['target_is_onehot']:
+      # Shape is [batch, num_instances, num_classes]
+      label_shape = batch['label']['labels'].shape
+      num_classes = label_shape.shape[-1]
+      instance = jax.nn.one_hot(0, num_classes)
+      reshape_shape = (1,) * (len(label_shape) - 1) + (num_classes,)
+      broadcast_shape = label_shape[:-2] + (1, num_classes)
+      instance = jnp.broadcast_to(
+          jnp.reshape(instance, reshape_shape), broadcast_shape)
+    else:
+      instance = jnp.zeros_like(batch['label']['labels'][..., :1])
+    batch['label']['labels'] = jnp.concatenate(
+        [batch['label']['labels'], instance], axis=-1)
+
+    # Same for boxes.
+    instance = jnp.zeros_like(batch['label']['boxes'][..., :1, :])
+    batch['label']['boxes'] = jnp.concatenate(
+        [batch['label']['boxes'], instance], axis=-2)
+
     if matches is None:
       if 'cost' not in outputs:
         cost, n_cols = self.compute_cost_matrix(outputs, batch['label'])
