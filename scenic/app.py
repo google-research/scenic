@@ -14,9 +14,9 @@
 
 """Generic entry point for Python application in Scenic.
 
-This provides run() which performs some inialization and then calls the provided
-main with a JAX PRNGKey, the ConfigDict, the working directory and a
-CLU MetricWriter.
+This provides run() which performs some initialization and then calls the
+provided main with a JAX PRNGKey, the ConfigDict, the working directory
+and a CLU MetricWriter.
 We expect each scenic project to have it's own main.py. It's very short but
 makes it easier to maintain scenic as the number of projects grows.
 
