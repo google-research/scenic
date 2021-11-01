@@ -46,6 +46,8 @@ _IMPORT_TABLE = {
         'scenic.dataset_lib.oxford_pets_dataset',
     'svhn':
         'scenic.dataset_lib.svhn_dataset',
+    'video_tfrecord_dataset':
+        'scenic.projects.vivit.data.video_tfrecord_dataset',
 }
 
 
