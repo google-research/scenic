@@ -57,6 +57,12 @@ configs specified in the config file.
 
 ## List of projects hosted in Scenic
 
+*   [ViViT](vivit)
+
+    > ViViT is a family of pure-transformer based models for video
+    > classification that achieved state-of-the-art results.
+    > Details can be found in the [paper](https://arxiv.org/abs/2103.15691).
+
 *   [FastViT](fast_vit)
 
     > FastViT is a project that aims at exploring ideas around making ViT faster
