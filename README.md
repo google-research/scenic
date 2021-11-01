@@ -40,12 +40,13 @@ including strong non-attentional baselines.
 There some SOTA models and baselines in Scenic which were either developed
 using Scenic, or have been reimplemented in Scenic:
 
-Projects that were developed in Scenic:
+Projects that were developed in Scenic or used it for their experiments:
 * [ViViT: A Video Vision Transformer](https://arxiv.org/abs/2103.15691)
 * [OmniNet: Omnidirectional Representations from Transformers](https://arxiv.org/abs/2103.01075)
 * [Attention Bottlenecks for Multimodal Fusion](https://arxiv.org/abs/2107.00135)
 * [TokenLearner: What Can 8 Learned Tokens Do for Images and Videos?](https://arxiv.org/abs/2106.11297)
 * [Exploring the Limits of Large Scale Pre-training](https://arxiv.org/abs/2110.02095)
+* [The Efficiency Misnomer](https://arxiv.org/abs/2110.12894)
 
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 
