@@ -236,7 +236,7 @@ def axial_dot_product_attention(
     if bias_kv is not None:
       # put attention axis into last dimension
       attn_logits += jnp.swapaxes(bias_kv, axis, -1)  # {batch_dims}1...y
-    attn_weights = nn.softmax(attn_logits, axis=-1)
+    attn_weights = jax.nn.softmax(attn_logits, axis=-1)
 
     # Apply dropout.
     if not deterministic and dropout_rate > 0.:
