@@ -497,6 +497,13 @@ class MetricTest(parameterized.TestCase):
     is_correct_array = model_utils.weighted_top_one_correctly_classified(
         logits, labels, weights=weights)
     num_correct = jnp.sum(is_correct_array)
+    is_correct_array_ref = model_utils.weighted_topk_correctly_classified(
+        logits, labels, weights, k=1)
+
+    np.testing.assert_array_almost_equal(
+        is_correct_array, is_correct_array_ref)
+    np.testing.assert_equal(np.sum(is_correct_array),
+                            np.sum(is_correct_array_ref))
 
     self.is_valid(num_correct, 'Number of correctly classified')
 

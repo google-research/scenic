@@ -136,7 +136,8 @@ def weighted_top_one_correctly_classified(
   top1_idx = jnp.argmax(logits, axis=-1)
   # Extracts the label at the highest logit index for each inputs.
   top1_correct = jnp.take_along_axis(
-      multi_hot_targets, top1_idx[:, None], axis=-1)[:, 0]
+      multi_hot_targets, top1_idx[..., None], axis=-1)
+  top1_correct = jnp.squeeze(top1_correct)
   if weights is not None:
     top1_correct = apply_weights(top1_correct, weights)
 
