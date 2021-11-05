@@ -228,8 +228,7 @@ def train(
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceContext('train', step_num=step):
       train_batch = next(dataset.train_iter)
-      train_state, t_metrics, lr = train_step_pmapped(
-          train_state=train_state, batch=train_batch)
+      train_state, t_metrics, lr = train_step_pmapped(train_state, train_batch)
       # This will accumulate metrics in TPU memory up to the point that we log
       # them. This is no problem for small metrics but may be a problem for
       # large (e.g. segmentation) metrics. An alternative is to set
@@ -288,8 +287,7 @@ def train(
         train_state = train_utils.sync_model_state_across_replicas(train_state)
         for _ in range(steps_per_eval):
           eval_batch = next(dataset.valid_iter)
-          e_metrics = eval_step_pmapped(
-              train_state=train_state, batch=eval_batch)
+          e_metrics = eval_step_pmapped(train_state, eval_batch)
           if is_multilabel_model:
             e_metrics, logits_batch, labels_batch = e_metrics
             # TODO(dehghani, lucic): Fetching from the device in each step might
@@ -365,8 +363,7 @@ def train(
         logging.info('Starting multicrop test')
         for _ in range(steps_per_test):
           test_batch = next(dataset.test_iter)
-          t_metrics = test_step_pmapped(
-              train_state=train_state, batch=test_batch)
+          t_metrics = test_step_pmapped(train_state, test_batch)
           # Fetch t_metrics to host and store.
           test_metrics.append(train_utils.unreplicate_and_get(t_metrics))
         # Log eval summary.

@@ -42,10 +42,10 @@ def to_cpu(array: jnp.ndarray):
 
 
 def train_step(
-    *,
-    flax_model: nn.Module,
     train_state: train_utils.TrainState,
     batch: Batch,
+    *,
+    flax_model: nn.Module,
     learning_rate_fn: Callable[[int], float],
     loss_fn: LossFn,
     metrics_fn: MetricFn,
@@ -61,12 +61,12 @@ def train_step(
   (batch) arguments are donated to the computation.
 
   Args:
-    flax_model: A Flax model.
     train_state: The state of training including the current
       global_step, model_state, rng, and optimizer. The buffer of this argument
       can be donated to the computation.
     batch: A single batch of data. The buffer of this argument can be donated to
       the computation.
+    flax_model: A Flax model.
     learning_rate_fn: learning rate scheduler which give the global_step
       generates the learning rate.
     loss_fn: A loss function that given logits, a batch, and parameters of the
@@ -168,10 +168,10 @@ def train_step(
 
 
 def eval_step(
-    *,
-    flax_model: nn.Module,
     train_state: train_utils.TrainState,
     batch: Batch,
+    *,
+    flax_model: nn.Module,
     metrics_fn: MetricFn,
     return_logits_and_labels: bool = False,
     return_confusion_matrix: bool = False,
@@ -194,12 +194,12 @@ def eval_step(
   over all batches.
 
   Args:
-    flax_model: A Flax model.
     train_state: TrainState, the state of training including the current
       global_step, model_state, rng, and optimizer. The buffer of this argument
       can be donated to the computation.
     batch: A single batch of data. a metrics function, that given logits and
       batch of data, calculates the metrics as well as the loss.
+    flax_model: A Flax model.
     metrics_fn: A metrics function, that given logits and batch of data,
       calculates the metrics as well as the loss.
     return_logits_and_labels: If true, returns logits and labels. Can be used
@@ -238,10 +238,10 @@ def eval_step(
 
 
 def test_step(
-    *,
-    flax_model: nn.Module,
     train_state: train_utils.TrainState,
     batch: Batch,
+    *,
+    flax_model: nn.Module,
     metrics_fn: MetricFn,
     n_clips: int = 2,
     return_logits_and_labels: bool = False,
@@ -259,7 +259,6 @@ def test_step(
   This assumption is true when local_batch_size = num_local_devices
 
   Args:
-    flax_model: A Flax model.
     train_state: The state of training including the current
       global_step, model_state, rng, and optimizer, and other metadata.
     batch: Dictionary with keys 'inputs', 'labels', 'batch_mask'. We assume that
@@ -268,6 +267,7 @@ def test_step(
       w, c] batch['labels'] = [num_crops, num_classes] However, for
       classification, the labels for all the crops are the same.
       batch['batch_mask'] = [num_crops]
+    flax_model: A Flax model.
     metrics_fn: Metrics function for the model.
     n_clips: The number of clips to process at a time by each device. Set
       due to memory constraints.
