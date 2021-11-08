@@ -196,6 +196,8 @@ class BaseModelWithMatching(base_model.BaseModel):  # pytype: disable=ignored-ab
       matcher_fn = matchers.hungarian_tpu_matcher
     elif matcher_name == 'hungarian_scan_tpu':
       matcher_fn = matchers.hungarian_scan_tpu_matcher
+    elif matcher_name == 'hungarian_cover_tpu':
+      matcher_fn = matchers.hungarian_cover_tpu_matcher
     else:
       raise ValueError('Unknown matcher (%s).' % matcher_name)
 

@@ -20,6 +20,10 @@ def get_config():
   config.dataset_configs = ml_collections.ConfigDict()
   config.dataset_configs.prefetch_to_device = 2
   config.dataset_configs.shuffle_buffer_size = 10_000
+  # Should be `config.num_queries - 1` because (i) Sinkhorn currently requires
+  # square cost matrices; and (ii) an additional empty box is appended inside
+  # the model.
+  config.dataset_configs.max_boxes = 99
   config.data_dtype_str = 'float32'
 
   # Model.
