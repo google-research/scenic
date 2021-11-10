@@ -128,6 +128,9 @@ def get_config():
   Use a pretrained Kinetics checkpoint, or ImageNet checkpoint
   config.init_from.checkpoint_path = 'path_to_checkpoint'
   config.init_from.checkpoint_format = 'scenic'
+  config.init_from.model_config = ml_collections.ConfigDict()
+  config.init_from.model_config.model = ml_collections.ConfigDict()
+  config.init_from.model_config.model.classifier = 'token'  # Specify if this is 'token' or 'gap'.  pylint: disable=line-too-long
   config.init_from.checkpoint_path = None
   config.init_from.restore_positional_embedding = True
   config.init_from.restore_input_embedding = True

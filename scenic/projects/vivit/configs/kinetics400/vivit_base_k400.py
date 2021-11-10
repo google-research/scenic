@@ -111,6 +111,9 @@ def get_config():
   # https://github.com/google-research/vision_transformer (checkpoint_format = 'bigvision')  pylint: disable=line-too-long
   config.init_from.checkpoint_path = 'path_to_checkpoint_of_vit_b_16'
   config.init_from.checkpoint_format = 'scenic'
+  config.init_from.model_config = ml_collections.ConfigDict()
+  config.init_from.model_config.model = ml_collections.ConfigDict()
+  config.init_from.model_config.model.classifier = 'token'  # Specify if this is 'token' or 'gap'.  pylint: disable=line-too-long
   config.init_from.restore_positional_embedding = True
   config.init_from.restore_input_embedding = True
   config.init_from.positional_embed_size_change = 'tile'
