@@ -630,14 +630,14 @@ def padtype_to_pads(
   """
   xc = jax.lib.xla_client
   if isinstance(padding, str):
-    mapping = {'VALID': xc.PaddingType.VALID, 'SAME': xc.PaddingType.SAME}
+    mapping = {'VALID': xc.PaddingType.VALID, 'SAME': xc.PaddingType.SAME}  # pytype: disable=module-attr  # gen-stub-imports
     try:
       padding = mapping[padding.upper()]
     except KeyError as err:
       msg = "Unrecognized padding type: expected 'VALID' or 'SAME', got {}."
       raise RuntimeError(msg.format(padding)) from err
 
-  if padding == xc.PaddingType.SAME:
+  if padding == xc.PaddingType.SAME:  # pytype: disable=module-attr  # gen-stub-imports
     window_shape = jnp.array(window_shape)
     window_strides = jnp.array(window_strides)
     out_shape = _ceil_divide(in_shape, window_strides)
@@ -645,7 +645,7 @@ def padtype_to_pads(
         (out_shape - 1) * window_strides + window_shape - in_shape, 0)
     pad_sizes = jnp.stack([pad_sizes // 2, pad_sizes - pad_sizes // 2], axis=1)
     return pad_sizes
-  elif padding == xc.PaddingType.VALID:
+  elif padding == xc.PaddingType.VALID:  # pytype: disable=module-attr  # gen-stub-imports
     return jnp.zeros((in_shape.shape[0], len(window_shape), 2), dtype=jnp.int32)
   raise TypeError(f'Unknown padding type: {padding}.')
 
