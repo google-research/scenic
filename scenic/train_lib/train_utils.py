@@ -796,18 +796,21 @@ class Chrono:
     self.accum_train_time = accum_train_time
     self.start_time = None
     self.prev_time = None
-    self.prev_step = None
+    self.prev_step = first_step
     self.pause_start = None
     self.paused_time = 0
+    self.warmup = 1  # How many calls to `tick` to skip.
 
   def tick(self, step: int, writer: metric_writers.MetricWriter):
     """A chronometer tick."""
     now = self.pause_start or time.time()
 
-    # We take the start as the first time `tick` is called, so we avoid
-    # measuring the overhead of compilation and don't include it in time
-    # estimates.
-    if None in (self.start_time, self.prev_time, self.prev_step):
+    # Take the start as the first time `tick` is called to avoid measuring the
+    # overhead of compilation and don't include it in time estimates.
+    if self.warmup:
+      self.warmup -= 1
+      return
+    if None in (self.start_time, self.prev_time):
       self.start_time = self.prev_time = now
       self.prev_step = step
       return
@@ -835,23 +838,16 @@ class Chrono:
     ds = step - self.prev_step  # Steps between ticks.
     ncores = jax.device_count()  # Global device count.
 
-    # Accumulate (integrate) training time, good for plots.
+    # Accumulate (integrate) training time.
     self.accum_train_time += dt
     core_hours = self.accum_train_time * ncores / 60 / 60
     devtype = jax.devices()[0].device_kind
-    core_hours_approx_v3 = core_hours
-    if devtype == 'TPU v2':
-      # Do approximate conversion to TPU V3.
-      core_hours_approx_v3 /= 1.2
-
     writer.write_scalars(
         step,
         {
             'img/sec/core': self.global_bs * ds / dt / ncores,
             'img/sec': self.global_bs * ds / dt,
             f'core_hours_{devtype}': core_hours,
-            'core_hours_approx_v3': core_hours_approx_v3,
-            'epoch': step / self.steps_per_epoch,  # Good for plot.
         })
 
     self.prev_time = now
