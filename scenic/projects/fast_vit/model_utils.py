@@ -60,20 +60,22 @@ class LinformerEncoderSelfAttention(nn.Module):
       ..., jnp.ndarray] = attention_layers.dot_product_attention
 
   @nn.compact
-  def __call__(self, x: jnp.ndarray, *, deterministic: bool) -> jnp.ndarray:
+  def __call__(self, inputs_q: jnp.ndarray, *,
+               deterministic: bool) -> jnp.ndarray:
     """Applies Linformer multi-head dot product self-attention.
 
     Projects the inputs into multi-headed query, key, and value vectors,
     applies dot-product attention and project the results to an output vector.
 
     Args:
-      x: Input of shape `[batch_sizes..., length, features]`.
+      inputs_q: Input of shape `[batch_sizes..., length, features]`.
       deterministic: Whether the model is run in deterministic mode (if so, do
         not apply dropout).
 
     Returns:
       Output of shape `[batch_sizes..., length features]`.
     """
+    x = inputs_q
     features = self.out_features or x.shape[-1]
     qkv_features = self.qkv_features or x.shape[-1]
 
