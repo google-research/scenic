@@ -19,7 +19,7 @@ class AttentionLayersTest(parameterized.TestCase):
     x = jnp.ones((4, 16, 32))
     n_heads = 2
     encoder_self_attention_def = functools.partial(
-        model_utils.LinformerEncoderSelfAttention, num_heads=n_heads)
+        model_utils.LinformerEncoderAttention, num_heads=n_heads)
     encoder_vars = encoder_self_attention_def().init(rng, x, deterministic=True)
     y = encoder_self_attention_def().apply(encoder_vars, x, deterministic=True)
     # Test outputs shape.
@@ -32,7 +32,7 @@ class AttentionLayersTest(parameterized.TestCase):
     x = jnp.ones((4, 16, 32))
     n_heads = 2
     encoder_self_attention_def = functools.partial(
-        model_utils.LinformerEncoderSelfAttention,
+        model_utils.LinformerEncoderAttention,
         num_heads=n_heads,
         dropout_rate=0.1)
     encoder_vars = encoder_self_attention_def().init(rng, x, deterministic=True)
@@ -46,16 +46,18 @@ class AttentionLayersTest(parameterized.TestCase):
       ('test_generalized', 'generalized'),
   ])
   def test_performer_encoder_self_attention(self, attention_fn_cls):
-    """Tests PerformerEncoderSelfAttention."""
+    """Tests PerformerEncoderAttention."""
     rng = random.PRNGKey(0)
     x = jnp.ones((4, 16, 32))
     n_heads = 2
     encoder_self_attention_def = functools.partial(
-        model_utils.PerformerEncoderSelfAttention,
+        model_utils.PerformerEncoderAttention,
         num_heads=n_heads,
         attention_fn_cls=attention_fn_cls)
-    encoder_vars = encoder_self_attention_def().init(rng, x, deterministic=True)
-    y = encoder_self_attention_def().apply(encoder_vars, x, deterministic=True)
+    encoder_vars = encoder_self_attention_def().init(
+        rng, x, x, deterministic=True)
+    y = encoder_self_attention_def().apply(
+        encoder_vars, x, x, deterministic=True)
     # Test outputs shape.
     self.assertEqual(y.shape, x.shape)
 
@@ -64,18 +66,19 @@ class AttentionLayersTest(parameterized.TestCase):
       ('test_generalized', 'generalized'),
   ])
   def test_performer_encoder_self_attention_w_dropout(self, attention_fn_cls):
-    """Tests PerformerEncoderSelfAttention with dropout."""
+    """Tests PerformerEncoderAttention with dropout."""
     rng = random.PRNGKey(0)
     rng, dropout_rng = random.split(rng)
     x = jnp.ones((4, 16, 32))
     n_heads = 2
     encoder_self_attention_def = functools.partial(
-        model_utils.PerformerEncoderSelfAttention,
+        model_utils.PerformerEncoderAttention,
         num_heads=n_heads,
         attention_fn_cls=attention_fn_cls)
-    encoder_vars = encoder_self_attention_def().init(rng, x, deterministic=True)
+    encoder_vars = encoder_self_attention_def().init(
+        rng, x, x, deterministic=True)
     y = encoder_self_attention_def().apply(
-        encoder_vars, x, deterministic=False, rngs={'dropout': dropout_rng})
+        encoder_vars, x, x, deterministic=False, rngs={'dropout': dropout_rng})
     # Test outputs shape.
     self.assertEqual(y.shape, x.shape)
 

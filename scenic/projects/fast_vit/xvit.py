@@ -201,7 +201,7 @@ class Encoder1DPyramid(nn.Module):
               f'({target_down_scale})')
           new_length = cur_length // target_down_scale
           x = nn.LayerNorm(name=f'pool_norm_{lyr}')(x)
-          x = model_utils.LinformerEncoderSelfAttention(
+          x = model_utils.LinformerEncoderAttention(
               num_heads=self.attention_configs['num_heads'],
               kernel_init=nn.initializers.xavier_uniform(),
               broadcast_dropout=False,

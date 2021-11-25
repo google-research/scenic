@@ -18,7 +18,7 @@ from scenic.model_lib.layers import attention_layers
 Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
 
 
-class LinformerEncoderSelfAttention(nn.Module):
+class LinformerEncoderAttention(nn.Module):
   """Linformer Encoder only multi-head dot-product self-attention.
 
   Attributes:
@@ -60,7 +60,10 @@ class LinformerEncoderSelfAttention(nn.Module):
       ..., jnp.ndarray] = attention_layers.dot_product_attention
 
   @nn.compact
-  def __call__(self, inputs_q: jnp.ndarray, *,
+  def __call__(self,
+               inputs_q: jnp.ndarray,
+               inputs_kv: jnp.ndarray = None,
+               *,
                deterministic: bool) -> jnp.ndarray:
     """Applies Linformer multi-head dot product self-attention.
 
@@ -68,13 +71,17 @@ class LinformerEncoderSelfAttention(nn.Module):
     applies dot-product attention and project the results to an output vector.
 
     Args:
-      inputs_q: Input of shape `[batch_sizes..., length, features]`.
+      inputs_q: Input query of shape `[batch_sizes..., length, features]`.
+      inputs_kv: Input key-vale, which is ignored in linformer.
       deterministic: Whether the model is run in deterministic mode (if so, do
         not apply dropout).
 
     Returns:
       Output of shape `[batch_sizes..., length features]`.
     """
+    if inputs_kv is not None:
+      logging.warning(
+          'Ignoring inputs_kv as Linformer only supports self-attention.')
     x = inputs_q
     features = self.out_features or x.shape[-1]
     qkv_features = self.qkv_features or x.shape[-1]
@@ -287,14 +294,6 @@ class PerformerEncoderAttention(nn.Module):
     )(inputs_q=inputs_q, inputs_kv=inputs_kv, deterministic=deterministic)
 
 
-class PerformerEncoderSelfAttention(PerformerEncoderAttention):
-  """Self-attention special case of multi-head dot-product attention."""
-
-  @nn.compact
-  def __call__(self, inputs_q: jnp.ndarray, deterministic: bool) -> jnp.ndarray:
-    return super().__call__(inputs_q, inputs_q, deterministic=deterministic)
-
-
 class AttentionFunctionName(enum.Enum):
   """Defines name assigned to self attention modules."""
   STANDARD = 'standard'
@@ -305,20 +304,15 @@ class AttentionFunctionName(enum.Enum):
 def _get_attention_module(name: str, is_self_attention=True) -> Any:
   """Returns an attention module."""
   function_name = AttentionFunctionName(name)
-  if is_self_attention:
-    if function_name == AttentionFunctionName.STANDARD:
-      return attention_layers.MultiHeadAttention
-    elif function_name == AttentionFunctionName.LINFORMER:
-      return LinformerEncoderSelfAttention
-    elif function_name == AttentionFunctionName.PERFORMER:
-      return PerformerEncoderSelfAttention
-  else:
-    if function_name == AttentionFunctionName.STANDARD:
-      return attention_layers.MultiHeadAttention
-    elif function_name == AttentionFunctionName.LINFORMER:
+  if function_name == AttentionFunctionName.STANDARD:
+    return attention_layers.MultiHeadAttention
+  elif function_name == AttentionFunctionName.LINFORMER:
+    if not is_self_attention:
       raise NotImplementedError
-    elif function_name == AttentionFunctionName.PERFORMER:
-      return PerformerEncoderAttention
+    else:
+      return LinformerEncoderAttention
+  elif function_name == AttentionFunctionName.PERFORMER:
+    return PerformerEncoderAttention
 
 
 def _get_variant_args(name: str) -> Any:
