@@ -40,7 +40,7 @@ def multilabel_classification_metrics_function(
     metrics: base_model
     .MetricNormalizerFnDict = _MULTI_LABEL_CLASSIFICATION_METRICS,
 ) -> Dict[str, Tuple[float, int]]:
-  """Calcualte metrics for the multi-label classification task.
+  """Calculates metrics for the multi-label classification task.
 
   Currently we assume each metric_fn has the API:
     ```metric_fn(logits, targets, weights)```

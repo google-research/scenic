@@ -39,7 +39,7 @@ def classification_metrics_function(
     target_is_onehot: bool = False,
     metrics: base_model.MetricNormalizerFnDict = _CLASSIFICATION_METRICS,
 ) -> Dict[str, Tuple[float, int]]:
-  """Calcualte metrics for the classification task.
+  """Calculates metrics for the classification task.
 
 
   Currently we assume each metric_fn has the API:
