@@ -282,82 +282,85 @@ class LossTest(parameterized.TestCase):
     self.assertSequenceAlmostEqual(
         out3.flatten(), out3_target.flatten(), places=5)
 
-  def test_weighted_unnormalized_sigmoid_cross_entropy(self):
-    """Tests weighted_unnormalized_sigmoid_cross_entropy."""
+  def test_weighted_sigmoid_cross_entropy(self):
+    """Tests weighted_sigmoid_cross_entropy."""
 
     logits = jnp.array([[1, 2, 3], [4, 5, 6]], dtype=jnp.float32)
     labels = jnp.array([[0, 1, 1], [1, 0, 1]], dtype=jnp.float32)
     sigmoid = jax.nn.sigmoid
     log = jnp.log
 
-    loss = model_utils.weighted_unnormalized_sigmoid_cross_entropy(
-        logits, labels)
-    gt_loss = jnp.array([
-        [-log(1 - sigmoid(1.)), -log(sigmoid(2.)), -log(sigmoid(3.))],
-        [-log(sigmoid(4.)), -log(1 - sigmoid(5.)), -log(sigmoid(6.))]
-    ])
+    loss = model_utils.weighted_sigmoid_cross_entropy(logits, labels)
+    gt_loss = jnp.array([[
+        -log(1 - sigmoid(1.)), -log(sigmoid(2.)), -log(sigmoid(3.))
+    ], [-log(sigmoid(4.)), -log(1 - sigmoid(5.)), -log(sigmoid(6.))]
+                        ]) / np.prod(labels.shape[:-1])
     self.assertSequenceAlmostEqual(
-        loss.flatten(), gt_loss.sum(axis=-1).flatten(), places=3)
+        loss.flatten(), gt_loss.sum().flatten(), places=3)
+
+    example_weights = jnp.array([1., 0.])
+    loss = model_utils.weighted_sigmoid_cross_entropy(
+        logits, labels, weights=example_weights)
+    gt_loss = jnp.array([[
+        -log(1 - sigmoid(1.)), -log(sigmoid(2.)), -log(sigmoid(3.))
+    ], [0., 0., 0.]]) / example_weights.sum() + 1e-9
+    self.assertSequenceAlmostEqual(
+        loss.flatten(), gt_loss.sum().flatten(), places=3)
+
+    label_weights = jnp.array([1., 2., 3.])
+    loss = model_utils.weighted_sigmoid_cross_entropy(
+        logits, labels, label_weights=label_weights)
+    gt_loss = jnp.array([[
+        -log(1 - sigmoid(1.)), -2 * log(sigmoid(2.)), -3 * log(sigmoid(3.))
+    ], [-log(sigmoid(4.)), -2 * log(1 - sigmoid(5.)), -3 * log(sigmoid(6.))]
+                        ]) / np.prod(labels.shape[:-1])
+    self.assertSequenceAlmostEqual(
+        loss.flatten(), gt_loss.sum().flatten(), places=3)
+
+    loss = model_utils.weighted_sigmoid_cross_entropy(
+        logits, labels, weights=example_weights, label_weights=label_weights)
+    gt_loss = jnp.array([[
+        -log(1 - sigmoid(1.)), -2 * log(sigmoid(2.)), -3 * log(sigmoid(3.))
+    ], [0., 0., 0.]]) / example_weights.sum() + 1e-9
+    self.assertSequenceAlmostEqual(
+        loss.flatten(), gt_loss.sum().flatten(), places=3)
+
+    # Label weights can actually be any shape that is broadcastable to the
+    # shape of logits.
+    label_weights = jnp.array([[1., 2., 3.], [4., 5., 6.]])
+    loss = model_utils.weighted_sigmoid_cross_entropy(
+        logits, labels, weights=example_weights, label_weights=label_weights)
+    gt_loss = jnp.array([[
+        -log(1 - sigmoid(1.)), -2 * log(sigmoid(2.)), -3 * log(sigmoid(3.))
+    ], [0., 0., 0.]]) / example_weights.sum() + 1e-9
+    self.assertSequenceAlmostEqual(
+        loss.flatten(), gt_loss.sum().flatten(), places=3)
+
+    with self.assertRaises(ValueError):
+      label_weights = jnp.array([1., 2., 3., 4.])
+      loss = model_utils.weighted_sigmoid_cross_entropy(
+          logits, labels, label_weights=label_weights)
+
+  def test_focal_sigmoid_cross_entropy(self):
+    """Tests focal_sigmoid_cross_entropy."""
+    logits = jnp.array([[1, 2, 3], [4, 5, 6]], dtype=jnp.float32)
+    labels = jnp.array([[0, 1, 1], [1, 0, 1]], dtype=jnp.float32)
+    sigmoid = jax.nn.sigmoid
+    log = jnp.log
 
     a = 0.25
     g = 2.
     loss = model_utils.focal_sigmoid_cross_entropy(
         logits, labels, alpha=a, gamma=g)
-    focal_factor = jnp.array([
-        [(1-a) * sigmoid(1.)**g, a * sigmoid(-2.)**g, a * sigmoid(-3.)**g],
-        [a * sigmoid(-4.)**g, (1-a) * sigmoid(5.)**g, a * sigmoid(-6.)**g]
-    ])
-    self.assertSequenceAlmostEqual(
-        loss.flatten(), (gt_loss * focal_factor).sum(axis=-1).flatten(),
-        places=3)
 
-    example_weights = jnp.array([1., 0.])
-    loss = model_utils.weighted_unnormalized_sigmoid_cross_entropy(
-        logits, labels, weights=example_weights)
-    gt_loss = jnp.array([
-        [-log(1 - sigmoid(1.)), -log(sigmoid(2.)), -log(sigmoid(3.))],
-        [0., 0., 0.]
-    ])
+    gt_loss = jnp.array(
+        [[-log(1 - sigmoid(1.)), -log(sigmoid(2.)), -log(sigmoid(3.))],
+         [-log(sigmoid(4.)), -log(1 - sigmoid(5.)), -log(sigmoid(6.))]])
+    focal_factor = jnp.array([[
+        (1 - a) * sigmoid(1.)**g, a * sigmoid(-2.)**g, a * sigmoid(-3.)**g
+    ], [a * sigmoid(-4.)**g, (1 - a) * sigmoid(5.)**g, a * sigmoid(-6.)**g]])
     self.assertSequenceAlmostEqual(
-        loss.flatten(), gt_loss.sum(axis=-1).flatten(), places=3)
-
-    label_weights = jnp.array([1., 2., 3.])
-    loss = model_utils.weighted_unnormalized_sigmoid_cross_entropy(
-        logits, labels, label_weights=label_weights)
-    gt_loss = jnp.array([
-        [-log(1 - sigmoid(1.)), -2 * log(sigmoid(2.)), -3 * log(sigmoid(3.))],
-        [-log(sigmoid(4.)), -2 * log(1 - sigmoid(5.)), -3 * log(sigmoid(6.))]
-    ])
-    self.assertSequenceAlmostEqual(
-        loss.flatten(), gt_loss.sum(axis=-1).flatten(), places=3)
-
-    loss = model_utils.weighted_unnormalized_sigmoid_cross_entropy(
-        logits, labels, weights=example_weights,
-        label_weights=label_weights)
-    gt_loss = jnp.array([
-        [-log(1 - sigmoid(1.)), -2 * log(sigmoid(2.)), -3 * log(sigmoid(3.))],
-        [0., 0., 0.]
-    ])
-    self.assertSequenceAlmostEqual(
-        loss.flatten(), gt_loss.sum(axis=-1).flatten(), places=3)
-
-    # Label weights can actually be any shape that is broadcastable to the
-    # shape of logits.
-    label_weights = jnp.array([[1., 2., 3.], [4., 5., 6.]])
-    loss = model_utils.weighted_unnormalized_sigmoid_cross_entropy(
-        logits, labels, weights=example_weights,
-        label_weights=label_weights)
-    gt_loss = jnp.array([
-        [-log(1 - sigmoid(1.)), -2 * log(sigmoid(2.)), -3 * log(sigmoid(3.))],
-        [0., 0., 0.]
-    ])
-    self.assertSequenceAlmostEqual(
-        loss.flatten(), gt_loss.sum(axis=-1).flatten(), places=3)
-
-    with self.assertRaises(ValueError):
-      label_weights = jnp.array([1., 2., 3., 4.])
-      loss = model_utils.weighted_unnormalized_sigmoid_cross_entropy(
-          logits, labels, label_weights=label_weights)
+        loss.flatten(), (gt_loss * focal_factor).flatten(), places=3)
 
   def test_dice_loss(self):
     """Tests the correctness of the segmentation dice loss."""
@@ -523,6 +526,27 @@ class MetricTest(parameterized.TestCase):
     weights *= weight_multiplier
 
     loss_array = model_utils.weighted_unnormalized_sigmoid_cross_entropy(
+        logits, labels, weights=weights)
+    loss_sum = jnp.sum(loss_array)
+
+    self.is_valid(loss_sum, 'Loss value')
+
+  @parameterized.parameters(itertools.product([1., 0.], [1., 0.]))
+  def test_weighted_unnormalized_softmax_cross_entropy(self, label_multiplier,
+                                                       weight_multiplier):
+    """Tests the unnormalized softmax cross entropy computation."""
+    batch_size = 512
+    num_of_classes = 100
+    logits = jnp.array(
+        np.random.normal(size=(batch_size, num_of_classes)), dtype=jnp.float32)
+    labels = jnp.array(
+        np.random.randint(0, 2, size=(batch_size, num_of_classes)))
+    labels *= label_multiplier
+
+    weights = jnp.ones(shape=(batch_size,), dtype=jnp.float32)
+    weights *= weight_multiplier
+
+    loss_array = model_utils.weighted_unnormalized_softmax_cross_entropy(
         logits, labels, weights=weights)
     loss_sum = jnp.sum(loss_array)
 

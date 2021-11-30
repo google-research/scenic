@@ -23,42 +23,9 @@ from scenic.model_lib.base_models import base_model
 from scenic.model_lib.base_models import model_utils
 
 
-def mean_squared_error(
-    predictions: jnp.ndarray,
-    targets: jnp.ndarray,
-    weights: Optional[jnp.ndarray] = None) -> jnp.ndarray:
-  """Compute weighted mean squared error given logits and targets.
-
-  Args:
-    predictions: Array of shape [batch, n_features].
-    targets: Array of shape [batch, n_features].
-    weights: Optional array of shape [batch, 1].
-      (rank of one_hot_targets -1). This is the weight to apply to the loss
-      computed for each example in the batch. Can be used to ignore padded
-      examples in the batch.
-
-  Returns:
-    The mean squared error of the examples in the given batch.
-  """
-  if predictions.ndim != targets.ndim:
-    raise ValueError(
-        'Incorrect shapes. Got shape %s predictions and %s targets' %
-        (str(predictions.shape), str(targets.shape)))
-
-  error = targets - predictions
-  loss = jnp.square(error)
-
-  # For each datapoint compute the total squared error, then (weighted) average.
-  if weights is not None:
-    loss = model_utils.apply_weights(loss, weights)
-    return jnp.sum(loss, axis=1) / weights.sum()
-  else:
-    return jnp.sum(loss, axis=1).mean()
-
-
 _REGRESSION_METRICS = immutabledict({
     'mean_squared_error':
-        (mean_squared_error, model_utils.num_examples)
+        (model_utils.weighted_squared_error, model_utils.num_examples)
 })
 
 
@@ -71,7 +38,7 @@ def regression_metrics_function(
 
   Currently we assume each metric_fn has the API:
     ```metric_fn(predictions, targets, weights)```
-  and returns an array of shape [batch_size]. We also assume that to compute
+  and returns an array of shape [batch,]. We also assume that to compute
   the aggregate metric, one should sum across all batches, then divide by the
   total samples seen. In this way we currently only support metrics of the 1/N
   sum f(inputs, targets). Note, the caller is responsible for dividing by
@@ -165,7 +132,8 @@ class RegressionModel(base_model.BaseModel):
     weights = batch.get('batch_mask')
     targets = batch['targets']
 
-    total_loss = mean_squared_error(predictions, targets, weights)
+    total_loss = model_utils.weighted_mean_squared_error(
+        predictions, targets, weights)
     if self.config.get('l2_decay_factor'):
       l2_loss = model_utils.l2_regularization(model_params)
       total_loss += 0.5 * self.config.l2_decay_factor * l2_loss

@@ -56,6 +56,20 @@ def get_fake_batch_and_predictions():
 class TestRegressionModel(absltest.TestCase):
   """Tests for the a fake regression model."""
 
+  def test_loss_function(self):
+    """Tests loss_function by checking its output's validity."""
+    model = FakeRegressionModel()
+    batch, predictions = get_fake_batch_and_predictions()
+    batch_replicated, predictions_replicated = (
+        jax_utils.replicate(batch), jax_utils.replicate(predictions))
+
+    # Test loss function in the pmapped setup:
+    loss_function_pmapped = jax.pmap(model.loss_function, axis_name='batch')
+    total_loss = loss_function_pmapped(predictions_replicated, batch_replicated)
+    total_loss = jax_utils.unreplicate(total_loss)
+    # Loss =  1/3 * (|[0, 1, 0, 0]|^2 + |[0, 0, 0, 0|^2 + |[1, 3, 0, 0]|^2)
+    self.assertAlmostEqual(total_loss, 11 / 3)
+
   def test_metric_function(self):
     """Tests metric_function by checking its output's format and validity."""
     model = FakeRegressionModel()
@@ -68,14 +82,13 @@ class TestRegressionModel(absltest.TestCase):
     expected_metrics_keys = ['mean_squared_error']
     self.assertSameElements(expected_metrics_keys, all_metrics.keys())
 
-    print('ALL METRICS: ', all_metrics)
     all_metrics = jax_utils.unreplicate(all_metrics)
     self.assertLen(all_metrics, 1)
 
-    v = next(iter(all_metrics.values()))
-    # Loss = 1/3 * (|[0, 1, 0, 0]|^2 + |[0,0,0,0|^2 + |[1, 3, 0, 0]|^2) = 11/3
-    self.assertAlmostEqual(v[0], 11.0/3)
-    self.assertEqual(v[1], 3)
+    mse_sum_count = all_metrics['mean_squared_error']
+    # (|[0, 1, 0, 0]|^2 + |[0, 0, 0, 0|^2 + |[1, 3, 0, 0]|^2) = 11
+    self.assertAlmostEqual(mse_sum_count[0], 11.0)
+    self.assertEqual(mse_sum_count[1], 3)
 
 if __name__ == '__main__':
   absltest.main()

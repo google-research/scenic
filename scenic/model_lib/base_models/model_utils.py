@@ -50,9 +50,9 @@ def num_examples(logits: jnp.ndarray,
 def apply_weights(output: jnp.ndarray, weights: jnp.ndarray) -> jnp.ndarray:
   """Applies given weights of the inputs in the minibatch to outputs.
 
-  Note that weights can be per example (i.e. of shape `[batch_size,]`) or per
-  pixel/token (i.e. of shape `[batch_size, height, width]` or
-  `[batch_size, len]`) so we need to broadcast it to the output shape.
+  Note that weights can be per example (i.e. of shape `[batch,]`) or per
+  pixel/token (i.e. of shape `[batch, height, width]` or
+  `[batch, len]`) so we need to broadcast it to the output shape.
 
   Args:
     output: Computed output, which can be loss or the correctly
@@ -76,7 +76,7 @@ def weighted_correctly_classified(
     logits: jnp.ndarray,
     one_hot_targets: jnp.ndarray,
     weights: Optional[jnp.ndarray] = None) -> jnp.ndarray:
-  """Compute weighted number of correctly classified over the given batch.
+  """Computes weighted number of correctly classified over the given batch.
 
   This computes the weighted number of correctly classified examples/pixels in a
   single, potentially padded minibatch. If the minibatch/inputs is padded (i.e.,
@@ -110,7 +110,7 @@ def weighted_top_one_correctly_classified(
     logits: jnp.ndarray,
     multi_hot_targets: jnp.ndarray,
     weights: Optional[jnp.ndarray] = None) -> jnp.ndarray:
-  """Compute weighted number of correctly classified, given top 1 class.
+  """Computes weighted number of correctly classified, given top 1 class.
 
   This computes the weighted number of correctly classified examples/pixels in a
   single, potentially padded minibatch, given top-one prediction. If the
@@ -148,7 +148,7 @@ def weighted_topk_correctly_classified(logits: jnp.ndarray,
                                        multi_hot_target: jnp.ndarray,
                                        weights: Optional[jnp.ndarray] = None,
                                        k: int = 5) -> jnp.ndarray:
-  """Compute weighted number of correctly classified given the top k prediction.
+  """Computes weighted number of correctly classified given the top k prediction.
 
   This computes the weighted number of correctly classified examples/pixels in a
   single, potentially padded minibatch, given the top-k prediction. In the
@@ -193,7 +193,7 @@ def weighted_topk_correctly_classified(logits: jnp.ndarray,
 
 def weighted_recall(logits: Array, multi_hot_target: Array,
                     weights: Optional[Array] = None) -> Array:
-  """Compute weighted recall given the top k prediction.
+  """Computes weighted recall given the top k prediction.
 
   This computes the weighted number of correctly recalled examples/pixels in a
   single, potentially padded minibatch, given the top-k prediction. Per sample,
@@ -275,7 +275,7 @@ def weighted_unnormalized_softmax_cross_entropy(
     label_smoothing: Optional[float] = None,
     label_weights: Optional[jnp.ndarray] = None,
     logits_normalized: bool = False) -> jnp.ndarray:
-  """Compute weighted softmax cross entropy give logits and targets.
+  """Computes weighted softmax cross entropy give logits and targets.
 
   This computes sum_(x,y) softmax-ce(x, y) for a single, potentially padded
   minibatch. If the minibatch is padded (that is it contains null examples)
@@ -288,8 +288,7 @@ def weighted_unnormalized_softmax_cross_entropy(
     weights: None or array of shape [batch x ...] (rank of one_hot_targets -1).
     label_smoothing: Scalar to use to smooth the one-hot labels.
     label_weights: Weight per label of shape [num_classes].
-    logits_normalized: If True, the logits are assumed to already be
-      normalized.
+    logits_normalized: If True, the logits are assumed to already be normalized.
 
   Returns:
     The softmax cross entropy of the examples in the given batch.
@@ -323,7 +322,7 @@ def weighted_unnormalized_sigmoid_cross_entropy(
     label_weights: Optional[jnp.ndarray] = None,
     label_smoothing: Optional[float] = None,
     logits_normalized: bool = False) -> jnp.ndarray:
-  """Compute weighted sigmoid cross entropy given logits and targets.
+  """Computes weighted sigmoid cross entropy given logits and targets.
 
   This also called Binary Cross-Entropy Loss and it measures the probability
   error in discrete classification tasks in which each class is independent and
@@ -336,10 +335,9 @@ def weighted_unnormalized_sigmoid_cross_entropy(
   Args:
     logits: Output of model in shape [batch, ..., num_classes].
     multi_hot_targets: Multi-hot vector of shape [batch, ..., num_classes].
-    weights: None or array of shape [batch x ...]
-      (rank of one_hot_targets -1). This is the weight to apply to the loss
-      computed for each example in the batch. Can be used to ignore padded
-      examples in the batch.
+    weights: None or array of shape [batch x ...] (rank of one_hot_targets -1).
+      This is the weight to apply to the loss computed for each example in the
+      batch. Can be used to ignore padded examples in the batch.
     label_weights: None or array of shape broadcastable to the shape of logits.
       Typically this would be [num_classes] and is the weight to apply to each
       label.
@@ -364,7 +362,6 @@ def weighted_unnormalized_sigmoid_cross_entropy(
     log_not_p = jnp.log((1 + 1e-6) - prob)
   else:
     log_p, log_not_p = jax.nn.log_sigmoid(logits), jax.nn.log_sigmoid(-logits)
-    prob = nn.sigmoid(logits)
 
   loss = -(multi_hot_targets * log_p +
            (1. - multi_hot_targets) * log_not_p)
@@ -374,7 +371,8 @@ def weighted_unnormalized_sigmoid_cross_entropy(
 
   if weights is not None:
     loss = apply_weights(loss, weights)
-  return loss.sum(axis=-1)
+
+  return loss
 
 
 def weighted_softmax_cross_entropy(
@@ -411,7 +409,7 @@ def weighted_sigmoid_cross_entropy(
     weights: Optional[jnp.ndarray] = None,
     label_weights: Optional[jnp.ndarray] = None,
     label_smoothing: Optional[float] = None) -> jnp.ndarray:
-  """Compute weighted sigmoid cross entropy given logits and targets.
+  """Computes weighted sigmoid cross entropy given logits and targets.
 
   Args:
     logits: Output of model in shape [batch, ..., num_classes].
@@ -426,7 +424,7 @@ def weighted_sigmoid_cross_entropy(
     The mean cross entropy of the examples in the given batch as a scalar.
   """
   if weights is not None:
-    normalization = weights.sum() + 1e-9
+    normalization = weights.sum()
   else:
     normalization = np.prod(multi_hot_targets.shape[:-1])
 
@@ -436,7 +434,7 @@ def weighted_sigmoid_cross_entropy(
       weights=weights,
       label_weights=label_weights,
       label_smoothing=label_smoothing)
-  return jnp.sum(unnormalized_sigmoid_ce) / normalization
+  return jnp.sum(unnormalized_sigmoid_ce) / (normalization + 1e-8)
 
 
 def l2_regularization(params: PyTree):
@@ -532,64 +530,134 @@ def weighted_box_l1_loss(
 ############################## Regression Loss #################################
 
 
-def mean_squared_error(
-    logits: jnp.ndarray,
-    target: jnp.ndarray,
+def weighted_squared_error(
+    predictions: jnp.ndarray,
+    targets: jnp.ndarray,
     weights: Optional[jnp.ndarray] = None) -> jnp.ndarray:
-  """Compute weighted mean squared error given logits and targets.
+  """Computes weighted squared error given predictions and targets.
+
+  This computes the squared_error of examples in a single, potentially
+  padded minibatch. If the minibatch is padded (that is it contains null
+  examples) it is assumed that weights is a binary mask where 0 indicates that
+  the example is null.
 
   Args:
-    logits: Output of model in shape [batch, ..., num_classes].
-    target: Vector of shape [batch, ..., num_heads].
-    weights: None or array of shape [batch x ...]
-      (rank of one_hot_targets -1). This is the weight to apply to the loss
-      computed for each example in the batch. Can be used to ignore padded
+    predictions: Output of model in shape shape [batch, ..., n_features].
+    targets: Array of shape [batch, ..., n_features].
+    weights:  None or array of shape [batch,] This is the weight to apply to the
+      loss computed for each example in the batch. Can be used to ignore padded
       examples in the batch.
 
   Returns:
-    The mean squared error of the examples in the given batch.
+    The mean squared error for each example in the given batch. The output shape
+    is [batch,].
   """
-  if logits.ndim != target.ndim:
+  if predictions.ndim != targets.ndim:
     raise ValueError(
-        'Incorrect shapes. Got shape %s logits and %s labels' %
-        (str(logits.shape), str(target.shape)))
+        'Incorrect shapes. Got shape %s predictions and %s targets' %
+        (str(predictions.shape), str(targets.shape)))
 
-  error = target - logits
+  error = targets - predictions
   loss = jnp.square(error)
-
+  # Sum over all features in each example in the batch:
+  loss = jnp.sum(loss, axis=tuple(range(1, predictions.ndim)))
   if weights is not None:
     loss = apply_weights(loss, weights)
-  return jnp.mean(loss)
+  return loss
 
 
-def mean_absolute_error(
-    logits: jnp.ndarray,
-    target: jnp.ndarray,
+def weighted_mean_squared_error(
+    predictions: jnp.ndarray,
+    targets: jnp.ndarray,
     weights: Optional[jnp.ndarray] = None) -> jnp.ndarray:
-  """Compute weighted mean absolute error given logits and targets.
+  """Weighted mean of weighted_squared_error.
 
   Args:
-    logits: Output of model in shape [batch, ..., num_classes].
-    target: Vector of shape [batch, ..., num_heads].
-    weights: None or array of shape [batch x ...]
-      (rank of one_hot_targets -1). This is the weight to apply to the loss
-      computed for each example in the batch. Can be used to ignore padded
+    predictions: Output of model in shape [batch, ..., num_features].
+    targets: Targets of shape [batch, ..., num_features].
+    weights:  None or array of shape [batch,] This is the weight to apply to the
+      loss  computed for each example in the batch. Can be used to ignore padded
       examples in the batch.
 
   Returns:
-    The mean absolute error of the examples in the given batch.
+    The averaged mean squared error of all the examples in the given batch as a
+    scalar.
   """
-  if logits.ndim != target.ndim:
-    raise ValueError(
-        'Incorrect shapes. Got shape %s logits and %s target' %
-        (str(logits.shape), str(target.shape)))
-
-  error = target - logits
-  loss = jnp.absolute(error)
+  unnormalized_mse = weighted_squared_error(
+      predictions=predictions, targets=targets, weights=weights)
 
   if weights is not None:
+    # Divide by sum of weights:
+    normalization = weights.sum()
+  else:
+    # Divide by batch size:
+    normalization = unnormalized_mse.shape[0]
+  return jnp.sum(unnormalized_mse) / (normalization + 1e-8)
+
+
+def weighted_absolute_error(
+    predictions: jnp.ndarray,
+    targets: jnp.ndarray,
+    weights: Optional[jnp.ndarray] = None) -> jnp.ndarray:
+  """Computes weighted absolute error given predictions and targets.
+
+  This computes the absolute_error of examples in a single, potentially
+  padded minibatch. If the minibatch is padded (that is it contains null
+  examples) it is assumed that weights is a binary mask where 0 indicates that
+  the example is null.
+
+  Args:
+    predictions: Output of model in shape shape [batch, ..., n_features].
+    targets: Array of shape [batch, ..., n_features].
+    weights:  None or array of shape [batch,] This is the weight to apply to the
+      loss  computed for each example in the batch. Can be used to ignore padded
+      examples in the batch.
+
+  Returns:
+    The mean absolute error for each example in the given batch. The output
+    shape is [batch,].
+  """
+  if predictions.ndim != targets.ndim:
+    raise ValueError(
+        'Incorrect shapes. Got shape %s predictions and %s targets' %
+        (str(predictions.shape), str(targets.shape)))
+
+  error = targets - predictions
+  loss = jnp.absolute(error)
+  # Sum over all features in each example in the batch:
+  loss = jnp.sum(loss, axis=tuple(range(1, predictions.ndim)))
+  if weights is not None:
     loss = apply_weights(loss, weights)
-  return jnp.mean(loss)
+  return loss
+
+
+def weighted_mean_absolute_error(
+    predictions: jnp.ndarray,
+    targets: jnp.ndarray,
+    weights: Optional[jnp.ndarray] = None) -> jnp.ndarray:
+  """Weighted mean of weighted_unnormalized_mean_absolute_error.
+
+  Args:
+    predictions: Output of model in shape [batch, ..., num_features].
+    targets: Targets of shape [batch, ..., num_features].
+    weights:  None or array of shape [batch] This is the weight to apply to the
+      loss  computed for each example in the batch. Can be used to ignore padded
+      examples in the batch.
+
+  Returns:
+    The averaged mean absolute error of all the examples in the given batch as
+    a scalar.
+  """
+  unnormalized_mae = weighted_absolute_error(
+      predictions=predictions, targets=targets, weights=weights)
+
+  if weights is not None:
+    # Divide by sum of weights:
+    normalization = weights.sum()
+  else:
+    # Divide by batch size:
+    normalization = unnormalized_mae.shape[0]
+  return jnp.sum(unnormalized_mae) / (normalization + 1e-8)
 
 
 ############################## Focal Loss ######################################
@@ -603,15 +671,27 @@ def focal_softmax_cross_entropy(
     label_weights: Optional[jnp.ndarray] = None,
     logits_normalized: bool = False,
     gamma: Optional[float] = 2.0) -> jnp.ndarray:
-  """Compute focal softmax cross-entropy given logits and targets.
+  """Computes focal softmax cross-entropy given logits and targets.
 
   This computes focal loss: (1-p_t)**gamma -log p_t, where p_t is the softmax
   probability of the target.
 
+  NOTE: this is weighted unnormalized computation of loss that returns the loss
+  of examples in the batch. If you are using it as a loss function, you can
+  use the normalilzed version as:
+  ```
+    unnormalized_loss = focal_softmax_cross_entropy(...)
+    if weights is not None:
+      normalization = weights.sum()
+    else:
+      normalization = np.prod(one_hot_targets.shape[:-1])
+    loss = jnp.sum(unnormalized_loss) / (normalization + 1e-8)
+  ```
+
   Args:
     logits: Output of model in shape [batch, ..., num_classes].
     one_hot_targets: One hot vector of shape [batch, ..., num_classes].
-    weights: None or array of shape [batch x ...] (rank of one_hot_targets -1).
+    weights: None or array of shape [batch, ...] (rank of one_hot_targets -1).
     label_smoothing: Scalar to use to smooth the one-hot labels.
     label_weights: Weight per label of shape [num_classes].
     logits_normalized: If True, the logits are assumed to be log probs.
@@ -640,17 +720,29 @@ def focal_sigmoid_cross_entropy(
     logits_normalized: bool = False,
     alpha: Optional[float] = 0.5,
     gamma: Optional[float] = 2.0) -> jnp.ndarray:
-  """Compute focal softmax cross-entropy given logits and targets.
+  """Computes focal softmax cross-entropy given logits and targets.
 
   Focal loss assuming y is the binary target vector:
   alpha * (1-p_t)**gamma -log p_t, if y_t = 1, and
   (1.-alpha) * p_t**gamma -log (1 - p_t), if y_t = 0,
   and p_t is the sigmoid probability at index t.
 
+  NOTE: this is weighted unnormalized computation of loss that returns the loss
+  of examples in the batch. If you are using it as a loss function, you can
+  use the normalilzed version as:
+  ```
+    unnormalized_loss = focal_sigmoid_cross_entropy(...)
+    if weights is not None:
+      normalization = weights.sum()
+    else:
+      normalization = np.prod(multi_hot_targets.shape[:-1])
+    loss = jnp.sum(unnormalized_loss) / (normalization + 1e-8)
+  ```
+
   Args:
     logits: Output of model in shape [batch, ..., num_classes].
     multi_hot_targets: Multi-hot vector of shape [batch, ..., num_classes].
-    weights: None or array of shape [batch x ...] (rank of one_hot_targets -1).
+    weights: None or array of shape [batch, ...] (rank of one_hot_targets -1).
     label_smoothing: Scalar to use to smooth the one-hot labels.
     label_weights: Weight per label of shape [num_classes].
     logits_normalized: If True, the logits are assumed to be log probs.
@@ -660,7 +752,7 @@ def focal_sigmoid_cross_entropy(
   Returns:
     The loss of the examples in the given batch.
   """
-  # optionally apply label smoothing
+  # Optionally apply label smoothing.
   if label_smoothing is not None:
     multi_hot_targets = apply_label_smoothing(multi_hot_targets,
                                               label_smoothing)
@@ -681,7 +773,7 @@ def focal_sigmoid_cross_entropy(
 
   if weights is not None:
     loss = apply_weights(loss, weights)
-  return loss.sum(axis=-1)
+  return loss
 
 
 ############################## Misc ######################################
