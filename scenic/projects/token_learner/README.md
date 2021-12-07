@@ -22,6 +22,8 @@ Alternatively, you can plug in the TokenLearnerModule (or TokenLearnerModuleV11)
 from the [model file](model.py) into any of your Transformer architectures, and
 benefit from it. Learning 8 or 16 tokens in the middle of the network is often
 sufficient to maintain the accuracy while cutting the computation by half.
+Placing the module before the last quarter of the network often improves the
+accuracy while reducing the computation.
 
 An example command-line to train a base ViT model on ImageNet (following the
 settings in the original [ViT paper](https://arxiv.org/pdf/2010.11929.pdf))
