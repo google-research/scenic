@@ -2,7 +2,7 @@ TokenLearner
 ==
 ![TokenLearner](data/tokenlearner.gif)
 
-TokenLearner is a learable module to be placed within Transformer archituctures
+TokenLearner is a learnable module to be placed within Transformer architectures
 for images and videos. Once placed, it significantly reduces the number of
 tokens for all subsequent layers, thereby reducing the overall computation.
 It simultaneously increases accuracy of the models by making the tokens dynamic
