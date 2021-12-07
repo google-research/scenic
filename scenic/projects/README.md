@@ -1,6 +1,35 @@
 ## Contents
-* [Scenic projects](#scenic-projects)
 * [List of projects hosted in Scenic](#list-of-projects-hosted-in-scenic)
+* [Scenic projects](#scenic-projects)
+
+
+## List of projects hosted in Scenic
+
+*   [ViViT](vivit)
+
+    > ViViT is a family of pure-transformer based models for video
+    > classification that achieved state-of-the-art results.
+    > Details can be found in the [paper](https://arxiv.org/abs/2103.15691).
+
+*   [TokenLearner](token_learner)
+
+    > TokenLearner proposes dynamic tokenization of images and videos for faster
+    > and more accurate video/image processing tasks. More can be found in
+    > the [paper](https://arxiv.org/abs/2106.11297).
+
+
+*   [FastViT](fast_vit)
+
+    > FastViT is a project that aims at exploring ideas around making ViT faster
+    > via using [efficient transformers](https://arxiv.org/abs/2009.06732), in
+    > particular on higher resolution inputs (more tokens and thus longer
+    > sequences).
+
+*   [Omninet](omninet)
+
+    > Omninet is a transformer model with
+    > [omni-directional representations](https://arxiv.org/abs/2103.01075).
+
 
 
 <a name="projects"></a>
@@ -53,24 +82,3 @@ a project can define its own dataset, model, and trainer and make a small
 registry for these objects within the project, e.g. in the project's `main.py`
 so that the right model, trainer, and dataset are selectable using the
 configs specified in the config file.
-
-
-## List of projects hosted in Scenic
-
-*   [ViViT](vivit)
-
-    > ViViT is a family of pure-transformer based models for video
-    > classification that achieved state-of-the-art results.
-    > Details can be found in the [paper](https://arxiv.org/abs/2103.15691).
-
-*   [FastViT](fast_vit)
-
-    > FastViT is a project that aims at exploring ideas around making ViT faster
-    > via using [efficient transformers](https://arxiv.org/abs/2009.06732), in
-    > particular on higher resolution inputs (more tokens and thus longer
-    > sequences).
-
-*   [Omninet](omninet)
-
-    > Omninet is a transformer model with
-    > [omni-directional representations](https://arxiv.org/abs/2103.01075).
