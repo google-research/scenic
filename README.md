@@ -47,6 +47,8 @@ Projects that were developed in Scenic or used it for their experiments:
 * [TokenLearner: What Can 8 Learned Tokens Do for Images and Videos?](https://arxiv.org/abs/2106.11297)
 * [Exploring the Limits of Large Scale Pre-training](https://arxiv.org/abs/2110.02095)
 * [The Efficiency Misnomer](https://arxiv.org/abs/2110.12894)
+* [Discrete Representations Strengthen Vision Transformer Robustness](https://arxiv.org/abs/2111.10493)
+* [Pyramid Adversarial Training Improves ViT Performance](https://arxiv.org/abs/2111.15121)
 
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 
