@@ -61,7 +61,7 @@ Dataset = collections.namedtuple(
     ['train_iter', 'valid_iter', 'test_iter', 'meta_data'])
 
 
-def maybe_pad_batch(batch, train, batch_size, pixel_level=False):
+def maybe_pad_batch(batch, train, batch_size, pixel_level=False, batch_dim=0):
   """Zero pad the batch on the right to the batch_size.
 
   All keys in the batch dictionary will have their corresponding arrays padded.
@@ -82,20 +82,24 @@ def maybe_pad_batch(batch, train, batch_size, pixel_level=False):
   make for padding the partial batches on top of the existing label mask.
 
   Args:
-    batch: dict; A dictionary mapping keys to arrays. We assume that inputs is
+    batch: A dictionary mapping keys to arrays. We assume that inputs is
       one of the keys.
-    train: bool; if the batch is from the training data. In that case, we drop
+    train: if the batch is from the training data. In that case, we drop
       the last (incomplete) batch and thus don't do any padding.
-    batch_size: int; All arrays in the dict will be padded to have first
+    batch_size: All arrays in the dict will be padded to have first
       dimension equal to desired_batch_size.
-    pixel_level: bool; If True, this will create a pixel-level (instead of
+    pixel_level: If True, this will create a pixel-level (instead of
       example-level) mask, e.g. for segmentation models.
+    batch_dim: Batch dimension. The default is 0, but it can be different
+      if a sharded batch is given.
 
   Returns:
     A dictionary mapping the same keys to the padded batches. Additionally we
     add a key representing weights, to indicate how the batch was padded.
   """
-  batch_pad = batch_size - batch['inputs'].shape[0]
+  assert batch_dim >= 0, f'batch_dim=={batch_dim} is expected to be >= 0'
+  # TODO(dehghani): Add type annotation to this function.
+  batch_pad = batch_size - batch['inputs'].shape[batch_dim]
 
   if pixel_level:
     unpadded_mask_shape = batch['inputs'].shape[:-1]
@@ -103,7 +107,7 @@ def maybe_pad_batch(batch, train, batch_size, pixel_level=False):
     assert 'batch_mask' not in batch, (
         'When the labels of the task are not pixel-level, batch_mask should '
         'not be already present in the batch.')
-    unpadded_mask_shape = batch['inputs'].shape[0]
+    unpadded_mask_shape = batch['inputs'].shape[:batch_dim+1]
 
   if train and batch_pad != 0:
     raise ValueError('In this codebase, we assumed that we alwayse drop the '
@@ -117,7 +121,8 @@ def maybe_pad_batch(batch, train, batch_size, pixel_level=False):
     return batch
 
   def zero_pad(array):
-    pad_with = [(0, batch_pad)] + [(0, 0)] * (array.ndim - 1)
+    pad_with = ([(0, 0)] * batch_dim  + [(0, batch_pad)] +
+                [(0, 0)] * (array.ndim - batch_dim - 1))
     return np.pad(array, pad_with, mode='constant')
 
   padded_batch = jax.tree_map(zero_pad, batch)
