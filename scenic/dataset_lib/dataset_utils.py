@@ -19,9 +19,10 @@ Xiaohua Zhai and other collaborators from Brain ZRH.
 """
 
 import collections
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Sequence
 
 from absl import logging
+import flax.linen as nn
 from flax.training import common_utils
 import jax
 import jax.numpy as jnp
@@ -446,6 +447,125 @@ def mixup(batch: Dict['str', jnp.ndarray],
       for i, d in enumerate(image_format))
   batch['inputs'] = weight * images + (1.0 - weight) * images[reverse]
 
+  return batch
+
+
+def _make_mask(h, w, yx, dyx):
+  """Helper function for cutmix."""
+  (y, x), (dy, dx) = yx, dyx
+  Y, X = jnp.arange(h), jnp.arange(w)  # pylint: disable=invalid-name
+  return (((x <= X) & (X < x + dx))[None, :]
+          & ((y <= Y) & (Y < y + dy))[:, None]).astype(np.int32)
+
+
+@jax.vmap
+def _stitch(dst, src, hw, src_dyx, dst_dyx):
+  """Stitches a `hw`-sized patch of `src` onto `dst`."""
+  src = jnp.roll(src, dst_dyx[0] - src_dyx[0], axis=0)
+  src = jnp.roll(src, dst_dyx[1] - src_dyx[1], axis=1)
+
+  mask = _make_mask(dst.shape[0], dst.shape[1], dst_dyx, hw)
+  if dst.ndim == 3:  # Append channel-dim as needed for broadcasting
+    mask = mask[..., None]
+
+  return mask, dst * (1 - mask) + src * mask
+
+
+@jax.vmap
+def _stitch_pair(canvas, img, yx, hw):
+  """Stitches `img` (rescaled to `hw`) onto `canvas` at `yx`."""
+  ch, cw = canvas.shape[:2]
+
+  # Move the `img` into the spot where it should be pasted in `canvas`.
+  img = jax.image.scale_and_translate(
+      img, (ch, cw) + canvas.shape[2:], spatial_dims=(0, 1),
+      scale=jnp.array(hw)/jnp.array(img.shape[:2]),
+      translation=jnp.array(yx),
+      method='linear')
+
+  mask = _make_mask(ch, cw, yx, hw)
+  if canvas.ndim == 3:  # Append channel-dim as needed for broadcasting
+    mask = mask[..., None]
+  return mask, canvas * (1 - mask) + img * mask
+
+
+def _randint(los, his, n):
+  """Samples (N,n)-shaped rnd array between N-shaped [`los`,`his`)."""
+  r = jax.lax.rng_uniform(0.0, 1.0, (len(los), n))
+  return (los[:, None] + (his[:, None] - los[:, None]) * r).astype(jnp.int32)
+
+
+def _randint2(los, his):
+  """Samples N-shaped rnd array between N-shaped [`los`,`his`)."""
+  # shape = np.broadcast(los, his).shape
+  shape = jnp.broadcast_shapes(los.shape, his.shape)
+  result = los + (his - los) * jax.lax.rng_uniform(0.0, 1.0, shape)
+  return result.astype(jnp.int32)
+
+
+def _random_params_for(imsz, minsz, maxsz, patchsz=1, n=1):
+  # Convert to patch count
+  min_phw = np.floor(np.array(minsz) / np.array(patchsz))
+  max_phw = np.floor(np.array(maxsz) / np.array(patchsz))
+  phw = _randint(min_phw, max_phw + 1, n).T  # (n, 2)
+
+  src_dyx = _randint2(np.zeros(2), np.array(imsz)//patchsz - phw + 1)
+  dst_dyx = _randint2(np.zeros(2), np.array(imsz)//patchsz - phw + 1)
+
+  return phw, src_dyx, dst_dyx
+
+
+def cutmix(batch: Dict['str', jnp.ndarray],
+           patch_size: Sequence[int] = (1, 1),
+           minsz: Sequence[int] = (64, 64),
+           maxsz: Sequence[int] = (192, 192),
+           src: Any = None,
+           labels_2d: bool = False,
+           ) -> Dict['str', jnp.ndarray]:
+  """Implements the CutMix input augmentation.
+
+  See https://arxiv.org/abs/1905.04899 for details.
+
+  Args:
+    batch: dict; A batch of data with 'inputs' and 'label'.
+    patch_size: Patch Size argument of cutmix.
+    minsz: minsz
+    maxsz: maxsz
+    src: src argument of cutmix.
+    labels_2d: whether to have 2D labels or not.
+
+  Returns:
+    An augmented batch.
+  """
+  images = batch['inputs']
+  labels = batch['label']
+
+  ps = np.array(patch_size)
+  phw, src_dyx, dst_dyx = _random_params_for(
+      imsz=images.shape[1:-1], n=images.shape[0],
+      minsz=minsz,
+      maxsz=maxsz,
+      patchsz=ps)
+
+  if src is not None:
+    masks, images = _stitch_pair(
+        images, jnp.roll(src, 1, axis=0), ps * dst_dyx, ps * phw)
+  else:
+    masks, images = _stitch(
+        images, jnp.roll(images, 1, axis=0),
+        hw=ps * phw, src_dyx=ps * src_dyx, dst_dyx=ps * dst_dyx)
+
+  # Quick hack for the shapes. TODO(lbeyer): do properly
+  masks = nn.avg_pool(masks, tuple(ps), tuple(ps))
+
+  l = labels[:, None, None, :] if labels.ndim == 2 else labels[:, None, None]
+  labels = l * (1 - masks) + masks * jnp.roll(l, 1, axis=0)
+  if not labels_2d:
+    labels = jnp.mean(labels, axis=(1, 2))
+    labels = labels.reshape(batch['label'].shape)
+
+  batch['inputs'] = images
+  batch['label'] = labels
   return batch
 
 

@@ -95,6 +95,13 @@ def train_step(
         config.mixup.get('image_format', 'NTHWC'),
         rng=mixup_rng)
 
+  if config.get('cutmix'):
+    batch = dataset_utils.cutmix(batch, config.cutmix.get('patch_size', (1, 1)),
+                                 config.cutmix.get('minsz', (64, 64)),
+                                 config.cutmix.get('maxsz', (192, 192)),
+                                 config.cutmix.get('src', None),
+                                 config.cutmix.get('labels_2d', False))
+
   # Bind the rng to the host/device we are on for dropout.
   dropout_rng = train_utils.bind_rng_to_host_device(
       rng, axis_name='batch', bind_to='device')
