@@ -4,12 +4,10 @@ These models span a range of architectures, as well as tasks.
 
 They include:
 
- * [Vision Transformer](https://arxiv.org/abs/2010.11929) (ViT) for image
-  classification. [[Official Implementation](https://github.com/google-research/vision_transformer#vision-transformer)]
- * [Detection Transformer](https://arxiv.org/abs/2005.12872) (DETR) for object
-    detectin. [[Official PyTorch Implementation](https://github.com/facebookresearch/detr)]
- * [MLP-Mixer](https://arxiv.org/abs/2105.01601) an all-MLP model for image
-  classification. [[Official Implementation](https://github.com/google-research/vision_transformer#mlp-mixer)]
+ * [Vision Transformer](https://arxiv.org/abs/2010.11929) (ViT) for image classification. [[Official Implementation](https://github.com/google-research/vision_transformer#vision-transformer)]
+ * [Detection Transformer](https://arxiv.org/abs/2005.12872) (DETR) for object detection. [[Official PyTorch Implementation](https://github.com/facebookresearch/detr)]
+ * [MLP-Mixer](https://arxiv.org/abs/2105.01601) an all-MLP model for image classification. [[Official Implementation](https://github.com/google-research/vision_transformer#mlp-mixer)]
+ * [CLIP](https://arxiv.org/abs/2103.00020) for learning visual concepts from natural language supervision [[Official Implementation](https://github.com/openai/CLIP/tree/main/clip)]
  * [Residual Networks](https://arxiv.org/abs/1512.03385) (ResNet) for image classification.
  * [Big Transfer ResNet](https://arxiv.org/abs/1912.11370) (BitResNet) for image classification. [[Official Implementation](https://github.com/google-research/big_transfer)]
  * [UNet](http://arxiv.org/abs/1505.04597) for semantic segmentation.
