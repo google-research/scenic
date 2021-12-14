@@ -129,10 +129,11 @@ def sinkhorn_matcher(cost: jnp.ndarray,
   def coupling_fn(c):
     geom = geometry.Geometry(
         cost_matrix=c, epsilon=epsilon, init=init, decay=decay)
-    return transport.Transport(geom,
-                               max_iterations=num_iters,
-                               chg_momentum_from=chg_momentum_from,
-                               threshold=threshold).matrix
+    return transport.solve(
+        geom,
+        max_iterations=num_iters,
+        chg_momentum_from=chg_momentum_from,
+        threshold=threshold).solver_output.matrix
 
   coupling = jax.vmap(coupling_fn)(cost)
 
