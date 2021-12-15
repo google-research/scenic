@@ -9,7 +9,7 @@ including images, video, audio, and multimodal combinations of them.
 
 More precisely, *Scenic* is a (i) set of shared light-weight libraries solving
 tasks commonly encountered tasks when training large-scale (i.e. multi-device,
-multi-host) vision models; and (ii) a number of *projects* containing fully
+multi-host) vision models; and (ii) several *projects* containing fully
 fleshed out problem-specific training and evaluation loops using these
 libraries.
 
@@ -37,7 +37,7 @@ including strong non-attentional baselines.
 
 
 ## SOTA models and baselines in *Scenic*
-There some SOTA models and baselines in Scenic which were either developed
+There are some SOTA models and baselines in Scenic which were either developed
 using Scenic, or have been reimplemented in Scenic:
 
 Projects that were developed in Scenic or used it for their experiments:
@@ -74,14 +74,14 @@ upstreamed to Scenic's shared libraries.
 ## Getting started
 * See `projects/baselines/README.md` for a walk-through baseline models and
   instructions on how to run the code.
-* If you would like to to contribute to *Scenic*, please check out the
+* If you would like to contribute to *Scenic*, please check out the
   [Philisophy](#philosophy), [Code structure](#code_structure) and
   [Contributing](CONTRIBUTING.md) sections.
   Should your contribution be a part of the shared libraries, please send us a
   pull request!
 
 
-### Quick start
+### Quickstart
 Download the code from GitHub
 
 ```
@@ -99,7 +99,7 @@ python scenic/main.py -- \
 ```
 
 [Here](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/common_lib/colabs/scenic_playground.ipynb)
-is also a minimal colab to train a simple feed forward model using Scenic.
+is also a minimal colab to train a simple feed-forward model using Scenic.
 
 <a name="code_structure"></a>
 ## Scenic component design
@@ -149,7 +149,7 @@ use the common models, trainers, task/data that live in library-level code, or
 they can simply fork any of the mentioned functionalities and redefine, layers,
 losses, metrics, logging methods, tasks, architectures, as well as training and
 evaluation loops. The modularity of library-level code makes it flexible for
-projects to fall placed on any spot in the "run-as-is" to "fully-customized"
+projects to fall placed on any spot in the "run-as-is" to "fully customized"
 spectrum.
 
 Common baselines such as a ResNet and Vision Transformer (ViT) are implemented
