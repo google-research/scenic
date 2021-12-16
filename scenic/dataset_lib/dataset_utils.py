@@ -61,7 +61,12 @@ Dataset = collections.namedtuple(
     ['train_iter', 'valid_iter', 'test_iter', 'meta_data'])
 
 
-def maybe_pad_batch(batch, train, batch_size, pixel_level=False, batch_dim=0):
+def maybe_pad_batch(batch: Dict[str, jnp.ndarray],
+                    train: bool,
+                    batch_size: int,
+                    pixel_level: bool = False,
+                    inputs_key: str = 'inputs',
+                    batch_dim: int = 0) -> Dict[str, jnp.ndarray]:
   """Zero pad the batch on the right to the batch_size.
 
   All keys in the batch dictionary will have their corresponding arrays padded.
@@ -90,6 +95,8 @@ def maybe_pad_batch(batch, train, batch_size, pixel_level=False, batch_dim=0):
       dimension equal to desired_batch_size.
     pixel_level: If True, this will create a pixel-level (instead of
       example-level) mask, e.g. for segmentation models.
+    inputs_key: Indicating the key used for the input that we do batch padding
+      based on.
     batch_dim: Batch dimension. The default is 0, but it can be different
       if a sharded batch is given.
 
@@ -99,15 +106,15 @@ def maybe_pad_batch(batch, train, batch_size, pixel_level=False, batch_dim=0):
   """
   assert batch_dim >= 0, f'batch_dim=={batch_dim} is expected to be >= 0'
   # TODO(dehghani): Add type annotation to this function.
-  batch_pad = batch_size - batch['inputs'].shape[batch_dim]
+  batch_pad = batch_size - batch[inputs_key].shape[batch_dim]
 
   if pixel_level:
-    unpadded_mask_shape = batch['inputs'].shape[:-1]
+    unpadded_mask_shape = batch[inputs_key].shape[:-1]
   else:
     assert 'batch_mask' not in batch, (
         'When the labels of the task are not pixel-level, batch_mask should '
         'not be already present in the batch.')
-    unpadded_mask_shape = batch['inputs'].shape[:batch_dim+1]
+    unpadded_mask_shape = batch[inputs_key].shape[:batch_dim + 1]
 
   if train and batch_pad != 0:
     raise ValueError('In this codebase, we assumed that we alwayse drop the '

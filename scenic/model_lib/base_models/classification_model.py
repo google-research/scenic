@@ -84,8 +84,7 @@ def classification_metrics_function(
 class ClassificationModel(base_model.BaseModel):
   """Defines commonalities between all classification models.
 
-  A model is class with three members: get_metrics_fn, loss_fn, and a
-  flax_model.
+  A model is class with three members: get_metrics_fn, loss_fn, & a flax_model.
 
   get_metrics_fn returns a callable function, metric_fn, that calculates the
   metrics and returns a dictionary. The metric function computes f(x_i, y_i) on
