@@ -19,8 +19,72 @@ Install for development:
   pip intall -e . .[tests]
 """
 
+from distutils import cmd
+import os
+import urllib.request
+
 from setuptools import find_packages
 from setuptools import setup
+from setuptools.command import install
+
+SIMCLR_DIR = "simclr/tf2"
+DATA_UTILS_URL = "https://raw.githubusercontent.com/google-research/simclr/master/tf2/data_util.py"
+
+
+class DownloadSimCLRAugmentationCommand(cmd.Command):
+  """Downloads SimCLR data_utils.py as it's not built into an egg."""
+  description = __doc__
+  user_options = []
+
+  def initialize_options(self):
+    pass
+
+  def finalize_options(self):
+    pass
+
+  def run(self):
+    build_cmd = self.get_finalized_command("build")
+    dist_root = os.path.realpath(build_cmd.build_lib)
+    output_dir = os.path.join(dist_root, SIMCLR_DIR)
+    if not os.path.exists(output_dir):
+      os.makedirs(output_dir)
+    output_path = os.path.join(output_dir, "data_util.py")
+    downloader = urllib.request.URLopener()
+    downloader.retrieve(DATA_UTILS_URL, output_path)
+
+
+TFMODEL_DIR = "tensorflow_models/official/vision/image_classification"
+TFMODEL_DATA_UTILS_URL = "https://raw.githubusercontent.com/tensorflow/models/master/official/vision/image_classification/augment.py"
+
+
+class DownloadTFModelAugmentationCommand(cmd.Command):
+  """Downloads TF model vision augment.py as it's not built into an egg."""
+  description = __doc__
+  user_options = []
+
+  def initialize_options(self):
+    pass
+
+  def finalize_options(self):
+    pass
+
+  def run(self):
+    build_cmd = self.get_finalized_command("build")
+    dist_root = os.path.realpath(build_cmd.build_lib)
+    output_dir = os.path.join(dist_root, TFMODEL_DIR)
+    if not os.path.exists(output_dir):
+      os.makedirs(output_dir)
+    output_path = os.path.join(output_dir, "augment.py")
+    downloader = urllib.request.URLopener()
+    downloader.retrieve(TFMODEL_DATA_UTILS_URL, output_path)
+
+
+class InstallCommand(install.install):
+
+  def run(self):
+    self.run_command("simclr_download")
+    self.run_command("tfmodel_download")
+    install.install.run(self)
 
 tests_require = [
     "pytest",
@@ -54,6 +118,11 @@ setup(
         "pycocotools",
         "dmvr @ git+git://github.com/deepmind/dmvr",
     ],
+    cmdclass={
+        "simclr_download": DownloadSimCLRAugmentationCommand,
+        "tfmodel_download": DownloadTFModelAugmentationCommand,
+        "install": InstallCommand,
+    },
     tests_require=tests_require,
     extras_require=dict(test=tests_require),
     classifiers=[
@@ -64,5 +133,5 @@ setup(
         "Programming Language :: Python",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
-    keywords="JAX machine learning",
+    keywords="Scenic",
 )
