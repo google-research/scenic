@@ -5,10 +5,13 @@ The code here uses JAX and Flax and follows the [official implementation of CLIP
 Note that the current implementation does not yet support training CLIP from
 scratch.
 
-This implementation uses the [tokenizer from the original implementation](https://github.com/openai/CLIP/blob/main/clip/simple_tokenizer.py)
-and requires downloading and setting the path to the `bpe_simple_vocab_16e6.txt.gz`
-in `layer.py`. Besides, path to the local CLIP checkpoints that are downloaded
-from the original repo is needed to be set in `model.py`.
+## Setup
+This implementation uses the [tokenizer from the original implementation](https://github.com/openai/CLIP/blob/main/clip/simple_tokenizer.py).
+
+Install torch and CLIP to automatically download and convert official checkpoints and use the tokenizer:
+```
+pip install torch git+https://github.com/openai/CLIP.git
+```
 
 ## Example usage:
 ```

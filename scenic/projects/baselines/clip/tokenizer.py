@@ -1,16 +1,20 @@
 """Simple CLIP tokenizer wrapper."""
 
+from absl import logging
 import functools
-from typing import Any, Callable, Union, Sequence
+from typing import Any, Callable, Optional, Sequence, Union
 
 from clip.simple_tokenizer import SimpleTokenizer
 import jax.numpy as jnp
 import numpy as np
+from scenic.projects.baselines.clip import download
 
 
-DEFAULT_BPE_PATH = <PATH TO bpe_simple_vocab_16e6.txt.gz FILE FROM
-https://github.com/openai/CLIP/blob/main/clip/bpe_simple_vocab_16e6.txt.gz>
+# pylint: disable=line-too-long
+DEFAULT_BPE_PATH = None
+DEFAULT_BPE_URL = 'https://github.com/openai/CLIP/blob/main/clip/bpe_simple_vocab_16e6.txt.gz?raw=true'
 MAX_TEXT_LENGTH = 77
+# pylint: enable=line-too-long
 
 
 def _tokenize(texts: Union[str, Sequence[str]], tokenizer: Any,
@@ -33,9 +37,15 @@ def _tokenize(texts: Union[str, Sequence[str]], tokenizer: Any,
 
 
 def build_tokenizer(
-    bpe_path: str = DEFAULT_BPE_PATH
-    ) -> Callable[[Union[str, Sequence[str]]], np.ndarray]:
+    bpe_path: Optional[str] = DEFAULT_BPE_PATH,
+    bpe_url: str = DEFAULT_BPE_URL,
+    download_dir: str = download.DEFAULT_DOWNLOAD_DIR
+) -> Callable[[Union[str, Sequence[str]]], np.ndarray]:
   """Returns CLIP's tokenization function."""
+  if bpe_path is None:
+    bpe_path = download.download(bpe_url, download_dir)
+    logging.info('Downloaded vocabulary from %s to %s', bpe_url, download_dir)
+
   tokenizer = SimpleTokenizer(bpe_path)
   tokenizer_fn = functools.partial(_tokenize, tokenizer=tokenizer,
                                    context_length=MAX_TEXT_LENGTH)

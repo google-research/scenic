@@ -1,11 +1,15 @@
 """Provides builders and loaders of CLIP checkpoints."""
 
+import os
 from typing import Any, Mapping, Optional
 
+from absl import logging
 import flax
+import jax
 import jax.numpy as jnp
 import numpy as np
 from scenic.projects.baselines.clip import layers
+from scenic.projects.baselines.clip import download
 
 from tensorflow.io import gfile
 
@@ -14,14 +18,21 @@ from tensorflow.io import gfile
 PyTree = Any
 
 # pylint: disable=line-too-long
-# Download checkpoints from https://github.com/openai/CLIP/blob/main/clip/clip.py#L30
-# and add set their local path here:
+# Checkpoint paths from https://github.com/openai/CLIP/blob/main/clip/clip.py#L30
+CHECKPOINTS_TORCH = {
+    'resnet_50': 'https://openaipublic.azureedge.net/clip/models/afeb0e10f9e5a86da6080e35cf09123aca3b358a0c3e3b6c78a7b63bc04b6762/RN50.pt',
+    'resnet_101': 'https://openaipublic.azureedge.net/clip/models/8fa8567bab74a42d41c5915025a8e4538c3bdbe8804a470a72f30b0d94fab599/RN101.pt',
+    'resnet_50x4': 'https://openaipublic.azureedge.net/clip/models/7e526bd135e493cef0776de27d5f42653e6b4c8bf9e0f653bb11773263205fdd/RN50x4.pt',
+    'vit_b32': 'https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt',
+    'vit_b16': 'https://openaipublic.azureedge.net/clip/models/5806e77cd80f8b59890b7e101eabd078d9fb84e6937f9e85e4ecb61988df416f/ViT-B-16.pt',
+}
+
 CHECKPOINTS = {
-  'resnet_50': <PATH TO resnet_50 LOCAL CHECKPOINT>,
-  'resnet_101': <PATH TO resnet_101 LOCAL CHECKPOINT>,
-  'resnet_50x4': <PATH TO resnet_50x4 LOCAL CHECKPOINT>,
-  'vit_b32': <PATH TO vit_b32 LOCAL CHECKPOINT>,
-  'vit_b16': <PATH TO vit_b32 LOCAL CHECKPOINT>,
+    'resnet_50': None,
+    'resnet_101': None,
+    'resnet_50x4': None,
+    'vit_b32': None,
+    'vit_b16': None,
 }
 # pylint: enable=line-too-long
 
@@ -37,6 +48,14 @@ CONFIGS = {
                     vision_num_layers=12,
                     vision_features=768,
                     vision_patch_size=32,
+                    text_features=512,
+                    text_num_heads=8,
+                    text_num_layers=12),
+    'vit_b16': dict(embed_dim=512,
+                    vocab_size=49408,
+                    vision_num_layers=12,
+                    vision_features=768,
+                    vision_patch_size=16,
                     text_features=512,
                     text_num_heads=8,
                     text_num_layers=12),
@@ -64,9 +83,39 @@ CONFIGS = {
 }
 
 
-def load_model_vars(model_name: str,
-                    checkpoint_path: Optional[str] = None) -> PyTree:
+def load_model_vars(
+    model_name: str,
+    checkpoint_path: Optional[str] = None,
+    download_dir: str = download.DEFAULT_DOWNLOAD_DIR,
+) -> PyTree:
+  """Load model variables from a checkpoint, downloading if necessary."""
   checkpoint_path = checkpoint_path or CHECKPOINTS.get(model_name)
+  if checkpoint_path is None:
+   checkpoint_path = os.path.join(download_dir, model_name + '.npy')
+
+   if not gfile.exists(checkpoint_path):
+     # Download PyTorch checkpoint
+     url = CHECKPOINTS_TORCH.get(model_name)
+     logging.info('Downloading checkpoint from %s to %s', url, download_dir)
+     checkpoint_path_torch = download.download(
+         url, download_dir, expected_sha256=url.split('/')[-2])
+
+     # Load and convert checkpoint to numpy
+     logging.info('Converting checkpoint %s to numpy', checkpoint_path_torch)
+     try:
+       import torch
+     except ImportError as e:
+       logging.error('Could not import torch for CLIP checkpoint conversion')
+     params = torch.jit.load(
+         checkpoint_path_torch, map_location='cpu').state_dict()
+     params = jax.tree_map(lambda p: p.cpu().numpy(), params)
+
+     # Save converted checkpoint
+     with gfile.GFile(checkpoint_path, 'wb') as f:
+       np.save(f, params)
+     del params
+     gfile.remove(checkpoint_path_torch)
+
   with gfile.GFile(checkpoint_path, 'rb') as f:
     np_params = np.load(f, allow_pickle=True).tolist()
   return _convert_vars(np_params)
@@ -74,6 +123,10 @@ def load_model_vars(model_name: str,
 
 def vit_b32():
   return layers.CLIP(**CONFIGS['vit_b32'])
+
+
+def vit_b16():
+  return layers.CLIP(**CONFIGS['vit_b16'])
 
 
 def resnet_50():
@@ -93,6 +146,7 @@ MODELS = {
     'resnet_101': resnet_101,
     'resnet_50x4': resnet_50x4,
     'vit_b32': vit_b32,
+    'vit_b16': vit_b16,
 }
 
 

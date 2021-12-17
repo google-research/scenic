@@ -115,6 +115,7 @@ setup(
         "clu",
         "sklearn",
         "seaborn",
+        "tqdm",
         "pycocotools",
         "dmvr @ git+git://github.com/deepmind/dmvr",
     ],
