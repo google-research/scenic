@@ -372,8 +372,8 @@ def train(
             e_metrics, _ = eval_step_pmapped(
                 train_state=train_state, batch=eval_batch)
             eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
-            eval_summary = train_utils.log_eval_summary(
-                step=step, eval_metrics=eval_metrics, writer=writer)
+          eval_summary = train_utils.log_eval_summary(
+              step=step, eval_metrics=eval_metrics, writer=writer)
         writer.flush()
         del eval_metrics
     ##################### CHECKPOINTING ###################
