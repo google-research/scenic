@@ -30,7 +30,6 @@ python scenic/projects/vivit/main.py -- \
 
 In addition to the Scenic requirements,
 [SimCLR](https://github.com/google-research/simclr)
-and [Tensorflow Models](https://github.com/tensorflow/models),
 should be installed and present in the `PYTHONPATH` environment variable for
 additional data augmentation.
 

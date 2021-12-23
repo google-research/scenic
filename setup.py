@@ -53,37 +53,10 @@ class DownloadSimCLRAugmentationCommand(cmd.Command):
     downloader.retrieve(DATA_UTILS_URL, output_path)
 
 
-TFMODEL_DIR = "tensorflow_models/official/vision/image_classification"
-TFMODEL_DATA_UTILS_URL = "https://raw.githubusercontent.com/tensorflow/models/master/official/vision/image_classification/augment.py"
-
-
-class DownloadTFModelAugmentationCommand(cmd.Command):
-  """Downloads TF model vision augment.py as it's not built into an egg."""
-  description = __doc__
-  user_options = []
-
-  def initialize_options(self):
-    pass
-
-  def finalize_options(self):
-    pass
-
-  def run(self):
-    build_cmd = self.get_finalized_command("build")
-    dist_root = os.path.realpath(build_cmd.build_lib)
-    output_dir = os.path.join(dist_root, TFMODEL_DIR)
-    if not os.path.exists(output_dir):
-      os.makedirs(output_dir)
-    output_path = os.path.join(output_dir, "augment.py")
-    downloader = urllib.request.URLopener()
-    downloader.retrieve(TFMODEL_DATA_UTILS_URL, output_path)
-
-
 class InstallCommand(install.install):
 
   def run(self):
     self.run_command("simclr_download")
-    self.run_command("tfmodel_download")
     install.install.run(self)
 
 tests_require = [
@@ -118,10 +91,10 @@ setup(
         "tqdm",
         "pycocotools",
         "dmvr @ git+git://github.com/deepmind/dmvr",
+        "tf-models-nightly",
     ],
     cmdclass={
         "simclr_download": DownloadSimCLRAugmentationCommand,
-        "tfmodel_download": DownloadTFModelAugmentationCommand,
         "install": InstallCommand,
     },
     tests_require=tests_require,

@@ -21,11 +21,10 @@ Code is based on:
 SimCLR style data augmentation is based on:
 https://github.com/google-research/simclr/blob/master/tf2/data_util.py
 
-For SimCLR data augmentation, and rand-augment, it is required to have the
-following two repositories downloaded and in your PYTHONPATH environment
+For SimCLR data augmentation it is required to have the
+following repository downloaded and added to your PYTHONPATH environment
 variable:
 https://github.com/google-research/simclr
-https://github.com/tensorflow/models
 """
 
 import functools
@@ -36,7 +35,7 @@ from dmvr import builders
 from dmvr import processors as dmvr_processors
 import simclr.tf2.data_util as simclr_data
 import tensorflow as tf
-from tensorflow_models.official.vision.image_classification import augment
+from official.vision.image_classification import augment
 
 
 def crop_resize(frames: tf.Tensor,
