@@ -4,7 +4,7 @@ Ported from:
 https://github.com/google-research/big_transfer/blob/master/bit_jax/models.py
 """
 
-from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
+from typing import Dict, Optional, Sequence, Tuple, Union
 
 import flax.linen as nn
 import jax.numpy as jnp
@@ -26,11 +26,8 @@ def weight_standardize(w: jnp.ndarray,
 class StdConv(nn.Conv):
   """Convolution with weight standardized kernel."""
 
-  def param(self,
-            name: str,
-            initializer: Callable[..., Any],
-            shape: Tuple[int, ...]):
-    param = super().param(name, initializer, shape)
+  def param(self, name: str, *args, **kwargs):
+    param = super().param(name, *args, **kwargs)
     if name == 'kernel':
       param = weight_standardize(param, axis=[0, 1, 2], eps=1e-10)
     return param
