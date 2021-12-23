@@ -788,7 +788,8 @@ class Chrono:
                total_steps: int,
                steps_per_epoch: int,
                global_bs: int,
-               accum_train_time: int = 0):
+               accum_train_time: int = 0,
+               example_type='img'):
     self.first_step = first_step
     self.total_steps = total_steps
     self.steps_per_epoch = steps_per_epoch
@@ -800,6 +801,7 @@ class Chrono:
     self.pause_start = None
     self.paused_time = 0
     self.warmup = 1  # How many calls to `tick` to skip.
+    self.example_type = example_type
 
   def tick(self, step: int, writer: metric_writers.MetricWriter):
     """A chronometer tick."""
@@ -843,10 +845,9 @@ class Chrono:
     core_hours = self.accum_train_time * ncores / 60 / 60
     devtype = jax.devices()[0].device_kind
     writer.write_scalars(
-        step,
-        {
-            'img/sec/core': self.global_bs * ds / dt / ncores,
-            'img/sec': self.global_bs * ds / dt,
+        step, {
+            f'{self.example_type}/sec/core': self.global_bs * ds / dt / ncores,
+            f'{self.example_type}/sec': self.global_bs * ds / dt,
             f'core_hours_{devtype}': core_hours,
         })
 
