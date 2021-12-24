@@ -334,8 +334,8 @@ def train(
           client.defragment()
 
     ##################### CHECKPOINTING ###########################
-    if ((step % checkpoint_steps == 0 and step > 0) or (step == total_steps) or
-        (step % log_eval_steps == 1)) and config.checkpoint:
+    if ((step % checkpoint_steps == 0 and step > 0) or
+        (step == total_steps)) and config.checkpoint:
       with report_progress.timed('checkpoint'):
         # Sync model state across replicas.
         train_state = train_utils.sync_model_state_across_replicas(train_state)
