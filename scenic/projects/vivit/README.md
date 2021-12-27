@@ -26,13 +26,6 @@ python scenic/projects/vivit/main.py -- \
   --workdir=vivit_base_factorised_encoder/
 ```
 
-## Installation
-
-In addition to the Scenic requirements,
-[SimCLR](https://github.com/google-research/simclr)
-should be installed and present in the `PYTHONPATH` environment variable for
-additional data augmentation.
-
 
 ## Model Zoo
 

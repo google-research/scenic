@@ -20,11 +20,6 @@ consistent throughout the video.
 Code is based on:
 SimCLR style data augmentation is based on:
 https://github.com/google-research/simclr/blob/master/tf2/data_util.py
-
-For SimCLR data augmentation it is required to have the
-following repository downloaded and added to your PYTHONPATH environment
-variable:
-https://github.com/google-research/simclr
 """
 
 import functools
