@@ -49,12 +49,14 @@ Projects that were developed in Scenic or used it for their experiments:
 * [The Efficiency Misnomer](https://arxiv.org/abs/2110.12894)
 * [Discrete Representations Strengthen Vision Transformer Robustness](https://arxiv.org/abs/2111.10493)
 * [Pyramid Adversarial Training Improves ViT Performance](https://arxiv.org/abs/2111.15121)
+* [VUT: Versatile UI Transformer for Multi-Modal Multi-Task User Interface Modeling](https://arxiv.org/abs/2112.05692)
 
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 
 Baselines that were reproduced in Scenic:
 * [An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929)
 * [End-to-End Object Detection with Transformers](https://arxiv.org/abs/2005.12872)
+* [Learning Transferable Visual Models From Natural Language Supervision](https://arxiv.org/abs/2103.00020)
 * [MLP-Mixer: An all-MLP Architecture for Vision](https://arxiv.org/abs/2105.01601)
 * [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385)
 * [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597)
