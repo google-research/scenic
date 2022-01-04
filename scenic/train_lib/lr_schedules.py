@@ -98,18 +98,19 @@ def piecewise_linear_scheduler(step, decay_events, decay_factors):
     return interpolated_factor
 
 
-def linear_warmup_scheduler(step, warmup_steps):
+def linear_warmup_scheduler(step, warmup_steps, alpha=0.):
   """Gives a scaling factor based on scheduling with a Linear Warmup.
 
   Args:
     step: int; Current step.
     warmup_steps: int; How many steps to warm up for in the warmup schedule.
+    alpha: float: The minimum value as a fraction of the initial value.
 
   Returns:
     Scaling factor applied to the learning rate on the given step.
   """
   if warmup_steps > 0:
-    return jnp.minimum(1.0, step / warmup_steps)
+    return jnp.minimum(1.0, alpha + step * (1.0 - alpha) / warmup_steps)
   else:
     return 1.0
 
@@ -178,11 +179,10 @@ def compound_lr_scheduler(config):
   * decay_every: Every k steps decay the learning rate by decay_factor.
   * cosine_decay: Cyclic cosine decay.
 
-  For instance, `config['factors'] = 'constant*linear_warmup'` combines
-  constant
-  learning rate schadule with linear warmup. This requires to have related
-  config
-  that are: config['warmup_steps'] and config['base_learning_rate'].
+  For instance, `config['factors'] = 'constant*linear_warmup'` combines the
+  constant learning rate schedule with a linear warmup. This requires one to
+  have the following configuration entries:
+  config['warmup_steps'] and config['base_learning_rate'].
 
   Args:
     config: Relevant config based on the chosen factors.
@@ -216,7 +216,8 @@ def compound_lr_scheduler(config):
 
       elif name == 'linear_warmup':
         warmup_steps = config['warmup_steps']
-        ratio *= linear_warmup_scheduler(step, warmup_steps)
+        warmup_alpha = config.get('warmup_alpha', 0)
+        ratio *= linear_warmup_scheduler(step, warmup_steps, warmup_alpha)
 
       elif name == 'rsqrt_decay':
         adjusted_step = jnp.maximum(step, config.get('warmup_steps', 0.))

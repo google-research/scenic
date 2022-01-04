@@ -38,6 +38,28 @@ class LearningRateTest(absltest.TestCase):
       expected_learning_rate = config.base_learning_rate
       self.assertAlmostEqual(lr_fn(step), expected_learning_rate)
 
+  def test_constant_linear_warmup(self):
+    """Test that linear warmup schedule works correctly."""
+    warmup_steps = 100
+    warmup_alpha = 0.1
+    config = ml_collections.ConfigDict(
+        dict(
+            lr_configs={
+                'learning_rate_schedule': 'compound',
+                'factors': 'constant*linear_warmup',
+                'base_learning_rate': 1.0,
+                'warmup_steps': warmup_steps,
+                'warmup_alpha': warmup_alpha
+            }))
+    lr_fn = lr_schedules.get_learning_rate_fn(config)
+    for step in range(400):
+      if step == 0:
+        self.assertEqual(lr_fn(step), warmup_alpha)
+      if step > 0 and step < warmup_steps:
+        self.assertGreater(lr_fn(step), lr_fn(step - 1))
+      if step >= warmup_steps:
+        self.assertEqual(lr_fn(step), 1.0)
+
   def test_polynomial_decay(self):
     """Test polynomial schedule works correctly."""
     config = ml_collections.ConfigDict(
@@ -61,7 +83,7 @@ class LearningRateTest(absltest.TestCase):
       expected_learning_rate = tf_polynomial_decay(step=step).numpy()
       self.assertAlmostEqual(lr_fn(step), expected_learning_rate)
 
-  def test_consine_decay(self):
+  def test_cosine_decay(self):
     """Test cosine schedule works correctly."""
     config = ml_collections.ConfigDict(
         dict(
@@ -76,7 +98,7 @@ class LearningRateTest(absltest.TestCase):
             }))
     lr_fn = lr_schedules.get_learning_rate_fn(config)
     config = config.lr_configs
-    tf_polynomial_decay = tf.keras.experimental.CosineDecayRestarts(
+    tf_cosine_decay = tf.keras.experimental.CosineDecayRestarts(
         initial_learning_rate=config['base_learning_rate'],
         first_decay_steps=config['steps_per_cycle'],
         t_mul=config['t_mul'],
@@ -84,7 +106,7 @@ class LearningRateTest(absltest.TestCase):
         alpha=config['alpha'],
     )
     for step in range(400):
-      expected_learning_rate = tf_polynomial_decay(step=step).numpy()
+      expected_learning_rate = tf_cosine_decay(step=step).numpy()
       self.assertAlmostEqual(lr_fn(step), expected_learning_rate)
 
 
