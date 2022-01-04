@@ -22,6 +22,10 @@ datasets:
 
 - **ViT**: [An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929)
 - **ViT-AugReg:** [How to train your ViT? Data, Augmentation, and Regularization in Vision Transformers](https://arxiv.org/abs/2106.10270)
+  For the `ImageNet-21K`-pre-trained checkpoints we are using the "recommended
+  checkpoints" (see paper section 4.5). The `ImageNet Accuracy` numbers are
+  after fine-tuning (resolution 224px) as described in Appendix B. For more
+  information see https://github.com/google-research/vision_transformer/
 
 | Model | Dataset | Pretraining | ImageNet Accuracy | Checkpoint |
 |-------|:-:|:-:|:-:|:-:|
@@ -31,6 +35,20 @@ datasets:
 | ViT-B/16            |     -    |  ImageNet-21K  |   -   |  [Link](https://storage.googleapis.com/scenic-bucket/baselines/ViT_B_16_ImageNet21k) |
 | ViT-L/32            |     -    |  ImageNet-21K  |   -   |  [Link](https://storage.googleapis.com/scenic-bucket/baselines/ViT_L_32_ImageNet21k) |
 | ViT-L/16            |     -    |  ImageNet-21K  |   -   |  [Link](https://storage.googleapis.com/scenic-bucket/baselines/ViT_L_16_ImageNet21k) |
+| ViT-AugReg-B/32     |     -    |  ImageNet-21K  |  79.1 |  [Link](https://storage.googleapis.com/vit_models/augreg/B_32-i21k-300ep-lr_0.001-aug_light1-wd_0.1-do_0.0-sd_0.0.npz) |
+| ViT-AugReg-B/16     |     -    |  ImageNet-21K  |  84.0 |  [Link](https://storage.googleapis.com/vit_models/augreg/B_16-i21k-300ep-lr_0.001-aug_medium1-wd_0.1-do_0.0-sd_0.0.npz) |
+
+The AugReg params can be directly loaded into a `train_state`:
+
+```python
+train_state_with_augreg_params = model.load_augreg_params(
+    train_state,
+    # Can read directly from storage bucket. Filename must start with model name
+    # ("B_32-" in this case).
+    'gs://vit_models/augreg/B_32-i21k-300ep-lr_0.001-aug_light1-wd_0.1-do_0.0-sd_0.0.npz',
+    # Config is checked against AugReg config.
+    config.model)
+```
 
 
 ### ResNet

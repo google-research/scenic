@@ -13,6 +13,7 @@ from scenic.model_lib.base_models.multilabel_classification_model import MultiLa
 from scenic.model_lib.layers import attention_layers
 from scenic.model_lib.layers import nn_layers
 import scipy
+from tensorflow.io import gfile
 
 Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
 
@@ -310,31 +311,69 @@ class ViTMultiLabelClassificationModel(MultiLabelClassificationModel):
     return init_vit_from_train_state(train_state, restored_train_state,
                                      self.config, restored_model_cfg)
 
+  def load_augreg_params(self, train_state: Any, params_path: str,
+                         model_cfg: ml_collections.ConfigDict) -> Any:
+    """Loads parameters from an AugReg checkpoint.
 
-def init_vit_from_train_state(
-    train_state: Any, restored_train_state: Any,
-    model_cfg: ml_collections.ConfigDict,
-    restored_model_cfg: ml_collections.ConfigDict) -> Any:
-  """Updates the train_state with data from restored_train_state.
+    See
+    https://github.com/google-research/vision_transformer/
+    and
+    https://arxiv.org/abs/2106.10270
+    for more information about these pre-trained models.
 
-  This function is writen to be used for 'fine-tuning' experiments. Here, we
-  do some surgery to support larger resolutions (longer sequence length) in
-  the transformer block, with respect to the learned pos-embeddings.
+    Args:
+      train_state: A raw TrainState for the model.
+      params_path: Path to an Augreg checkpoint. The model config is read from
+        the filename (e.g. a B/32 model starts with "B_32-").
+      model_cfg: Configuration of the model. Usually used for some asserts.
 
-  Args:
-    train_state: A raw TrainState for the model.
-    restored_train_state: A TrainState that is loaded with parameters/state of a
-      pretrained model.
-    model_cfg: Configuration of the model. Usually used for some asserts.
-    restored_model_cfg: Configuration of the model from which the
-      restored_train_state come from. Usually used for some asserts.
+    Returns:
+      Updated train_state with params replaced with the ones read from the
+      AugReg checkpoint.
+    """
+    restored_model_cfg = _get_augreg_cfg(params_path)
+    assert tuple(restored_model_cfg.patches.size) == tuple(
+        model_cfg.patches.size)
+    assert restored_model_cfg.hidden_size == model_cfg.hidden_size
+    assert restored_model_cfg.mlp_dim == model_cfg.mlp_dim
+    assert restored_model_cfg.num_layers == model_cfg.num_layers
+    assert restored_model_cfg.num_heads == model_cfg.num_heads
+    assert restored_model_cfg.classifier == model_cfg.classifier
 
-  Returns:
-    Updated train_state.
-  """
-  params = flax.core.unfreeze(train_state.optimizer.target)
-  restored_params = flax.core.unfreeze(restored_train_state.optimizer.target)
+    flattened = np.load(gfile.GFile(params_path, 'rb'))
+    restored_params = flax.traverse_util.unflatten_dict(
+        {tuple(k.split('/')): v for k, v in flattened.items()})
+    restored_params['output_projection'] = restored_params.pop('head')
+    params = flax.core.unfreeze(train_state.optimizer.target)
 
+    _merge_params(params, restored_params, model_cfg, restored_model_cfg)
+
+    return train_state.replace(
+        optimizer=train_state.optimizer.replace(
+            target=flax.core.freeze(params)))
+
+
+def _get_augreg_cfg(params_path):
+  model = params_path.split('/')[-1].split('-')[0]
+  assert model in ('B_16', 'B_32'), (
+      'Currently only B/16 and B/32 models are supported.')
+  sz = {'B_16': 16, 'B_32': 32}[model]
+  return ml_collections.ConfigDict(
+      dict(
+          num_classes=0,
+          mlp_dim=3072,
+          num_layers=12,
+          num_heads=12,
+          hidden_size=768,
+          classifier='token',
+          patches=dict(size=(sz, sz)),
+          dropout_rate=0.,
+          attention_dropout_rate=0.,
+      ))
+
+
+def _merge_params(params, restored_params, model_cfg, restored_model_cfg):
+  """Merges `restored_params` into `params`."""
   # Start moving parameters, one-by-one and apply changes if needed.
   for m_key, m_params in restored_params.items():
     if m_key == 'output_projection':
@@ -384,7 +423,7 @@ def init_vit_from_train_state(
                   restored_posemb_grid, zoom, order=1)
               restored_posemb_grid = restored_posemb_grid.reshape(
                   1, gs * gs, -1)
-              # Attache the CLS token again.
+              # Attach the CLS token again.
               restored_posemb = jnp.array(
                   np.concatenate([cls_tok, restored_posemb_grid], axis=1))
 
@@ -395,6 +434,33 @@ def init_vit_from_train_state(
     else:
       # Use the rest as they are in the pretrianed model.
       params[m_key] = m_params
+
+
+def init_vit_from_train_state(
+    train_state: Any, restored_train_state: Any,
+    model_cfg: ml_collections.ConfigDict,
+    restored_model_cfg: ml_collections.ConfigDict) -> Any:
+  """Updates the train_state with data from restored_train_state.
+
+  This function is written to be used for 'fine-tuning' experiments. Here, we
+  do some surgery to support larger resolutions (longer sequence length) in
+  the transformer block, with respect to the learned pos-embeddings.
+
+  Args:
+    train_state: A raw TrainState for the model.
+    restored_train_state: A TrainState that is loaded with parameters/state of a
+      pretrained model.
+    model_cfg: Configuration of the model. Usually used for some asserts.
+    restored_model_cfg: Configuration of the model from which the
+      restored_train_state come from. Usually used for some asserts.
+
+  Returns:
+    Updated train_state.
+  """
+  params = flax.core.unfreeze(train_state.optimizer.target)
+  restored_params = flax.core.unfreeze(restored_train_state.optimizer.target)
+
+  _merge_params(params, restored_params, model_cfg, restored_model_cfg)
 
   return train_state.replace(
       optimizer=train_state.optimizer.replace(target=flax.core.freeze(params)))
