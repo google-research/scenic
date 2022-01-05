@@ -26,6 +26,8 @@ model_bound = model.bind(clip_vars)
 
 tokenizer = clip_tokenizer.build_tokenizer()
 text = tokenizer('This is a cat.')
+# Note that `resnet_50x4` expects image size 288, all other networks expect
+# image size 224 (due to using attention pooling in resnets).
 image = jnp.zeros((1, 224, 224, 3))
 image = clip.normalize_image(image)
 
