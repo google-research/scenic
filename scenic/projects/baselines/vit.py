@@ -61,6 +61,7 @@ class Encoder1DBlock(nn.Module):
   dropout_rate: float = 0.1
   attention_dropout_rate: float = 0.1
   stochastic_depth: float = 0.0
+  enforce_hidden_size_divisible_by_heads: bool = True
 
   def get_stochastic_depth_mask(self, x: jnp.ndarray,
                                 deterministic: bool) -> jnp.ndarray:
@@ -95,13 +96,15 @@ class Encoder1DBlock(nn.Module):
     # Attention block.
     assert inputs.ndim == 3
     x = nn.LayerNorm(dtype=self.dtype)(inputs)
-    x = nn.MultiHeadDotProductAttention(
+    x = attention_layers.MultiHeadAttention(
         num_heads=self.num_heads,
         dtype=self.dtype,
         kernel_init=nn.initializers.xavier_uniform(),
         broadcast_dropout=False,
-        deterministic=deterministic,
-        dropout_rate=self.attention_dropout_rate)(x, x)
+        dropout_rate=self.attention_dropout_rate,
+        enforce_hidden_size_divisible_by_heads=self
+        .enforce_hidden_size_divisible_by_heads)(
+            x, x, deterministic=deterministic)
     x = nn.Dropout(rate=self.dropout_rate)(x, deterministic)
     x = x * (1.0 - self.get_stochastic_depth_mask(x, deterministic)) + inputs
 
@@ -140,6 +143,7 @@ class Encoder(nn.Module):
   attention_dropout_rate: float = 0.1
   stochastic_depth: float = 0.0
   dtype: Any = jnp.float32
+  enforce_hidden_size_divisible_by_heads: bool = True
 
   @nn.compact
   def __call__(self, inputs: jnp.ndarray, *, train: bool = False):
@@ -164,7 +168,9 @@ class Encoder(nn.Module):
           stochastic_depth=(lyr / max(self.num_layers - 1, 1)) *
           self.stochastic_depth,
           name=f'encoderblock_{lyr}',
-          dtype=dtype)(
+          dtype=dtype,
+          enforce_hidden_size_divisible_by_heads=self
+          .enforce_hidden_size_divisible_by_heads)(
               x, deterministic=not train)
     encoded = nn.LayerNorm(name='encoder_norm')(x)
     return encoded
@@ -201,6 +207,7 @@ class ViT(nn.Module):
   stochastic_depth: float = 0.0
   classifier: str = 'gap'
   dtype: Any = jnp.float32
+  enforce_hidden_size_divisible_by_heads: bool = True
 
   @nn.compact
   def __call__(self, x: jnp.ndarray, *, train: bool, debug: bool = False):
@@ -230,6 +237,8 @@ class ViT(nn.Module):
         attention_dropout_rate=self.attention_dropout_rate,
         stochastic_depth=self.stochastic_depth,
         dtype=self.dtype,
+        enforce_hidden_size_divisible_by_heads=self
+        .enforce_hidden_size_divisible_by_heads,
         name='Transformer')(
             x, train=train)
 

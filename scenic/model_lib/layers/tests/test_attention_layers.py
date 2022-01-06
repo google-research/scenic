@@ -60,6 +60,26 @@ class AttentionLayersTest(parameterized.TestCase):
     # Test outputs shape.
     self.assertEqual(y.shape, x.shape)
 
+  def test_multihead_attention_hidden_size_not_divisible_by_heads(self):
+    """Tests MultiHeadAttention."""
+    rng = random.PRNGKey(0)
+    x = jnp.ones((4, 16, 30))
+    n_heads = 4
+    layer = attention_layers.MultiHeadAttention(
+        num_heads=n_heads, enforce_hidden_size_divisible_by_heads=False)
+    variables = layer.init(rng, x, x, deterministic=True)
+    self.assertTupleEqual(variables['params']['query']['kernel'].shape,
+                          (30, 4, 7))
+    self.assertTupleEqual(variables['params']['key']['kernel'].shape,
+                          (30, 4, 7))
+    self.assertTupleEqual(variables['params']['value']['kernel'].shape,
+                          (30, 4, 7))
+    self.assertTupleEqual(variables['params']['out']['kernel'].shape,
+                          (4, 7, 30))
+    y = layer.apply(variables, x, x, deterministic=True)
+    # Test outputs shape.
+    self.assertEqual(y.shape, x.shape)
+
   def test_multihead_attention_w_dropout(self):
     """Tests MultiHeadAttention with dropout."""
     rng = random.PRNGKey(0)

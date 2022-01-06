@@ -270,6 +270,8 @@ class MultiHeadAttention(nn.Module):
     attention_fn: Defaults to dot_product_attention. Other function of the
       same signature are possible.
     dtype: the dtype of the computation (default: float32).
+    enforce_hidden_size_divisible_by_heads: Whether or not we allow the hidden
+      size to not be divisible by the number of heads.
   """
   num_heads: int
   qkv_features: Optional[int] = None
@@ -282,6 +284,7 @@ class MultiHeadAttention(nn.Module):
   attention_fn: Callable[..., jnp.ndarray] = dot_product_attention
   precision: Optional[jax.lax.Precision] = None
   dtype: jnp.dtype = jnp.float32
+  enforce_hidden_size_divisible_by_heads: bool = True
 
   @nn.compact
   def __call__(self,
@@ -325,8 +328,9 @@ class MultiHeadAttention(nn.Module):
     features = self.out_features or inputs_q.shape[-1]
     qkv_features = self.qkv_features or inputs_q.shape[-1]
 
-    assert qkv_features % self.num_heads == 0, (
-        'Memory dimension must be divisible by number of heads.')
+    if self.enforce_hidden_size_divisible_by_heads:
+      assert qkv_features % self.num_heads == 0, (
+          'Memory dimension must be divisible by number of heads.')
     head_dim = qkv_features // self.num_heads
 
     def add_positional_emb(x, pos):
