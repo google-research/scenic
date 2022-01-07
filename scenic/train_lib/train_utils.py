@@ -666,7 +666,8 @@ def log_eval_summary(step: int,
                          Callable[[Dict[str, Tuple[float, int]], str],
                                   Dict[str, float]]] = None,
                      prefix: str = 'valid',
-                     key_separator: str = '_') -> Dict[str, float]:
+                     key_separator: str = '_',
+                     flush_writer: bool = True) -> Dict[str, float]:
   """Computes and logs eval metrics.
 
   Args:
@@ -686,6 +687,7 @@ def log_eval_summary(step: int,
     prefix: str; Prefix added to the name of the summaries writen by this
       function.
     key_separator: Separator added between the prefix and key.
+    flush_writer: If True, flush the writer after logging.
 
   Returns:
     A dictionary of metrics, mapping both `eval_metrics` and
@@ -710,6 +712,8 @@ def log_eval_summary(step: int,
           for key, val in eval_metrics_summary.items()
       })
 
+  if flush_writer:
+    writer.flush()
   return eval_metrics_summary
 
 
@@ -723,7 +727,8 @@ def log_train_summary(step: int,
                           Callable[[Dict[str, Tuple[float, int]], str],
                                    Dict[str, float]]] = None,
                       prefix: str = 'train',
-                      key_separator: str = '_') -> Dict[str, float]:
+                      key_separator: str = '_',
+                      flush_writer: bool = True) -> Dict[str, float]:
   """Computes and logs train metrics.
 
   Args:
@@ -743,6 +748,7 @@ def log_train_summary(step: int,
     prefix: str; Prefix added to the name of the summaries writen by this
       function.
     key_separator: Separator added between the prefix and key.
+    flush_writer: If True, flush the writer after logging.
 
   Returns:
     A dictionary of metrics, mapping `train_metrics from metric name (incl.
@@ -772,7 +778,8 @@ def log_train_summary(step: int,
   writer.write_scalars(step,
                        {key: val.mean() for key, val in train_logs.items()})
 
-  writer.flush()
+  if flush_writer:
+    writer.flush()
   return train_metrics_summary
 
 
