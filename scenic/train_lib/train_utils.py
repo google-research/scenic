@@ -14,6 +14,7 @@
 
 """Utility functions for Training."""
 
+import collections.abc as collections
 import functools
 import os
 import time
@@ -106,6 +107,106 @@ def initialize_model(
     """Initialization function to be jitted."""
     init_model_state, init_params = model_def.init(
         rngs, *dummy_input, train=False, debug=False).pop('params')
+    # Set bias in the head to low value, such that loss is small initially.
+    if config.get('init_head_bias', None) is not None:
+      init_params = flax.core.unfreeze(init_params)
+      init_params['output_projection'] = optimizers.tree_map_with_names(
+          lambda p: jnp.full_like(p, config.init_head_bias),
+          init_params['output_projection'],
+          match_name_fn=lambda name: 'bias' in name)
+      init_params = flax.core.freeze(init_params)
+    return init_params, init_model_state
+
+  if not isinstance(rngs, dict):
+    rngs = {'params': rngs}
+  init_params, init_model_state = _initialize_model(rngs)
+  # Pop out params rng:
+  rngs.pop('params')
+
+  # Count number of trainable parameters:
+  num_trainable_params = debug_utils.log_param_shapes(init_params)
+
+  # Count gflops:
+  count_flops = config.get('count_flops',
+                           ml_collections.ConfigDict({'count_flops': True}))
+  if count_flops:
+    variables = {'params': init_params, **init_model_state}
+    flops = debug_utils.compute_flops(
+        flax_model_apply_fn=functools.partial(
+            model_def.apply, variables, train=False, debug=False, rngs=rngs),
+        input_spec=count_flops.get('input_spec', input_spec),
+        fuse_multiply_add=count_flops.get('fuse_multiply_add', True))
+    gflops = flops / (10**9)
+  else:
+    gflops = None
+
+  return init_params, init_model_state, num_trainable_params, gflops
+
+
+def initialize_model_with_pytree(
+    *,
+    model_def: nn.Module,
+    input_spec: PyTree,
+    config: ml_collections.ConfigDict,
+    rngs: Union[jnp.ndarray, Mapping[str, jnp.ndarray]],
+) -> Tuple[PyTree, PyTree, int, Optional[float]]:
+  """Initializes parameters and model state with a pytree input_spec.
+
+  This is an extension of the above initialize_model fuction where we can put
+  pytree `input_spec`. We keep the original fuction for backward compatibility.
+  If the root type of `input_spec` is `Sequence`, each element is fed to the
+  model as position arguments whereas they are fed as keyword arguments if the
+  root type is `dict`.
+
+  Args:
+    model_def: Definition of a model.
+    input_spec: A PyTree whose leaves are (shape, dtype) pairs specifying the
+      shape and dtype of the inputs. If unspecified the dtype is float32.
+    config: Configurations of the initialization.
+    rngs: Jax rng keys.
+
+  Returns:
+    Initial params, Init model_state, and number of trainable_params.
+  """
+  batch_size = (config.batch_size //
+                jax.device_count()) if config.get('batch_size') else None
+
+  def check_leaf_spec(spec: Sequence[PyTree]) -> bool:
+    return ((len(spec) == 2 and isinstance(spec[0], collections.Sequence) and
+             all(isinstance(i, int) for i in spec[0]) and
+             isinstance(spec[1], jnp.dtype)) or
+            (all(isinstance(i, int) for i in spec[0])))
+
+  def create_dummy_input(spec: PyTree) -> PyTree:
+    if isinstance(spec, dict):
+      return {k: create_dummy_input(v) for k, v in spec.items()}
+    elif isinstance(spec, collections.Sequence):
+      if check_leaf_spec(spec):
+        in_st = debug_utils.input_spec_to_jax_shape_dtype_struct(
+            spec, batch_size=batch_size)
+        return jnp.zeros(in_st.shape, in_st.dtype)
+      else:
+        return tuple(create_dummy_input(child) for child in spec)
+    elif spec is None:
+      return None
+    else:
+      raise NotImplementedError('Unsupported spec type.', type(spec))
+  dummy_input = create_dummy_input(input_spec)
+
+  # We want all parameters to be created in host RAM, not on any device, they'll
+  # be sent there later as needed, otherwise we already encountered two
+  # situations where we allocate them twice.
+  @functools.partial(jax.jit, backend='cpu')
+  def _initialize_model(rngs):
+    """Initialization function to be jitted."""
+    # If dummy_input is a dict, we feed inputs as keyword arguments, otherwise
+    # feed as position arguments.
+    if isinstance(dummy_input, dict):
+      init_model_state, init_params = model_def.init(
+          rngs, **dummy_input, train=False, debug=False).pop('params')
+    else:
+      init_model_state, init_params = model_def.init(
+          rngs, *dummy_input, train=False, debug=False).pop('params')
     # Set bias in the head to low value, such that loss is small initially.
     if config.get('init_head_bias', None) is not None:
       init_params = flax.core.unfreeze(init_params)
