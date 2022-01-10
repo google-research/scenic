@@ -25,6 +25,8 @@ import jax
 import jax.numpy as jnp
 from jax.tree_util import tree_map
 
+PyTree = Any
+
 
 def enable_jax_debugging_flags():
   """Enables some of the global JAX flags for debugging."""
@@ -111,6 +113,60 @@ def compute_flops(flax_model_apply_fn: Callable[[jnp.ndarray], Any],
       dummy_input.append(jnp.zeros(in_st.shape, in_st.dtype))
     else:
       dummy_input.append(None)
+
+  m = jax.xla_computation(flax_model_apply_fn)(*dummy_input).as_hlo_module()
+  client = jax.lib.xla_bridge.get_backend()
+  analysis = jax.lib.xla_client._xla.hlo_module_cost_analysis(client, m)  # pylint: disable=protected-access
+
+  flops = analysis['flops']
+  if fuse_multiply_add:
+    flops = flops / 2
+  logging.info('GFLOPs %0.3f for input spec: %s', flops / 10**9, input_spec)
+  return flops
+
+
+def compute_flops_with_pytree(flax_model_apply_fn: Callable[[jnp.ndarray], Any],
+                              input_spec: PyTree,
+                              fuse_multiply_add: bool) -> float:
+  """Performs static analysis of the graph to compute theoretical FLOPs.
+
+  One can also use the XProf profiler to get the actual FLOPs at runtime
+  based on device counters. Theoretical FLOPs are more useful for comparing
+  models across different library implementations and is hardware-agnostic.
+
+  Args:
+    flax_model_apply_fn: Apply function of the flax model to be analysed.
+    input_spec: A PyTree whose leaves are (shape, dtype) pairs specifying the
+      shape and dtype of the inputs. If unspecified the dtype is float32.
+    fuse_multiply_add: Bool; If true, count a multiply and add (also known as
+      "multiply-accumulate" or "MAC") as 1 FLOP rather than 2 (as done by the
+      HLO analysis). This is commonly used in literature.
+
+  Returns:
+    flops: The total number of flops.
+  """
+
+  def check_leaf_spec(spec: Sequence[PyTree]) -> bool:
+    return ((len(spec) == 2 and isinstance(spec[0], collections.Sequence) and
+             all(isinstance(i, int) for i in spec[0]) and
+             isinstance(spec[1], jnp.dtype)) or
+            (all(isinstance(i, int) for i in spec[0])))
+
+  def create_dummy_input(spec: PyTree) -> PyTree:
+    if isinstance(spec, dict):
+      return {k: create_dummy_input(v) for k, v in spec.items()}
+    elif isinstance(spec, collections.Sequence):
+      if check_leaf_spec(spec):
+        in_st = input_spec_to_jax_shape_dtype_struct(spec, batch_size=1)
+        return jnp.zeros(in_st.shape, in_st.dtype)
+      else:
+        return tuple(create_dummy_input(child) for child in spec)
+    elif spec is None:
+      return None
+    else:
+      raise NotImplementedError('Unsupported spec type.', type(spec))
+
+  dummy_input = create_dummy_input(input_spec)
 
   m = jax.xla_computation(flax_model_apply_fn)(*dummy_input).as_hlo_module()
   client = jax.lib.xla_bridge.get_backend()

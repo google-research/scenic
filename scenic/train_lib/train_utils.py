@@ -38,7 +38,7 @@ from tensorflow.io import gfile
 
 # JAX team is working on type annotation for pytree:
 # https://github.com/google/jax/issues/1555
-PyTree = Union[Mapping[str, Mapping], Any]
+PyTree = Any
 PRNGKey = jnp.ndarray
 
 
@@ -231,7 +231,7 @@ def initialize_model_with_pytree(
                            ml_collections.ConfigDict({'count_flops': True}))
   if count_flops:
     variables = {'params': init_params, **init_model_state}
-    flops = debug_utils.compute_flops(
+    flops = debug_utils.compute_flops_with_pytree(
         flax_model_apply_fn=functools.partial(
             model_def.apply, variables, train=False, debug=False, rngs=rngs),
         input_spec=count_flops.get('input_spec', input_spec),
