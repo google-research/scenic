@@ -184,7 +184,7 @@ def eval_step(
       jax.host_callback.
 
   Returns:
-    Calculated metrics and Logits.
+    Calculated metrics and logits.
   """
   variables = {
       'params': train_state.optimizer.target,
