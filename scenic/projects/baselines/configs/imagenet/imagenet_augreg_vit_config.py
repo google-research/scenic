@@ -1,39 +1,7 @@
 # pylint: disable=line-too-long
-r"""Default configs for ViT on ImageNet2012.
+r"""Default configs for Regularized ViT on ImageNet2012.
 
-
-
-Note: you can also use ImageNet input pipeline from big transfer pipeline:
-```
-  config.dataset_name = 'bit'
-  config.data_dtype_str = 'float32'
-  config.dataset_configs = ml_collections.ConfigDict()
-  config.dataset_configs.dataset = 'imagenet2012'
-  # aka tiny_test/test[:5%] in task_adapt
-  config.dataset_configs.val_split = 'validation'
-  config.dataset_configs.train_split = 'train'
-  config.dataset_configs.num_classes = 1000
-  INPUT_RES = 224  # pylint: disable=invalid-name
-  RESIZE_RES = int(INPUT_RES * (256 / 224))  # pylint: disable=invalid-name
-  LS = 1e-4  # pylint: disable=invalid-name
-  config.dataset_configs.pp_train = (
-    f'decode_jpeg_and_inception_crop({INPUT_RES})|flip_lr|value_range(-1, '
-    f'1)|onehot({config.dataset_configs.num_classes},'
-    f' key="label", key_result="labels", '
-    f'on={1.0-LS}, off={LS})|keep("image", '
-    f'"labels")')  # pylint: disable=line-too-long
-  config.dataset_configs.pp_eval = (
-    f'decode|resize_small({RESIZE_RES})|'
-    f'central_crop({INPUT_RES})|value_range(-1, '
-    f'1)|onehot({config.dataset_configs.num_classes},'
-    f' key="label", '
-    f'key_result="labels")|keep("image", '
-    f'"labels")')  # pylint: disable=line-too-long
-  config.dataset_configs.prefetch_to_device = 2
-
-  # shuffle_buffer_size is per host, so small-ish is ok.
-  config.dataset_configs.shuffle_buffer_size = 250_000
-```
+Based on: https://arxiv.org/pdf/2106.10270.pdf
 
 """
 # pylint: disable=line-too-long
@@ -41,6 +9,8 @@ Note: you can also use ImageNet input pipeline from big transfer pipeline:
 import ml_collections
 
 _IMAGENET_TRAIN_SIZE = 1281167
+NUM_CLASSES = 1000
+
 VARIANT = 'B/16'
 
 
@@ -50,16 +20,36 @@ def get_config(runlocal=''):
   runlocal = bool(runlocal)
 
   config = ml_collections.ConfigDict()
-  config.experiment_name = 'imagenet-vit'
+  config.experiment_name = 'imagenet-regularized_vit'
   # Dataset.
-  config.dataset_name = 'imagenet'
+  config.dataset_name = 'bit'
   config.data_dtype_str = 'float32'
   config.dataset_configs = ml_collections.ConfigDict()
+  config.dataset_configs.dataset = 'imagenet2012'
+  config.dataset_configs.num_classes = NUM_CLASSES
+  config.dataset_configs.train_split = 'train'
+  config.dataset_configs.val_split = 'validation'
+  config.dataset_configs.pp_train = (
+      'decode_jpeg_and_inception_crop(224)|flip_lr'
+      '|randaug(2, 15)'
+      '|value_range(-1, 1)'
+      f'|onehot({NUM_CLASSES}, key="label", key_result="labels")'
+      '|keep("image", "labels")')
+  config.dataset_configs.pp_eval = (
+      'decode'
+      '|resize_small(256)|central_crop(224)'
+      '|value_range(-1, 1)'
+      f'|onehot({NUM_CLASSES}, key="label", key_result="labels")'
+      '|keep("image", "labels")')
+  config.dataset_configs.prefetch_to_device = 2
+  # Shuffle_buffer_size is per host, so small-ish is ok.
+  config.dataset_configs.shuffle_buffer_size = 250_000
 
   # Model.
   version, patch = VARIANT.split('/')
   config.model_name = 'vit_multilabel_classification'
   config.model = ml_collections.ConfigDict()
+
   config.model.hidden_size = {'Ti': 192,
                               'S': 384,
                               'B': 768,
@@ -80,8 +70,9 @@ def get_config(runlocal=''):
                              'H': 32}[version]
   config.model.representation_size = None
   config.model.classifier = 'token'
-  config.model.attention_dropout_rate = 0.
+  config.model.attention_dropout_rate = 0.0
   config.model.dropout_rate = 0.1
+  config.model.stochastic_depth = 0.1
   config.model_dtype_str = 'float32'
 
   # Training.
@@ -90,28 +81,32 @@ def get_config(runlocal=''):
   config.optimizer_configs = ml_collections.ConfigDict()
   config.optimizer_configs.beta1 = 0.9
   config.optimizer_configs.beta2 = 0.999
-  config.optimizer_configs.weight_decay = 0.3
+  config.optimizer_configs.weight_decay = 0.1
   config.explicit_weight_decay = None  # No explicit weight decay
   config.l2_decay_factor = None
   config.max_grad_norm = 1.0
   config.label_smoothing = None
-  config.num_training_epochs = 90
+  config.num_training_epochs = 300
   config.log_eval_steps = 1000
   config.batch_size = 8 if runlocal else 4096
   config.rng_seed = 42
-  config.init_head_bias = -10.0
+  config.init_head_bias = -6.9  # -log(1000)
 
   # Learning rate.
   steps_per_epoch = _IMAGENET_TRAIN_SIZE // config.batch_size
   total_steps = config.num_training_epochs * steps_per_epoch
-  base_lr = 3e-3
+  base_lr = 0.001
   config.lr_configs = ml_collections.ConfigDict()
   config.lr_configs.learning_rate_schedule = 'compound'
-  config.lr_configs.factors = 'constant*linear_warmup*linear_decay'
-  config.lr_configs.total_steps = total_steps
-  config.lr_configs.end_learning_rate = 1e-5
+  config.lr_configs.factors = 'constant * cosine_decay * linear_warmup'
   config.lr_configs.warmup_steps = 10_000
+  config.lr_configs.steps_per_cycle = total_steps
   config.lr_configs.base_learning_rate = base_lr
+
+  # Mixup.
+  config.mixup = ml_collections.ConfigDict()
+  config.mixup.bind_to = None
+  config.mixup.alpha = 0.5
 
   # Logging.
   config.write_summary = True  # write TB and/or XM summary
@@ -121,6 +116,9 @@ def get_config(runlocal=''):
   config.checkpoint_steps = 5000
   config.debug_train = False  # debug mode during training
   config.debug_eval = False  # debug mode during eval
+
+  config.m = None  # placeholder for randaug strength
+  config.l = None  # placeholder for randaug layers
 
 
   return config
