@@ -81,6 +81,7 @@ setup(
         "flax",
         "ml-collections",
         "tensorflow",
+        "tensorflow-addons",
         "tfds-nightly",
         "ott-jax",
         "immutabledict",
