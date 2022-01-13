@@ -91,7 +91,7 @@ setup(
         "seaborn",
         "tqdm",
         "pycocotools",
-        "dmvr @ git+git://github.com/deepmind/dmvr",
+        "dmvr @ git+https://github.com/deepmind/dmvr.git",
         "tf-models-nightly",
     ],
     cmdclass={
