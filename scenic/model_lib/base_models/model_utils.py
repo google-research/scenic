@@ -525,6 +525,8 @@ def weighted_box_l1_loss(
     return abs_diff
   elif reduction == 'mean':
     return abs_diff.mean()
+  else:
+    raise ValueError(f'Unknown reduction: {reduction}')
 
 
 ############################## Regression Loss #################################
