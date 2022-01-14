@@ -30,7 +30,10 @@
     > Omninet is a transformer model with
     > [omni-directional representations](https://arxiv.org/abs/2103.01075).
 
+*   [CLAY](clay)
 
+    > CLAY is a Transformer-based pipeline for mobile UI layout denoising.
+    > [CLAY](https://arxiv.org/abs/2201.04100).
 
 <a name="projects"></a>
 ## Scenic projects

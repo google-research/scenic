@@ -50,6 +50,7 @@ Projects that were developed in Scenic or used it for their experiments:
 * [Discrete Representations Strengthen Vision Transformer Robustness](https://arxiv.org/abs/2111.10493)
 * [Pyramid Adversarial Training Improves ViT Performance](https://arxiv.org/abs/2111.15121)
 * [VUT: Versatile UI Transformer for Multi-Modal Multi-Task User Interface Modeling](https://arxiv.org/abs/2112.05692)
+* [CLAY: Learning to Denoise Raw Mobile UI Layouts for Improving Datasets at Scale](https://arxiv.org/abs/2201.04100)
 
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 
