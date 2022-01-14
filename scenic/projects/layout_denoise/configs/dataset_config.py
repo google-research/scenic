@@ -11,9 +11,7 @@ EVAL_SIZE = {
 }
 
 
-def get_config(data_name='rico',
-               shuffle_buffer_size=10_000,
-               use_inner=True):
+def get_config(data_name='rico', shuffle_buffer_size=10_000, use_inner=True):
   """Returns configs for a datset given its name."""
   dataset_configs = ml_collections.ConfigDict()
   dataset_configs.shuffle_buffer_size = shuffle_buffer_size
@@ -21,10 +19,11 @@ def get_config(data_name='rico',
   dataset_configs.use_inner = use_inner
 
   if data_name == 'rico':
-    dataset_configs.train_files = [
-    ]
-    dataset_configs.eval_files = [
-    ]
+    # Add path to training files containing tf.Example.
+    dataset_configs.train_files = ['/path/to/train_tfexample']
+    # Add path to eval (validation) files containing tf.Example.
+    dataset_configs.eval_files = ['/path/to/eval_tfexample']
+
   dataset_configs.dataset_name = data_name
   dataset_configs.task_name = 'layout_denoise'
   dataset_configs.num_train_examples = TRAIN_SIZE[data_name]
