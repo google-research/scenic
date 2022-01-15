@@ -33,7 +33,7 @@
 *   [CLAY](layout_denoise)
 
     > CLAY is a Transformer-based pipeline for mobile UI layout denoising. Read
-    > more about this project in CALY [paper](https://arxiv.org/abs/2201.04100).
+    > more about this project in CLAY [paper](https://arxiv.org/abs/2201.04100).
 
 
 <a name="projects"></a>
