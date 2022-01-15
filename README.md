@@ -59,6 +59,8 @@ Baselines that were reproduced in Scenic:
 * [End-to-End Object Detection with Transformers](https://arxiv.org/abs/2005.12872)
 * [Learning Transferable Visual Models From Natural Language Supervision](https://arxiv.org/abs/2103.00020)
 * [MLP-Mixer: An all-MLP Architecture for Vision](https://arxiv.org/abs/2105.01601)
+* [How to train your ViT? Data, Augmentation, and Regularization in Vision Transformers](https://arxiv.org/abs/2106.10270)
+* [Big Transfer (BiT): General Visual Representation Learning](https://arxiv.org/abs/1912.11370)
 * [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385)
 * [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597)
 
