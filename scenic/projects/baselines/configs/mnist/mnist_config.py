@@ -38,12 +38,11 @@ def get_config():
   config.batch_size = 128
   config.rng_seed = 0
   # Logging.
-  config.write_summary = True  # write TB and/or XM summary
-  config.write_xm_measurements = True  # write XM measurements
-  config.xprof = True  # Profile using xprof
-  config.checkpoint = True  # do checkpointing
-  config.debug_train = False  # debug mode during training
-  config.debug_eval = False  # debug mode during eval
+  config.write_summary = True
+  config.xprof = True  # Profile using xprof.
+  config.checkpoint = True  # Do checkpointing.
+  config.debug_train = False  # Debug mode during training.
+  config.debug_eval = False  # Debug mode during eval.
   return config
 
 

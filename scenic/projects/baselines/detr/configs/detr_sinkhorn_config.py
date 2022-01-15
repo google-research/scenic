@@ -108,14 +108,14 @@ def get_config():
   config.init_from.checkpoint_path = 'path_to_checkpoint_of_resnet_50'
 
   # Logging.
-  config.write_summary = True  # write summary
-  config.xprof = True  # Profile using xprof
+  config.write_summary = True
+  config.xprof = True  # Profile using xprof.
   config.log_summary_steps = 50  # train summary steps
   config.log_large_summary_steps = 1000  # Expensive summary operations freq
-  config.checkpoint = True  # do checkpointing
+  config.checkpoint = True  # Do checkpointing.
   config.checkpoint_steps = steps_per_epoch
-  config.debug_train = False  # debug mode during training
-  config.debug_eval = False  # debug mode during eval
+  config.debug_train = False  # Debug mode during training.
+  config.debug_eval = False  # Debug mode during eval.
 
   return config
 

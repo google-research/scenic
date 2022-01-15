@@ -16,7 +16,7 @@ def get_config():
   config = ml_collections.ConfigDict()
   config.experiment_name = 'vivit_kinetics400_classification'
 
-  # Dataset
+  # Dataset.
   config.dataset_name = 'video_tfrecord_dataset'
   config.dataset_configs = ml_collections.ConfigDict()
   config.data_dtype_str = 'float32'
@@ -97,7 +97,7 @@ def get_config():
   # Applies when temporal_encoding_config.method='temporal_sampling'
   config.model.temporal_encoding_config.n_sampled_frames = 16  # Unused here.
 
-  # Training
+  # Training.
   config.trainer_name = 'vivit_trainer'
   config.optimizer = 'momentum'
   config.optimizer_configs = ml_collections.ConfigDict()
@@ -123,7 +123,7 @@ def get_config():
   config.init_from.restore_input_embedding = True
   config.init_from.positional_embed_size_change = 'tile'
 
-  # Learning rate
+  # Learning rate.
   steps_per_epoch = KINETICS_400_TRAIN_SIZE // config.batch_size
   total_steps = config.num_training_epochs * steps_per_epoch
   config.lr_configs = ml_collections.ConfigDict()
@@ -133,12 +133,11 @@ def get_config():
   config.lr_configs.steps_per_cycle = total_steps
   config.lr_configs.base_learning_rate = 5e-2
 
-  # Logging
-  config.write_summary = True  # write TB and/or XM summary
-  config.write_xm_measurements = True  # write XM measurements
-  config.checkpoint = True  # do checkpointing
-  config.debug_train = False  # debug mode during training
-  config.debug_eval = False  # debug mode during eval
+  # Logging.
+  config.write_summary = True
+  config.checkpoint = True  # Do checkpointing.
+  config.debug_train = False  # Debug mode during training.
+  config.debug_eval = False  # Debug mode during eval.
   config.checkpoint_steps = 1000  # Checkpoint more frequently than a val epoch.
   return config
 

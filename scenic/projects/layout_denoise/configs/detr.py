@@ -30,7 +30,7 @@ def get_config():
         shuffle_buffer_size=shuffle_buffer_size // len(config.dataset_names),
         use_inner=config.use_inner)
 
-  # model
+  # Model.
   config.model_name = 'layout_denoise'
   # model_type can be `full`, `vh_only` or `mlp`.
   config.model_type = 'full'
@@ -65,10 +65,10 @@ def get_config():
   config.attention_dropout_rate = 0.2
   config.pos_pattern = '1/4'
 
-  # loss
+  # Loss.
   config.aux_loss = True
   config.class_loss_coef = 1.0
-  # training
+  # Training.
   config.trainer_name = 'layout_denoise_trainer'
   config.optimizer = 'adam'
   config.optimizer_configs = ml_collections.ConfigDict()
@@ -81,7 +81,7 @@ def get_config():
   config.batch_size = 128
   config.eval_batch_size = 32
   config.rng_seed = 0
-  # learning rate
+  # Learning rate.
   config.lr_configs = ml_collections.ConfigDict()
   config.lr_configs.learning_rate_schedule = 'compound'
   config.lr_configs.factors = 'constant*piecewise_constant'
@@ -108,19 +108,18 @@ def get_config():
   config.pretrained_backbone_configs = ml_collections.ConfigDict()
   config.pretrained_backbone_configs.xm = (18140063, 1)
   config.pretrained_backbone_configs.checkpoint_path = None
-  # logging
+  # Logging.
   config.eval_ngram_list = [1]
-  config.run_coco_evaluation = True  # run evaluation using
-  config.write_summary = True  # write TB and/or XM summary
-  config.write_xm_measurements = True  # write XM measurements
-  config.xprof = False  # Profile using xprof
+  config.run_coco_evaluation = True  # Run evaluation using.
+  config.write_summary = True
+  config.xprof = False  # Profile using xprof.
   config.log_summary_steps = 100  # train summary steps
   config.log_large_summary_steps = 1000
   config.log_eval_steps = 1000
   config.checkpoint_steps = 1000
-  config.checkpoint = True  # do checkpointing
-  config.debug_train = False  # debug mode during training
-  config.debug_eval = False  # debug mode during eval
+  config.checkpoint = True  # Do checkpointing.
+  config.debug_train = False  # Debug mode during training.
+  config.debug_eval = False  # Debug mode during eval.
   config.eval_synchronously = False
   return config
 
