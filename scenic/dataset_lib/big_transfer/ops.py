@@ -27,7 +27,7 @@ import tensorflow.compat.v1 as tf
 import tensorflow.compat.v2 as tf2
 import tensorflow_hub as hub
 
-from official.vision.image_classification import augment
+from official.vision.beta.ops import augment
 from tensorflow_addons import image as image_utils
 
 AUTOAUGMENT_MODULE = "@experimental/andresp/cl238414945/nas_imagenet/1"
