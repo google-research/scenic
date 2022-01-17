@@ -63,6 +63,17 @@ We share checkpoints of models from the following papers, trained on ImageNet:
 | ResNet50         | ImageNet |       -        |  76.1 |  [Link](https://storage.googleapis.com/scenic-bucket/baselines/ResNet50_ImageNet1k) |
 | BiTResNet50      | ImageNet |       -        |  77.0 |  [Link](https://storage.googleapis.com/scenic-bucket/baselines/BiTResNet50_ImageNet1k) |
 
+
 ### DETR
 Please check [DETR directory](detr) for more information and link to download
+pretrained checkpoints.
+
+
+### CLIP
+Please check [CLIP directory](clip) for more information and link to download
+pretrained checkpoints.
+
+
+### BERT
+Please check [BERT directory](bert) for more information and link to download
 pretrained checkpoints.
