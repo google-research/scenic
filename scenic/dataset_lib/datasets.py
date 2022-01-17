@@ -50,6 +50,10 @@ _IMPORT_TABLE = {
         'scenic.projects.vivit.data.video_tfrecord_dataset',
     'bit':
         'scenic.dataset_lib.big_transfer.bit',
+    'bert_wikibooks':
+        'scenic.projects.baselines.bert.datasets.bert_wikibooks_dataset',
+    'bert_glue':
+        'scenic.projects.baselines.bert.datasets.bert_glue_dataset',
 }
 
 
