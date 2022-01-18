@@ -52,7 +52,7 @@ def get_dataset(*,
                 rng=None,
                 dataset_configs=None,
                 dataset_service_address: Optional[str] = None):
-  """Returns generators for the JFT train, validation and test sets.
+  """Returns generators for train and validation sets for a specified dataset.
 
   Args:
     batch_size: int; Determines the train batch size.

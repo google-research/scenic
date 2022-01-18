@@ -520,6 +520,8 @@ def get_data_range(builder, split, host_id, host_count):
 def get_num_examples(dataset, split, data_dir=None):
   """Returns the total number of examples in a dataset split."""
   builder = tfds.builder(dataset, data_dir=data_dir)
+  # Download dataset:
+  builder.download_and_prepare()
 
   n = 0
   nhosts = jax.process_count()
