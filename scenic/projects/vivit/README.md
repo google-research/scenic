@@ -46,7 +46,14 @@ All the models below are take in 32 frames as input.
 | ViViT-B/16x2 FE | Kinetics 400  | 78.4           | 4x3   | [configs/kinetics400/vivit_base_factorised_encoder.py](configs/kinetics400/vivit_base_factorised_encoder.py)       | [Checkpoint](https://storage.googleapis.com/scenic-bucket/vivit/kinetics_400/vivit_base_16x2_fe/checkpoint) [SavedModel](https://storage.googleapis.com/scenic-bucket/vivit/kinetics_400/vivit_base_16x2_fe/saved_model.zip)                       |
 | ViViT-L/16x2 FE | Kinetics 400  | 80.3           | 4x3   | [configs/kinetics400/vivit_large_factorised_encoder.py](configs/kinetics400/vivit_large_factorised_encoder.py)     | [Checkpoint](https://storage.googleapis.com/scenic-bucket/vivit/kinetics_400/vivit_large_16x2_fe/checkpoint) [SavedModel](https://storage.googleapis.com/scenic-bucket/vivit/kinetics_400/vivit_large_16x2_fe/saved_model.zip)                     |
 | ViViT-L/16x2 FE | Kinetics 600  | 81.6           | 4x3   | [configs/kinetics600/vivit_large_factorised_encoder.py](configs/kinetics600/vivit_large_factorised_encoder.py)     | [Checkpoint](https://storage.googleapis.com/scenic-bucket/vivit/kinetics_600/vivit_large_16x2_fe/checkpoint) [SavedModel](https://storage.googleapis.com/scenic-bucket/vivit/kinetics_600/vivit_large_16x2_fe/saved_model.zip)                     |
-| ViViT-L/16x2 FE | Epic Kitchens | 43.6           | 4x1   | [configs/epic_kitchens/vivit_large_factorised_encoder.py](configs/epic_kitchens/vivit_large_factorised_encoder.py) | [Checkpoint](https://storage.googleapis.com/scenic-bucket/vivit/epic_kitchens/vivit_large_16x2_fe/checkpoint) [SavedModel](https://storage.googleapis.com/scenic-bucket/vivit/epic_kitchens/vivit_large_16x2_fe/saved_model.zip)                   |
+| ViViT-L/16x2 FE | Epic Kitchens | 43.6           | 4x1   | [configs/epic_kitchens/vivit_large_factorised_encoder.py](configs/epic_kitchens/vivit_large_factorised_encoder.py) | [Checkpoint](https://storage.googleapis.com/scenic-bucket/vivit/epic_kitchens/vivit_large_16x2_fe/checkpoint) [SavedModel](https://storage.googleapis.com/scenic-bucket/vivit/epic_kitchens/vivit_large_16x2_fe/saved_model.zip)
+
+## Other Unofficial Implementations
+
+Feel free to share your implementation by contacting the authors or sending a
+pull request.
+
+- [Keras](https://keras.io/examples/vision/vivit/) by [Aritra Roy Gosthipaty](https://twitter.com/ariG23498) and [Ayush Thakur](https://twitter.com/ayushthakur0)
 
 ## Reference
 
