@@ -413,6 +413,74 @@ class LossTest(parameterized.TestCase):
                                                  [0.5, 1.0],
                                                  [1.0, 0.0]]], decimal=3)
 
+  def test_weighted_square_error(self):
+    """Tests implementation of squared error."""
+
+    predictions = jnp.array([
+        [
+            [1.0, 3.0, 5.0, 6.0],
+            [3.0, 5.0, 11.0, 10.0],
+            [9.0, 10.0, 11.0, 12.0],
+            [14.0, 13.0, 14.0, 17.0],
+        ],
+        [
+            [17.0, 18.0, 21.0, 22.0],
+            [20.0, 19.0, 24.0, 25.0],
+            [27.0, 29.0, 30.0, 32.0],
+            [27.0, 28.0, 33.0, 32.0],
+        ],
+    ])
+    targets = jnp.arange(1, 33).reshape(2, 4, 4)
+
+    # Without specifying axis, this will be over the last two dimensions.
+    loss = model_utils.weighted_mean_squared_error(predictions, targets)
+    expected_loss = jnp.mean(jnp.array([38.0, 70.0]))
+    self.assertAlmostEqual(loss, expected_loss, places=5)
+
+    # Test by specifying axes as a tuple. The following are all equivalent to
+    # the previous test.
+    loss = model_utils.weighted_mean_squared_error(predictions, targets,
+                                                   axis=(1, 2))
+    self.assertAlmostEqual(loss, expected_loss, places=5)
+
+    loss = model_utils.weighted_mean_squared_error(predictions, targets,
+                                                   axis=(-1, -2))
+    self.assertAlmostEqual(loss, expected_loss, places=5)
+
+    loss = model_utils.weighted_mean_squared_error(predictions, targets,
+                                                   axis=(2, 1))
+    self.assertAlmostEqual(loss, expected_loss, places=5)
+
+    # Test by computing loss over a single axis only.
+    loss = model_utils.weighted_mean_squared_error(predictions, targets,
+                                                   axis=-1)
+    expected_loss = jnp.mean(jnp.array([[9, 25, 0, 4],
+                                        [8, 12, 38, 12]]))
+    self.assertAlmostEqual(loss, expected_loss, places=5)
+
+    loss = model_utils.weighted_mean_squared_error(predictions, targets,
+                                                   axis=2)
+    self.assertAlmostEqual(loss, expected_loss, places=5)
+
+    loss = model_utils.weighted_mean_squared_error(predictions, targets,
+                                                   axis=1)
+    expected_loss = jnp.mean(jnp.array([[5, 3, 21, 9],
+                                        [9, 22, 18, 21]]))
+    self.assertAlmostEqual(loss, expected_loss, places=5)
+
+    # Test with loss weights.
+    weights = jnp.array([[1, 1, 1, 0], [0, 1, 1, 0]])
+    loss = model_utils.weighted_mean_squared_error(predictions, targets,
+                                                   weights, axis=-1)
+    expected_loss = jnp.mean(jnp.array([9, 25, 12, 38, 0]))
+    self.assertAlmostEqual(loss, expected_loss, places=5)
+
+    weights = jnp.array([1, 0])
+    loss = model_utils.weighted_mean_squared_error(predictions, targets,
+                                                   weights, axis=-1)
+    expected_loss = jnp.mean(jnp.array([9, 25, 0, 4]))
+    self.assertAlmostEqual(loss, expected_loss, places=5)
+
 
 class MetricTest(parameterized.TestCase):
   """Tests the metric computation related utilities."""

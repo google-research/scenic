@@ -535,7 +535,8 @@ def weighted_box_l1_loss(
 def weighted_squared_error(
     predictions: jnp.ndarray,
     targets: jnp.ndarray,
-    weights: Optional[jnp.ndarray] = None) -> jnp.ndarray:
+    weights: Optional[jnp.ndarray] = None,
+    axis: Optional[Union[int, Tuple[int, ...]]] = None) -> jnp.ndarray:
   """Computes weighted squared error given predictions and targets.
 
   This computes the squared_error of examples in a single, potentially
@@ -549,6 +550,8 @@ def weighted_squared_error(
     weights:  None or array of shape [batch,] This is the weight to apply to the
       loss computed for each example in the batch. Can be used to ignore padded
       examples in the batch.
+    axis: The axis (or axes) to compute the loss over. If not specified, all
+      dimensions besides the leading batch dimension are used.
 
   Returns:
     The mean squared error for each example in the given batch. The output shape
@@ -558,11 +561,13 @@ def weighted_squared_error(
     raise ValueError(
         'Incorrect shapes. Got shape %s predictions and %s targets' %
         (str(predictions.shape), str(targets.shape)))
+  if axis is None:
+    # Sum over all features in each example in the batch:
+    axis = tuple(range(1, predictions.ndim))
 
   error = targets - predictions
   loss = jnp.square(error)
-  # Sum over all features in each example in the batch:
-  loss = jnp.sum(loss, axis=tuple(range(1, predictions.ndim)))
+  loss = jnp.sum(loss, axis=axis)
   if weights is not None:
     loss = apply_weights(loss, weights)
   return loss
@@ -571,7 +576,8 @@ def weighted_squared_error(
 def weighted_mean_squared_error(
     predictions: jnp.ndarray,
     targets: jnp.ndarray,
-    weights: Optional[jnp.ndarray] = None) -> jnp.ndarray:
+    weights: Optional[jnp.ndarray] = None,
+    axis: Optional[Union[int, Tuple[int, ...]]] = None) -> jnp.ndarray:
   """Weighted mean of weighted_squared_error.
 
   Args:
@@ -580,20 +586,29 @@ def weighted_mean_squared_error(
     weights:  None or array of shape [batch,] This is the weight to apply to the
       loss  computed for each example in the batch. Can be used to ignore padded
       examples in the batch.
+    axis: The axis (or axes) to compute the loss over. If not specified, all
+      dimensions besides the leading batch dimension are used.
 
   Returns:
     The averaged mean squared error of all the examples in the given batch as a
     scalar.
   """
   unnormalized_mse = weighted_squared_error(
-      predictions=predictions, targets=targets, weights=weights)
+      predictions=predictions, targets=targets, weights=weights, axis=axis)
 
   if weights is not None:
-    # Divide by sum of weights:
-    normalization = weights.sum()
+    # Divide by sum of the broadcasted weights:
+    broadcasted_shape = weights.shape + (1,) * (
+        unnormalized_mse.ndim - weights.ndim)
+    broadcasted_weights = jax.lax.broadcast_in_dim(
+        weights,
+        shape=broadcasted_shape,
+        broadcast_dimensions=tuple(range(weights.ndim)))
+    normalization = jnp.sum(broadcasted_weights *
+                            jnp.ones(unnormalized_mse.shape))
   else:
-    # Divide by batch size:
-    normalization = unnormalized_mse.shape[0]
+    # Divide by number of examples:
+    normalization = unnormalized_mse.size
   return jnp.sum(unnormalized_mse) / (normalization + 1e-8)
 
 
