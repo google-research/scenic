@@ -106,15 +106,18 @@ def maybe_pad_batch(batch: Dict[str, jnp.ndarray],
   """
   assert batch_dim >= 0, f'batch_dim=={batch_dim} is expected to be >= 0'
   # TODO(dehghani): Add type annotation to this function.
-  batch_pad = batch_size - batch[inputs_key].shape[batch_dim]
+  batch_inputs_value = batch[inputs_key]
+  if isinstance(batch_inputs_value, tuple):
+    batch_inputs_value = batch_inputs_value[0]
+  batch_pad = batch_size - batch_inputs_value.shape[batch_dim]
 
   if pixel_level:
-    unpadded_mask_shape = batch[inputs_key].shape[:-1]
+    unpadded_mask_shape = batch_inputs_value.shape[:-1]
   else:
     assert 'batch_mask' not in batch, (
         'When the labels of the task are not pixel-level, batch_mask should '
         'not be already present in the batch.')
-    unpadded_mask_shape = batch[inputs_key].shape[:batch_dim + 1]
+    unpadded_mask_shape = batch_inputs_value.shape[:batch_dim + 1]
 
   if train and batch_pad != 0:
     raise ValueError('In this codebase, we assumed that we alwayse drop the '
