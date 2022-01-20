@@ -168,6 +168,7 @@ projects.
 ## Citing Scenic
 If you use Scenic, you can cite our [white paper](https://arxiv.org/abs/2110.11403).
 Here is an example BibTeX entry:
+
 ```
 @article{dehghani2021scenic,
   author={Mostafa Dehghani and Alexey Gritsenko and Anurag Arnab and Matthias Minderer and Yi Tay},
