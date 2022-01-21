@@ -34,6 +34,13 @@ python scenic/projects/token_learner/main.py -- \
   --workdir=token_learner/
 ```
 
+## Other Unofficial Implementations
+
+Feel free to share your implementation by contacting the authors or sending a
+pull request.
+
+- [Keras](https://keras.io/examples/vision/token_learner/) by [Aritra Roy Gosthipaty](https://twitter.com/ariG23498) and [Sayak Paul](https://twitter.com/RisingSayak) (equal contribution)
+
 ## Reference
 
 If you use TokenLearner, please use the following BibTeX entry.
