@@ -40,7 +40,7 @@ def get_config(runlocal=''):
   config.model.tokenizer.num_tokens = 16  # Number of tokens to learn.
   config.model.tokenizer.tokenlearner_loc = 9  # The layer to insert TokenLearner at. Must be between [0, config.model.num_layers). Change this to control the accuracy/computation trade-off
   config.model.tokenizer.use_tokenfuse = False  # Whether to use TokenFuser as well.
-  config.model.tokenizer.use_v11 = True  # Whether to use TokenLearner V1.1. Recommended in general.
+  config.model.tokenizer.use_v11 = False  # Whether to use TokenLearner V1.1. If False, uses the original TokenLearner module.
 
   config.model.num_heads = {'Ti': 3, 'S': 6, 'B': 12, 'L': 16, 'H': 16}[version]
   config.model.mlp_dim = {'Ti': 768,

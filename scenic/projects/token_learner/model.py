@@ -107,8 +107,8 @@ class TokenLearnerModuleV11(nn.Module):
   Instead of using 4 conv. layers with small channels to implement spatial
   attention, this version uses 2 grouped conv. layers with more channels. It
   also uses softmax instead of sigmoid. We confirmed that this version works
-  better when having limited training data, such as training with ImageNet1K
-  from scratch.
+  better in general when having limited training data (except when using
+  ViT-Ti), such as training with ImageNet1K from scratch.
 
   Attributes:
     num_tokens: Number of tokens.
@@ -135,14 +135,17 @@ class TokenLearnerModuleV11(nn.Module):
 
     selected = nn.LayerNorm()(selected)
 
+    num_groups = 1 if feature_shape[-1] < 256 else feature_shape[-1] // 128
+
     for _ in range(1):
       selected = nn.Conv(
           feature_shape[-1],
           kernel_size=(1, 1),
           strides=(1, 1),
           padding='SAME',
-          feature_group_count=8,
+          feature_group_count=num_groups,
           use_bias=False)(selected)  # Shape: [bs, h, w, channels].
+      selected = nn.gelu(selected)
 
     selected = nn.Conv(
         self.num_tokens,
@@ -163,7 +166,7 @@ class TokenLearnerModuleV11(nn.Module):
         kernel_size=(1, 1),
         strides=(1, 1),
         padding='SAME',
-        feature_group_count=8,
+        feature_group_count=num_groups,
         use_bias=False)(feat)  # Shape: [bs, h, w, channels].
     feat = jnp.reshape(
         feat, [feature_shape[0], feature_shape[1] * feature_shape[2], -1
@@ -227,7 +230,7 @@ class TokenLearnerModuleMixer(nn.Module):
 
     selected = jnp.transpose(selected, [0, 2, 1])  # Shape: [bs, n_token, h*w].
     selected = nn.LayerNorm()(selected)
-    selected = nn.sigmoid(selected)[..., None]  # Shape: [bs, n_token, h*w, 1].
+    selected = nn.sigmoid(selected)  # Shape: [bs, n_token, h*w].
 
     selected = nn.Dropout(rate=self.dropout_rate)(selected,
                                                   deterministic=deterministic)
