@@ -409,7 +409,10 @@ def _merge_params(params, restored_params, model_cfg, restored_model_cfg):
               restored_posemb_grid = restored_posemb[0, 1:]
               ntok -= 1
             else:
-              cls_tok = restored_posemb[:, :0]
+              if model_cfg.model.classifier == 'token':
+                cls_tok = posemb[:, :1]
+              else:
+                cls_tok = restored_posemb[:, :0]
               restored_posemb_grid = restored_posemb[0]
 
             restored_gs = int(np.sqrt(len(restored_posemb_grid)))
@@ -421,19 +424,26 @@ def _merge_params(params, restored_params, model_cfg, restored_model_cfg):
               zoom = (gs / restored_gs, gs / restored_gs, 1)
               restored_posemb_grid = scipy.ndimage.zoom(
                   restored_posemb_grid, zoom, order=1)
-              restored_posemb_grid = restored_posemb_grid.reshape(
-                  1, gs * gs, -1)
-              # Attach the CLS token again.
-              restored_posemb = jnp.array(
-                  np.concatenate([cls_tok, restored_posemb_grid], axis=1))
+            # Attach the CLS token again.
+            restored_posemb_grid = restored_posemb_grid.reshape(
+                1, gs * gs, -1)
+            restored_posemb = jnp.array(
+                np.concatenate([cls_tok, restored_posemb_grid], axis=1))
 
           params[m_key][tm_key]['pos_embedding'] = restored_posemb
-        else:  # Other parameters of the Transformer encoder.
+        # Other parameters of the Transformer encoder if they are in the target.
+        elif tm_key in params[m_key]:
           params[m_key][tm_key] = tm_params
+        else:
+          logging.info('Ignoring %s. In restored model\'s Transformer,'
+                       'but not in target', m_key)
+
+    elif m_key in params:
+      # Use the rest if they are in the pretrained model.
+      params[m_key] = m_params
 
     else:
-      # Use the rest as they are in the pretrianed model.
-      params[m_key] = m_params
+      logging.info('Ignoring %s. In restored model, but not in target', m_key)
 
 
 def init_vit_from_train_state(
