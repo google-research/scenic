@@ -29,6 +29,8 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
+PyTree = Any
+
 
 Dataset = collections.namedtuple(
     # Each instance of the Dataset has three iterators, train_iter, valid_iter,
@@ -61,7 +63,7 @@ Dataset = collections.namedtuple(
     ['train_iter', 'valid_iter', 'test_iter', 'meta_data'])
 
 
-def maybe_pad_batch(batch: Dict[str, jnp.ndarray],
+def maybe_pad_batch(batch: Dict[str, PyTree],
                     train: bool,
                     batch_size: int,
                     pixel_level: bool = False,
@@ -69,11 +71,12 @@ def maybe_pad_batch(batch: Dict[str, jnp.ndarray],
                     batch_dim: int = 0) -> Dict[str, jnp.ndarray]:
   """Zero pad the batch on the right to the batch_size.
 
-  All keys in the batch dictionary will have their corresponding arrays padded.
-  This function returns a dictionary with the same keys, additionally with the
-  key 'batch_mask' added, with 1.0 indicating indices which are true data and
-  0.0 indicating a padded index. `batch_mask` will be used for calculating the
-  weighted cross entropy, or weighted accuracy.
+  All leave tensors in the batch pytree will be padded. This function expects
+  the root structure of the batch pytree to be a dictionary and returns a
+  dictionary with the same structure (and substructures), additionally with the
+  key 'batch_mask' added to the root dict, with 1.0 indicating indices which are
+  true data and 0.0 indicating a padded index. `batch_mask` will be used for
+  calculating the weighted cross entropy, or weighted accuracy.
 
   Note that in this codebase, we assume we drop the last partial batch from the
   training set, so if the batch is from the training set (i.e. `train=True`),
@@ -87,8 +90,9 @@ def maybe_pad_batch(batch: Dict[str, jnp.ndarray],
   make for padding the partial batches on top of the existing label mask.
 
   Args:
-    batch: A dictionary mapping keys to arrays. We assume that inputs is
-      one of the keys.
+    batch: A dictionary containing a pytree. If `inputs_key` is not set, we use
+      the first leave to get the current batch size. Otherwise, the tensor
+      mapped with `inputs_key` at the root dictionary is used.
     train: if the batch is from the training data. In that case, we drop
       the last (incomplete) batch and thus don't do any padding.
     batch_size: All arrays in the dict will be padded to have first
@@ -105,16 +109,19 @@ def maybe_pad_batch(batch: Dict[str, jnp.ndarray],
     add a key representing weights, to indicate how the batch was padded.
   """
   assert batch_dim >= 0, f'batch_dim=={batch_dim} is expected to be >= 0'
-  # TODO(dehghani): Add type annotation to this function.
-  batch_pad = batch_size - batch[inputs_key].shape[batch_dim]
+  if inputs_key is None:
+    sample_tensor = jax.tree_leaves(batch)[0]
+  else:
+    sample_tensor = batch[inputs_key]
+  batch_pad = batch_size - sample_tensor.shape[batch_dim]
 
   if pixel_level:
-    unpadded_mask_shape = batch[inputs_key].shape[:-1]
+    unpadded_mask_shape = sample_tensor.shape[:-1]
   else:
     assert 'batch_mask' not in batch, (
         'When the labels of the task are not pixel-level, batch_mask should '
         'not be already present in the batch.')
-    unpadded_mask_shape = batch[inputs_key].shape[:batch_dim + 1]
+    unpadded_mask_shape = sample_tensor.shape[:batch_dim + 1]
 
   if train and batch_pad != 0:
     raise ValueError('In this codebase, we assumed that we alwayse drop the '
