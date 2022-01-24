@@ -400,24 +400,7 @@ def train_and_evaluate(
         eval_global_metrics_summary_future = pool.submit(
             global_metrics_evaluator.compute_metrics, clear_annotations=False)
 
-    ############### LOG EVAL SUMMARY ###############
-    def log_fn(step, eval_metrics, future_extra_eval_summary, writer,
-               metrics_normalizer_fn):
-      return train_utils.log_eval_summary(
-          step=step,
-          eval_metrics=eval_metrics,
-          extra_eval_summary=_wait(future_extra_eval_summary),
-          writer=writer,
-          metrics_normalizer_fn=metrics_normalizer_fn)
-
-    # Note that we return a Future on a summary instead of the summary itself!
-    return pool.submit(
-        log_fn,
-        step=step,
-        eval_metrics=eval_metrics,
-        future_extra_eval_summary=eval_global_metrics_summary_future,
-        writer=writer,
-        metrics_normalizer_fn=metrics_normalizer_fn)
+    return (step, eval_metrics), eval_global_metrics_summary_future
 
   ###################################################
 
@@ -456,6 +439,7 @@ def train_and_evaluate(
       step0_log['gflops'] = gflops
     writer.write_scalars(1, step0_log)
 
+  (last_eval_step, last_eval_metrics), last_eval_future = (None, None), None
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceContext('train', step_num=step):
       train_batch = next(dataset.train_iter)
@@ -501,10 +485,11 @@ def train_and_evaluate(
 
     del train_predictions
 
-    if (step % log_summary_steps == 0) or (step == total_steps):
+    if (step % log_summary_steps == 0) or (step == total_steps - 1):
       ############### LOG TRAIN SUMMARY ###############
       if lead_host:
         chrono.tick(step, writer)
+
       # Write summary:
       train_summary = train_utils.log_train_summary(
           step=step,
@@ -519,17 +504,26 @@ def train_and_evaluate(
       #################################################
 
     if (step % log_eval_steps == 0) or (step == total_steps):
+      # First wait for the previous eval to finish & write summary.
+      if last_eval_future is not None:
+        train_utils.log_eval_summary(
+            step=last_eval_step,
+            eval_metrics=last_eval_metrics,
+            extra_eval_summary=last_eval_future.result(),
+            writer=writer,
+            metrics_normalizer_fn=metrics_normalizer_fn)
+        last_eval_future = None
+
       # Sync model state across replicas (in case of having model state, e.g.
       # batch statistic when using batch norm).
       start_time = time.time()
       with report_progress.timed('eval'):
         train_state = train_utils.sync_model_state_across_replicas(train_state)
-        eval_summary = evaluate(train_state, step)
+        (last_eval_step, last_eval_metrics), last_eval_future = evaluate(
+            train_state, step)
       duration = time.time() - start_time
-      logging.info('Done with evaluation: %.4f sec.', duration)
+      logging.info('Done with async evaluation: %.4f sec.', duration)
       writer.flush()
-      if step != total_steps:
-        del eval_summary  # Free up space.
 
     ##################### CHECKPOINTING ############################
     if ((step % checkpoint_steps == 0 and step > 0) or
@@ -544,7 +538,13 @@ def train_and_evaluate(
     chrono.resume()  # Un-pause now.
 
   # Wait until computations are done before exiting.
-  eval_summary = eval_summary.result()
   pool.shutdown()
+  if last_eval_future is not None:
+    train_utils.log_eval_summary(
+        step=last_eval_step,
+        eval_metrics=last_eval_metrics,
+        extra_eval_summary=last_eval_future.result(),
+        writer=writer,
+        metrics_normalizer_fn=metrics_normalizer_fn)
   train_utils.barrier()
   return train_state, train_summary, eval_summary
