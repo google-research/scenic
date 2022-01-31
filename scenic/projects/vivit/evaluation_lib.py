@@ -26,9 +26,9 @@ def restore_checkpoint(checkpoint_path: str,
                        step: int = None) -> Tuple[train_utils.TrainState, int]:
   """Restores the last checkpoint.
 
-  Supports checkpoints saved either with old Scenic (flax.nn) or current
-  Scenic (flax.Linen). Therefore, this function can be used for evaluation of
-  old or current models.
+  Supports checkpoints saved either with old Scenic (flax.deprecated.nn) or
+  current Scenic (flax.Linen). Therefore, this function can be used for
+  evaluation of old or current models.
 
   First restores the checkpoint, which is an instance of TrainState that holds
   the state of training, and then replicates it.
