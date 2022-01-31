@@ -174,21 +174,21 @@ def eval_step(
 
 
 def representation_fn(
-    *,
-    flax_model: nn.Module,
     train_state: train_utils.TrainState,
     batch: bert_base_model.Batch,
+    *,
+    flax_model: nn.Module,
     representation_layer: str,
     gather_to_host: bool = True
 ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
   """Feeds the inputs to the model and returns their representations.
 
   Args:
-    flax_model: A Flax model.
     train_state: TrainState, the state of training including the current
       global_step, model_state, rng, and optimizer. The buffer of this argument
       can be donated to the computation.
     batch: A single batch of data from the dataset.
+    flax_model: A Flax model.
     representation_layer: The name of the layer to use as the representation.
     gather_to_host: Whether to gather results from all devices to the host,
       rather than leaving them distributed.
@@ -333,16 +333,12 @@ def train(
       donate_argnums=(1,),
   )
   if 'fewshot' in config:
-    representation_fn_pmaped = jax.pmap(
-        functools.partial(
-            representation_fn,
-            flax_model=model.flax_model,
-            representation_layer=config.fewshot.representation_layer),
-        # We can donate the batch's buffer.
-        donate_argnums=(1,),
-        axis_name='batch')
-    fewshotter = bert_train_utils.BERTFewShotEvaluator(representation_fn_pmaped,
-                                                       config.fewshot)
+    representation_fn_fewshot = functools.partial(
+        representation_fn,
+        flax_model=model.flax_model,
+        representation_layer=config.fewshot.representation_layer)
+    fewshotter = bert_train_utils.BERTFewShotEvaluator(
+        representation_fn_fewshot, config.fewshot)
 
   log_eval_steps = config.get('log_eval_steps') or steps_per_epoch
   if not log_eval_steps:

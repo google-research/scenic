@@ -210,7 +210,8 @@ class BERTFewShotEvaluator:
     self.shots = fewshot_config.shots
     self.l2_regs = fewshot_config.l2_regs
     self.local_batch_size = fewshot_config.batch_size // jax.process_count()
-    self.repr_fn = representation_fn
+    self.repr_fn = jax.pmap(
+        representation_fn, donate_argnums=(1,), axis_name='batch')
     self.walk_first = fewshot_config.walk_first
     self._datasets = {}  # This will be our cache for lazy loading.
 
@@ -241,8 +242,7 @@ class BERTFewShotEvaluator:
     total_steps = int(np.ceil(num_samples / self.local_batch_size))
     for _ in range(1, total_steps + 1):
       batch = next(data)
-      pre_logits, labels, mask = self.repr_fn(
-          train_state=train_state, batch=batch)
+      pre_logits, labels, mask = self.repr_fn(train_state, batch)
       # We need to unreplicate the output of `lax.all_gather`.
       # Shapes at this point are:
       #   pre_logits: `[hosts, devices, global_batch, features]`.
