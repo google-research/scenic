@@ -97,8 +97,7 @@ class SegmentationTrainerTest(parameterized.TestCase):
         donate_argnums=(1,),
     )
     for fake_batch in fake_batches_replicated:
-      _, _, metrics, _ = eval_step_pmapped(
-          train_state=train_state, batch=fake_batch)
+      _, _, metrics, _ = eval_step_pmapped(train_state, fake_batch)
       metrics = train_utils.unreplicate_and_get(metrics)
       eval_metrics.append(metrics)
     eval_metrics = train_utils.stack_forest(eval_metrics)

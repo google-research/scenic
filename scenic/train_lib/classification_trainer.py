@@ -43,10 +43,10 @@ LossFn = Callable[[jnp.ndarray, Batch, Optional[jnp.ndarray]], float]
 
 
 def train_step(
-    *,
-    flax_model: nn.Module,
     train_state: train_utils.TrainState,
     batch: Batch,
+    *,
+    flax_model: nn.Module,
     learning_rate_fn: Callable[[int], float],
     loss_fn: LossFn,
     metrics_fn: MetricFn,
@@ -62,12 +62,12 @@ def train_step(
   (batch) arguments are donated to the computation.
 
   Args:
-    flax_model: A Flax model.
     train_state: The state of training including the current
       global_step, model_state, rng, and optimizer. The buffer of this argument
       can be donated to the computation.
     batch: A single batch of data. The buffer of this argument can be donated to
       the computation.
+    flax_model: A Flax model.
     learning_rate_fn: learning rate scheduler which give the global_step
       generates the learning rate.
     loss_fn: A loss function that given logits, a batch, and parameters of the
@@ -149,10 +149,10 @@ def train_step(
 
 
 def eval_step(
-    *,
-    flax_model: nn.Module,
     train_state: train_utils.TrainState,
     batch: Batch,
+    *,
+    flax_model: nn.Module,
     metrics_fn: MetricFn,
     debug: Optional[bool] = False
 ) -> Tuple[Dict[str, Tuple[float, int]], jnp.ndarray]:
@@ -171,12 +171,12 @@ def eval_step(
   over all batches.
 
   Args:
-    flax_model: A Flax model.
     train_state: TrainState, the state of training including the current
       global_step, model_state, rng, and optimizer. The buffer of this argument
       can be donated to the computation.
     batch: A single batch of data. a metrics function, that given logits and
       batch of data, calculates the metrics as well as the loss.
+    flax_model: A Flax model.
     metrics_fn: A metrics function, that given logits and batch of data,
       calculates the metrics as well as the loss.
     debug: Whether the debug mode is enabled during evaluation.
@@ -327,8 +327,7 @@ def train(
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceContext('train', step_num=step):
       train_batch = next(dataset.train_iter)
-      train_state, t_metrics, lr = train_step_pmapped(
-          train_state=train_state, batch=train_batch)
+      train_state, t_metrics, lr = train_step_pmapped(train_state, train_batch)
       # This will accumulate metrics in TPU memory up to the point that we log
       # them. This is no problem for small metrics but may be a problem for
       # large (e.g. segmentation) metrics. An alternative is to set
@@ -369,8 +368,7 @@ def train(
               train_state)
           for _ in range(steps_per_eval):
             eval_batch = next(dataset.valid_iter)
-            e_metrics, _ = eval_step_pmapped(
-                train_state=train_state, batch=eval_batch)
+            e_metrics, _ = eval_step_pmapped(train_state, eval_batch)
             eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
           eval_summary = train_utils.log_eval_summary(
               step=step, eval_metrics=eval_metrics, writer=writer)
