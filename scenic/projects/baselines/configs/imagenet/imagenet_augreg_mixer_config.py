@@ -50,22 +50,33 @@ def get_config(runlocal=''):
   version, patch = VARIANT.split('/')
   config.model_name = 'mixer_multilabel_classification'
   config.model = ml_collections.ConfigDict()
-  config.model.hidden_size = {'Ti': 192, 'S': 384, 'B': 768, 'L': 1024}[version]
+  config.model.hidden_size = {
+      'Ti': 192,
+      'S': 384,
+      'B': 768,
+      'L': 1024,
+      'H': 1280}[version]
   config.model.patch_size = [int(patch), int(patch)]
-  config.model.num_heads = {'Ti': 3, 'S': 6, 'B': 12, 'L': 16}[version]
   config.model.channels_mlp_dim = {
       'Ti': 768,
       'S': 1536,
       'B': 3072,
-      'L': 4096
+      'L': 4096,
+      'H': 5120
   }[version]
   config.model.sequence_mlp_dim = {
       'Ti': 96,
       'S': 192,
       'B': 384,
-      'L': 512
+      'L': 512,
+      'H': 640
   }[version]
-  config.model.num_layers = {'Ti': 12, 'S': 12, 'B': 12, 'L': 24}[version]
+  config.model.num_layers = {
+      'Ti': 12,
+      'S': 12,
+      'B': 12,
+      'L': 24,
+      'H': 32}[version]
   config.model.dropout_rate = 0.
   config.model.stochastic_depth = 0.1
   config.model_dtype_str = 'float32'
@@ -90,7 +101,7 @@ def get_config(runlocal=''):
   # Learning rate.
   steps_per_epoch = _IMAGENET_TRAIN_SIZE // config.batch_size
   total_steps = config.num_training_epochs * steps_per_epoch
-  base_lr = 0.001 if version == 'L' else 0.003
+  base_lr = 0.001 if version in {'L', 'H'} else 0.003
   config.lr_configs = ml_collections.ConfigDict()
   config.lr_configs.learning_rate_schedule = 'compound'
   config.lr_configs.factors = 'constant*linear_warmup*linear_decay'
