@@ -23,22 +23,37 @@ CHECKPOINTS_TORCH = {
     'resnet_50': 'https://openaipublic.azureedge.net/clip/models/afeb0e10f9e5a86da6080e35cf09123aca3b358a0c3e3b6c78a7b63bc04b6762/RN50.pt',
     'resnet_101': 'https://openaipublic.azureedge.net/clip/models/8fa8567bab74a42d41c5915025a8e4538c3bdbe8804a470a72f30b0d94fab599/RN101.pt',
     'resnet_50x4': 'https://openaipublic.azureedge.net/clip/models/7e526bd135e493cef0776de27d5f42653e6b4c8bf9e0f653bb11773263205fdd/RN50x4.pt',
+    'resnet_50x16': 'https://openaipublic.azureedge.net/clip/models/52378b407f34354e150460fe41077663dd5b39c54cd0bfd2b27167a4a06ec9aa/RN50x16.pt',
+    'resnet_50x64': 'https://openaipublic.azureedge.net/clip/models/be1cfb55d75a9666199fb2206c106743da0f6468c9d327f3e0d0a543a9919d9c/RN50x64.pt',
     'vit_b32': 'https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt',
     'vit_b16': 'https://openaipublic.azureedge.net/clip/models/5806e77cd80f8b59890b7e101eabd078d9fb84e6937f9e85e4ecb61988df416f/ViT-B-16.pt',
+    'vit_l14': 'https://openaipublic.azureedge.net/clip/models/b8cca3fd41ae0c99ba7e8951adf17d267cdb84cd88be6f7c2e0eca1737a03836/ViT-L-14.pt',
 }
 
 CHECKPOINTS = {
     'resnet_50': None,
     'resnet_101': None,
     'resnet_50x4': None,
+    'resnet_50x16': None,
+    'resnet_50x64': None,
     'vit_b32': None,
     'vit_b16': None,
+    'vit_l14': None,
 }
 # pylint: enable=line-too-long
 
 
 MAX_TEXT_LENGTH = 77
-IMAGE_RESOLUTION = 224
+IMAGE_RESOLUTION = {
+    'resnet_50': 224,
+    'resnet_101': 224,
+    'resnet_50x4': 288,
+    'resnet_50x16': 384,
+    'resnet_50x64': 448,
+    'vit_b32': 224,
+    'vit_b16': 224,
+    'vit_l14': 224
+}
 IMAGE_MEAN = np.array([0.48145466, 0.4578275, 0.40821073])
 IMAGE_STD = np.array([0.26862954, 0.26130258, 0.27577711])
 
@@ -59,6 +74,14 @@ CONFIGS = {
                     text_features=512,
                     text_num_heads=8,
                     text_num_layers=12),
+    'vit_l14': dict(embed_dim=768,
+                    vocab_size=49408,
+                    vision_num_layers=24,
+                    vision_features=1024,
+                    vision_patch_size=14,
+                    text_features=768,
+                    text_num_heads=12,
+                    text_num_layers=12),
     'resnet_50': dict(embed_dim=1024,
                       vocab_size=49408,
                       vision_num_layers=(3, 4, 6, 3),
@@ -73,6 +96,20 @@ CONFIGS = {
                         text_features=640,
                         text_num_heads=10,
                         text_num_layers=12),
+    'resnet_50x16': dict(embed_dim=768,
+                         vocab_size=49408,
+                         vision_num_layers=(6, 8, 18, 8),
+                         vision_features=96,
+                         text_features=768,
+                         text_num_heads=12,
+                         text_num_layers=12),
+    'resnet_50x64': dict(embed_dim=1024,
+                         vocab_size=49408,
+                         vision_num_layers=(3, 15, 36, 10),
+                         vision_features=128,
+                         text_features=1024,
+                         text_num_heads=16,
+                         text_num_layers=12),
     'resnet_101': dict(embed_dim=512,
                        vocab_size=49408,
                        vision_num_layers=(3, 4, 23, 3),
@@ -129,12 +166,24 @@ def vit_b16():
   return layers.CLIP(**CONFIGS['vit_b16'])
 
 
+def vit_l14():
+  return layers.CLIP(**CONFIGS['vit_l14'])
+
+
 def resnet_50():
   return layers.CLIP(**CONFIGS['resnet_50'])
 
 
 def resnet_50x4():
   return layers.CLIP(**CONFIGS['resnet_50x4'])
+
+
+def resnet_50x16():
+  return layers.CLIP(**CONFIGS['resnet_50x16'])
+
+
+def resnet_50x64():
+  return layers.CLIP(**CONFIGS['resnet_50x64'])
 
 
 def resnet_101():
@@ -145,8 +194,11 @@ MODELS = {
     'resnet_50': resnet_50,
     'resnet_101': resnet_101,
     'resnet_50x4': resnet_50x4,
+    'resnet_50x16': resnet_50x16,
+    'resnet_50x64': resnet_50x64,
     'vit_b32': vit_b32,
     'vit_b16': vit_b16,
+    'vit_l14': vit_l14,
 }
 
 
