@@ -21,7 +21,7 @@ using this [config file](configs/kinetics400/vivit_base_factorised_encoder.py)
 is
 
 ```
-python scenic/projects/vivit/main.py -- \
+python -m scenic.projects.vivit.main \
   --config=scenic/projects/vivit/configs/kinetics400/vivit_base_factorised_encoder.py \
   --workdir=vivit_base_factorised_encoder/
 ```
