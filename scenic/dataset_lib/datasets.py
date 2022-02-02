@@ -54,6 +54,8 @@ _IMPORT_TABLE = {
         'scenic.projects.baselines.bert.datasets.bert_wikibooks_dataset',
     'bert_glue':
         'scenic.projects.baselines.bert.datasets.bert_glue_dataset',
+    'coco_detr_detection':
+        'scenic.projects.baselines.detr.input_pipeline_detection',
 }
 
 
