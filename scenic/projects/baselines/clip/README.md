@@ -7,10 +7,11 @@ scratch.
 
 ## Setup
 This implementation uses the [tokenizer from the original implementation](https://github.com/openai/CLIP/blob/main/clip/simple_tokenizer.py).
-
-Install torch and CLIP to automatically download and convert official checkpoints and use the tokenizer:
-```
-pip install torch git+https://github.com/openai/CLIP.git
+The following command will install the required packages for CLIP, including
+torch and CLIP to automatically download and convert official checkpoints and
+use the tokenizer:
+```shell
+$ pip install -r scenic/projects/baselines/clip/requirements.txt
 ```
 
 ## Example usage:

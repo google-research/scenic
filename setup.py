@@ -16,7 +16,7 @@
 
 Install for development:
 
-  pip intall -e . .[tests]
+  pip intall -e . .[testing]
 """
 
 from distutils import cmd
@@ -59,9 +59,32 @@ class InstallCommand(install.install):
     self.run_command("simclr_download")
     install.install.run(self)
 
+
+install_requires_projects = [
+    "ott-jax>=0.2.0",
+    "sklearn",
+    "seaborn>=0.11.2",
+    "dmvr @ git+https://github.com/deepmind/dmvr.git",
+]
+
+install_requires_core = [
+    "absl-py>=1.0.0",
+    "numpy>=1.12",
+    "jax>=0.2.21",
+    "jaxlib>=0.1.74",
+    "flax>=0.4.0",
+    "ml-collections>=0.1.1",
+    "tensorflow<2.8,>=2.7.0",
+    "tensorflow-addons>=0.15.0",
+    "immutabledict>=2.2.1",
+    "clu>=0.0.6",
+    "tfds-nightly>=4.5.2.dev,<5",
+    "tf-models-nightly>=2.7.0.dev,<3",
+]
+
 tests_require = [
     "pytest",
-]
+] + install_requires_projects
 
 setup(
     name="scenic",
@@ -75,31 +98,15 @@ setup(
     license="Apache 2.0",
     packages=find_packages(),
     include_package_data=True,
-    install_requires=[
-        "absl-py",
-        "jax",
-        "flax",
-        "ml-collections",
-        "tensorflow",
-        "tensorflow-addons",
-        "tfds-nightly",
-        "ott-jax",
-        "immutabledict",
-        "numpy",
-        "clu",
-        "sklearn",
-        "seaborn",
-        "tqdm",
-        "pycocotools",
-        "dmvr @ git+https://github.com/deepmind/dmvr.git",
-        "tf-models-nightly",
-    ],
+    install_requires=install_requires_core,
     cmdclass={
         "simclr_download": DownloadSimCLRAugmentationCommand,
         "install": InstallCommand,
     },
     tests_require=tests_require,
-    extras_require=dict(test=tests_require),
+    extras_require={
+        "testing": tests_require,
+    },
     classifiers=[
         "Development Status :: 1 - Beta",
         "Intended Audience :: Developers",

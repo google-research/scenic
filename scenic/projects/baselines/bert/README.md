@@ -8,6 +8,11 @@ The code here at this point supports the pretraining and finetuning/fewshot eval
 on GLUE.  We hope to find time to also add support for finetuning on SuperGLUE,
 SQUAD, and XTREME based on [the code in Tensorflow model](https://github.com/tensorflow/models/tree/master/official/nlp/finetuning).
 
+### Additional Requirements:
+The following command will install the required packages for BERT.
+```shell
+$ pip install -r scenic/projects/baselines/bert/requirements.txt
+```
 
 ## Process Datasets
 The  code here consumes data with the same format as the official
@@ -16,7 +21,7 @@ that is also explained in [BERT official repo](https://github.com/tensorflow/mod
 
 So to start, you first need to get the preprocessing code:
 ```shell
-git clone https://github.com/tensorflow/models.git
+$ git clone https://github.com/tensorflow/models.git
 ```
 
 ### Pre-training
@@ -32,9 +37,9 @@ length parameter you specify when you run pre-training.
 
 Example shell script to call create_pretraining_data.py
 ```shell
-export WORKING_DIR='local disk or cloud location'
-export BERT_DIR='local disk or cloud location'
-python models/official/nlp/data/create_pretraining_data.py \
+$ export WORKING_DIR='local disk or cloud location'
+$ export BERT_DIR='local disk or cloud location'
+$ python models/official/nlp/data/create_pretraining_data.py \
   --input_file=$WORKING_DIR/input/input.txt \
   --output_file=$WORKING_DIR/output/tf_examples.tfrecord \
   --vocab_file=$BERT_DIR/wwm_uncased_L-24_H-1024_A-16/vocab.txt \
@@ -61,12 +66,12 @@ Users can download the
 and unpack it to some directory `$GLUE_DIR`.
 
 ```shell
-export GLUE_DIR=~/glue
-export BERT_DIR=gs://cloud-tpu-checkpoints/bert/keras_bert/uncased_L-24_H-1024_A-16
+$ export GLUE_DIR=~/glue
+$ export BERT_DIR=gs://cloud-tpu-checkpoints/bert/keras_bert/uncased_L-24_H-1024_A-16
 
-export TASK_NAME=MNLI
-export OUTPUT_DIR=gs://some_bucket/datasets
-python ../data/create_finetuning_data.py \
+$ export TASK_NAME=MNLI
+$ export OUTPUT_DIR=gs://some_bucket/datasets
+$ python ../data/create_finetuning_data.py \
  --input_data_dir=${GLUE_DIR}/${TASK_NAME}/ \
  --vocab_file=${BERT_DIR}/vocab.txt \
  --train_data_output_path=${OUTPUT_DIR}/${TASK_NAME}_train.tf_record \

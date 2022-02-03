@@ -30,7 +30,7 @@ from dmvr import builders
 from dmvr import processors as dmvr_processors
 import simclr.tf2.data_util as simclr_data
 import tensorflow as tf
-from official.vision.beta.ops import augment
+from official.legacy.image_classification import augment
 
 
 def crop_resize(frames: tf.Tensor,

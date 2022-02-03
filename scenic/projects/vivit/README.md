@@ -7,6 +7,10 @@ ViViT achieved state-of-the-art results on 5 different public datasets.
 Details can be found in the [paper](https://arxiv.org/abs/2103.15691).
 
 ## Getting Started
+The following command will install the required packages for ViViT:
+```shell
+$ pip install -r scenic/projects/vivit/requirements.txt
+```
 
 ViViT models and training jobs are defined by [configuration files](configs).
 
@@ -20,8 +24,8 @@ An example command-line to train ViViT-B/16x2 Factorised Encoder on Kinetics
 using this [config file](configs/kinetics400/vivit_base_factorised_encoder.py)
 is
 
-```
-python -m scenic.projects.vivit.main \
+```shell
+$ python -m scenic.projects.vivit.main \
   --config=scenic/projects/vivit/configs/kinetics400/vivit_base_factorised_encoder.py \
   --workdir=vivit_base_factorised_encoder/
 ```

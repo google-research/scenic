@@ -89,21 +89,24 @@ upstreamed to Scenic's shared libraries.
 
 
 ### Quickstart
-Download the code from GitHub
+You will need Python 3.9 or later. Download the code from GitHub
 
-```
-git clone https://github.com/google-research/scenic.git
-cd scenic
-pip install .
+```shell
+$ git clone https://github.com/google-research/scenic.git
+$ cd scenic
+$ pip install .
 ```
 
 and run training for ViT on ImageNet:
 
-```
-python scenic/main.py -- \
+```shell
+$ python scenic/main.py -- \
   --config=scenic/projects/baselines/configs/imagenet/imagenet_vit_config.py \
   --workdir=./
 ```
+
+Note that for specific projects and baselines, you might need to install extra
+packages that are mentioned in their `README.md` or `requirements.txt` files.
 
 [Here](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/common_lib/colabs/scenic_playground.ipynb)
 is also a minimal colab to train a simple feed-forward model using Scenic.

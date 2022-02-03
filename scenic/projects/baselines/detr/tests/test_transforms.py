@@ -78,8 +78,8 @@ class TransformsTestBase(parameterized.TestCase):
       self.assertTrue(np.all(np.equal(v1, v2)), msg=msg)
     elif v1.dtype == tf.float32 or v1.dtype == tf.float64:
       # approximate match for all others
-      np.testing.assert_allclose(v1, v2,
-                                 equal_nan=False, err_msg=msg, rtol=5e-6)
+      np.testing.assert_allclose(
+          v1, v2, equal_nan=False, err_msg=msg, rtol=5e-5)
     else:
       raise NotImplementedError(f'{v1.dtype} type not supported.')
 

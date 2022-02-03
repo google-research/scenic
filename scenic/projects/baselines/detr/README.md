@@ -2,12 +2,18 @@
 This directory contains the implementation of DETR for [end-to-end object detection with transformers](https://arxiv.org/abs/2005.12872).
 The code here uses JAX and Flax and follows the [official implementation of DETR in PyTorch](https://github.com/facebookresearch/detr).
 
+### Additional Requirements:
+The following command will install the required packages for DETR.
+```shell
+$ pip install -r scenic/projects/baselines/detr/requirements.txt
+```
+
 ### Training DETR
 In order to train DETR on COCO object detection, you can use the
 `detr_config.py`  in the [configs directory](configs):
 
-```sh
-python scenic/projects/baselines/detr/main.py -- \
+```shell
+$ python scenic/projects/baselines/detr/main.py -- \
   --config=scenic/projects/baselines/detr/configs/detr_config.py \
   --workdir=./
 ```
