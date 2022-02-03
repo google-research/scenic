@@ -40,8 +40,8 @@ def initialise_from_train_state(
       pretrained model.
     restored_model_cfg: Configuration of the model from which the
       restored_train_state come from. Usually used for some asserts.
-    restore_output_proj: If true, load the final output projection. Set
-      to False if finetuning to a new dataset.
+    restore_output_proj: If true, load the final output projection. Set to False
+      if finetuning to a new dataset.
     vivit_transformer_key: The key used for storing the subtree in the
       parameters that keeps Transformer weights, that are supposed to be
       initialized from the given pre-trained model.
@@ -53,7 +53,7 @@ def initialise_from_train_state(
   """
   # Inspect and compare the parameters of the model with the init-model.
   params = flax.core.unfreeze(train_state.optimizer.target)
-  if config.init_from.get('checkpoint_format', 'scenic') == 'bigvision':
+  if config.init_from.get('checkpoint_format', 'scenic') == 'big_vision':
     restored_params = restored_train_state.optimizer['target']
   else:
     restored_params = restored_train_state.optimizer.target
@@ -240,4 +240,3 @@ def init_embedding(to_params, from_params, config):
     to_params['embedding']['bias'] = restored_bias
   else:
     logging.info('Not restoring input embedding parameters')
-

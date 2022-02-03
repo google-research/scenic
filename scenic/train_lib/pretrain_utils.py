@@ -226,17 +226,17 @@ def restore_pretrained_checkpoint(
   return new_train_state
 
 
-def convert_bigvision_to_scenic_checkpoint(
+def convert_big_vision_to_scenic_checkpoint(
     checkpoint_path: str,
     train_state: Optional[train_utils.TrainState] = None,
     convert_to_linen: bool = True) -> train_utils.TrainState:
-  """Converts a BigVision checkpoint to a scenic train state.
+  """Converts a big_vision checkpoint to a scenic train state.
 
   The model weights, global step and accumulated train time are extracted.
   Optimizer state, such as the momentum, is not extracted.
 
   Args:
-    checkpoint_path: Path to BigVision checkpoint.
+    checkpoint_path: Path to big_vision checkpoint.
     train_state: A Scenic TrainState object.
     convert_to_linen: Whether to convert to Linen format.
 
@@ -262,7 +262,7 @@ def convert_bigvision_to_scenic_checkpoint(
       subtree[path[-1]] = v
     return unflattened
 
-  logging.info('Loading bigvision checkpoint from %s', checkpoint_path)
+  logging.info('Loading big_vision checkpoint from %s', checkpoint_path)
   checkpoint_data = np.load(gfile.GFile(checkpoint_path, 'rb'))
   tree = unflatten_dict(checkpoint_data, separator='/', leaf_idx=0)
 
@@ -289,23 +289,24 @@ def convert_bigvision_to_scenic_checkpoint(
   return restored_train_state
 
 
-def convert_strict_bigvision_to_scenic_checkpoint(
+def convert_strict_big_vision_to_scenic_checkpoint(
     checkpoint_path: str,
     train_state: train_utils.TrainState) -> train_utils.TrainState:
-  """Converts a checkpoint saved by BigVision into a Scenic TrainState.
+  """Converts a checkpoint saved by big_vision into a Scenic TrainState.
 
   This assumes that all the variables in the checkpoint are in the scenic
   train state optimizer.
 
   Args:
-    checkpoint_path: Full path to a BigVision checkpoint file
+    checkpoint_path: Full path to a big_vision checkpoint file
     train_state: A Scenic TrainState object.
 
   Returns:
     restored_train_state: Scenic TrainState object with the 'global step',
       'optimizer' and 'accum_train_time' fields.
   """
-  def load_bigvision_checkpoint(tree, path):
+
+  def load_big_vision_checkpoint(tree, path):
     assert gfile.exists(path), 'Checkpoint {} does not exist'.format(path)
     with gfile.GFile(path, 'rb') as f:
       data = np.load(f, allow_pickle=False)
@@ -316,9 +317,8 @@ def convert_strict_bigvision_to_scenic_checkpoint(
       'extra': dict(accum_train_time=0.0)
   }
   _, checkpoint_tree = jax.tree_flatten(checkpoint_tree)
-  checkpoint = load_bigvision_checkpoint(
-      checkpoint_tree, checkpoint_path)
-  logging.info('Loaded bigvision checkpoint from %s', checkpoint_path)
+  checkpoint = load_big_vision_checkpoint(checkpoint_tree, checkpoint_path)
+  logging.info('Loaded big_vision checkpoint from %s', checkpoint_path)
 
   restored_params = checkpoint['opt'].target
   restored_params = dict(checkpoints.convert_pre_linen(restored_params))

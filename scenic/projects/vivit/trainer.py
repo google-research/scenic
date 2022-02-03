@@ -95,15 +95,15 @@ def train(
     if checkpoint_format == 'scenic':
       restored_train_state = pretrain_utils.restore_pretrained_checkpoint(
           init_checkpoint_path, train_state, assert_exist=True)
-    elif checkpoint_format == 'bigvision':
-      restored_train_state = pretrain_utils.convert_bigvision_to_scenic_checkpoint(
+    elif checkpoint_format == 'big_vision':
+      restored_train_state = pretrain_utils.convert_big_vision_to_scenic_checkpoint(
           init_checkpoint_path, train_state)
-      # Config dict in bigvision is not the same format as scenic.
+      # Config dict in big_vision is not the same format as scenic.
       # Therefore, make sure config match the config of the loaded model!
       restored_model_cfg = copy.deepcopy(config)
       # The following is needed when the restored and target models used a
-      # different classifier. As bigvision uses a different config dict, we have
-      # to specify this manually.
+      # different classifier. As big_vision uses a different config dict, we
+      # have to specify this manually.
       restored_model_cfg.model.classifier = config.init_from.get(
           'classifier_type', 'token')
 

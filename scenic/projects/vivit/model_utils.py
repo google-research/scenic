@@ -313,7 +313,7 @@ def initialise_from_train_state(
   """
   # Inspect and compare the parameters of the model with the init-model.
   params = flax.core.unfreeze(train_state.optimizer.target)
-  if config.init_from.get('checkpoint_format', 'scenic') == 'bigvision':
+  if config.init_from.get('checkpoint_format', 'scenic') == 'big_vision':
     restored_params = restored_train_state.optimizer['target']
   else:
     restored_params = restored_train_state.optimizer.target
