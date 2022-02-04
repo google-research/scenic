@@ -28,8 +28,7 @@ OI_LABEL_MAP_PATH = {
         'scenic/dataset_lib/coco_dataset/data/open_images_v4-classes.csv'),
     # For open_images_v5, we use the subset of classes that has segmentations.
     'open_images_v5': (
-        'scenic/dataset_lib/coco_dataset/data/'
-        'open_images_v5-classes-segmentation.csv'),
+        'scenic/dataset_lib/coco_dataset/data/open_images_v4-classes.csv'),
 }
 
 COCO_2017_THINGS = {
