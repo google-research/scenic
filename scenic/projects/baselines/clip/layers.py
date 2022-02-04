@@ -372,6 +372,7 @@ class CLIP(nn.Module):
   vision_features: int
   vision_num_layers: Union[int, Sequence[int]]
   vision_patch_size: Optional[int] = None
+  vision_return_map: bool = False
 
   def setup(self):
     if isinstance(self.vision_num_layers, (tuple, list)):
@@ -380,7 +381,7 @@ class CLIP(nn.Module):
           num_layers=self.vision_num_layers,
           features=self.vision_features,
           num_heads=self.vision_num_heads,
-          out_features=self.embed_dim)
+          out_features=None if self.vision_return_map else self.embed_dim)
     else:
       self.vision_num_heads = self.vision_features // 64
       self.visual = VisionTransformer(
@@ -388,7 +389,7 @@ class CLIP(nn.Module):
           features=self.vision_features,
           num_layers=self.vision_num_layers,
           num_heads=self.vision_num_heads,
-          out_features=self.embed_dim)
+          out_features=None if self.vision_return_map else self.embed_dim)
     self.text = TextEncoder(
         out_features=self.embed_dim,
         vocab_size=self.vocab_size,
