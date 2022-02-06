@@ -52,13 +52,14 @@ Projects that were developed in Scenic or used it for their experiments:
 * [VUT: Versatile UI Transformer for Multi-Modal Multi-Task User Interface Modeling](https://arxiv.org/abs/2112.05692)
 * [CLAY: Learning to Denoise Raw Mobile UI Layouts for Improving Datasets at Scale](https://arxiv.org/abs/2201.04100)
 * [Zero-Shot Text-Guided Object Generation with Dream Fields](https://arxiv.org/abs/2112.01455)
+* [Multiview Transformers for Video Recognition](https://arxiv.org/pdf/2201.04288.pdf)
 
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 
 Baselines that were reproduced in Scenic:
-* [An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929)
-* [End-to-End Object Detection with Transformers](https://arxiv.org/abs/2005.12872)
-* [Learning Transferable Visual Models From Natural Language Supervision](https://arxiv.org/abs/2103.00020)
+* [(ViT) An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929)
+* [(DETR) End-to-End Object Detection with Transformers](https://arxiv.org/abs/2005.12872)
+* [(CLIP) Learning Transferable Visual Models From Natural Language Supervision](https://arxiv.org/abs/2103.00020)
 * [MLP-Mixer: An all-MLP Architecture for Vision](https://arxiv.org/abs/2105.01601)
 * [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805)
 * [How to train your ViT? Data, Augmentation, and Regularization in Vision Transformers](https://arxiv.org/abs/2106.10270)
