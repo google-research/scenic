@@ -52,7 +52,8 @@ Projects that were developed in Scenic or used it for their experiments:
 * [VUT: Versatile UI Transformer for Multi-Modal Multi-Task User Interface Modeling](https://arxiv.org/abs/2112.05692)
 * [CLAY: Learning to Denoise Raw Mobile UI Layouts for Improving Datasets at Scale](https://arxiv.org/abs/2201.04100)
 * [Zero-Shot Text-Guided Object Generation with Dream Fields](https://arxiv.org/abs/2112.01455)
-* [Multiview Transformers for Video Recognition](https://arxiv.org/pdf/2201.04288.pdf)
+* [Multiview Transformers for Video Recognition](https://arxiv.org/abs/2201.04288)
+* [PolyViT: Co-training Vision Transformers on Images, Videos and Audio](https://arxiv.org/abs/2111.12993)
 
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 
