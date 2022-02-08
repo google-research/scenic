@@ -335,6 +335,7 @@ class MultiOptimizerWithLogging(optimizers.MultiOptimizer):
 
   def init_state(self, params):
     self.log(params)
+    self.check_traversals(params)
     return super().init_state(params)
 
   def log(self, inputs):
@@ -346,6 +347,33 @@ class MultiOptimizerWithLogging(optimizers.MultiOptimizer):
         if traversal._filter_fn(path, value):  # pylint: disable=protected-access
           logging.info(
               'ParamTraversalLogger (opt %d): %s, %s', i, value.shape, path)
+
+  def check_traversals(self, inputs):
+    covered, not_covered = {}, set()
+
+    # Populate all possible paths.
+    params = _get_params_dict(inputs)
+    flat_dict = traverse_util.flatten_dict(params)
+    for key, value in _sorted_items(flat_dict):
+      path = '/' + '/'.join(key)
+      not_covered.add(path)
+
+    # Detect duplicate coverage.
+    for i, traversal in enumerate(self.traversals):
+      params = _get_params_dict(inputs)
+      flat_dict = traverse_util.flatten_dict(params)
+      for key, value in _sorted_items(flat_dict):
+        path = '/' + '/'.join(key)
+        if traversal._filter_fn(path, value):  # pylint: disable=protected-access
+          if path in covered:
+            raise ValueError(f'{path} is optimized by multiple optimizers '
+                             f'({i} and {covered[path]})')
+          covered[path] = i
+          not_covered.remove(path)
+
+    if not_covered:
+      for path in not_covered:
+        logging.warning('%s is not optimized by any of the optimizers!', path)
 
 
 def _sorted_items(x):
