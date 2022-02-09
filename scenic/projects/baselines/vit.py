@@ -405,15 +405,23 @@ def _merge_params(params, restored_params, model_cfg, restored_model_cfg):
             ntok = posemb.shape[1]
             if restored_model_cfg.model.classifier == 'token':
               # The first token is the CLS token.
-              cls_tok = restored_posemb[:, :1]
               restored_posemb_grid = restored_posemb[0, 1:]
-              ntok -= 1
-            else:
               if model_cfg.model.classifier == 'token':
-                cls_tok = posemb[:, :1]
+                # CLS token in restored model and in target.
+                cls_tok = restored_posemb[:, :1]
+                ntok -= 1
               else:
+                # CLS token in restored model, but not target.
                 cls_tok = restored_posemb[:, :0]
+            else:
               restored_posemb_grid = restored_posemb[0]
+              if model_cfg.model.classifier == 'token':
+                # CLS token in target, but not restored model.
+                cls_tok = posemb[:, :1]
+                ntok -= 1
+              else:
+                # CLS token not in target or restored model.
+                cls_tok = restored_posemb[:, :0]
 
             restored_gs = int(np.sqrt(len(restored_posemb_grid)))
             gs = int(np.sqrt(ntok))
