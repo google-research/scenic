@@ -425,7 +425,7 @@ class BaseModelWithMatching(base_model.BaseModel):  # pytype: disable=ignored-ab
     if self.dataset_meta_data['target_is_onehot']:
       # Shape is [batch, num_instances, num_classes]
       label_shape = batch['label']['labels'].shape
-      num_classes = label_shape.shape[-1]
+      num_classes = label_shape[-1]
       instance = jax.nn.one_hot(0, num_classes)
       reshape_shape = (1,) * (len(label_shape) - 1) + (num_classes,)
       broadcast_shape = label_shape[:-2] + (1, num_classes)
