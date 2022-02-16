@@ -458,7 +458,9 @@ def _shard_read_instruction(host_id, host_count, abs_ri, builder):
   # Compute each host's subset.
   # All hosts should perfrom exactly the same number iterations. To make sure
   # this is the case we ensure that all hosts get the same number of images.
-  # some setups, do padding instead, at least for the validation set.
+  # Currently we might be dropping a little here in some setups (the maximum
+  # num examples we may drop is num_host-1. Alternatively, one can do padding
+  # instead, at least for the validation set.
   examples_per_host = (full_end - full_start) // host_count
   host_start = full_start + examples_per_host * host_id
   host_end = full_start + examples_per_host * (host_id + 1)
