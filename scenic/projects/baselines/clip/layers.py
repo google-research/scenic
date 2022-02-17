@@ -312,6 +312,9 @@ class VisionTransformer(nn.Module):
     if self.out_features is not None:
       x = LayerNorm(name='ln_post')(x[:, 0])
       x = nn.Dense(self.out_features, use_bias=False, name='proj')(x)
+    else:
+      x = LayerNorm(name='ln_post')(x)
+
     return x, feature_map
 
 
