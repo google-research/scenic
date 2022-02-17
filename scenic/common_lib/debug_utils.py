@@ -12,18 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utilities for logging, debugging, profiling, and visualization."""
+"""Utilities for logging, debugging, profiling, testing, and visualization."""
 
 import collections
 import json
 import operator
-from typing import Any, Callable, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Optional, Sequence, Set, Tuple, Union
 
 from absl import logging
 from clu import parameter_overview
 import jax
 import jax.numpy as jnp
 from jax.tree_util import tree_map
+import ml_collections
 
 PyTree = Any
 
@@ -177,3 +178,50 @@ def compute_flops_with_pytree(flax_model_apply_fn: Callable[[jnp.ndarray], Any],
     flops = flops / 2
   logging.info('GFLOPs %0.3f for input spec: %s', flops / 10**9, input_spec)
   return flops
+
+
+class ConfigDictWithAccessRecord(ml_collections.ConfigDict):
+  """A wrapper for ConfigDicts that records access of any config field.
+
+  ConfigDictWithAccessRecord behaves like a standard ConfigDict, except that it
+  records access to any config field (including nested instances of
+  ConfigDictWithAccessRecord). This allows testing for unused config fields.
+
+  Example usage:
+
+    def test_config_access(self):
+      with mock.patch('configs.my_config.ml_collections.ConfigDict',
+                      test_utils.ConfigDictWithAccessRecord):
+        config = config_module.get_config()
+      config.reset_access_record()  # Resets previous access records.
+      ...  # Code that uses config.
+      self.assertEmpty(config.get_not_accessed())
+  """
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.reset_access_record()
+
+  def __getitem__(self, key: str):
+    self._access_record.add(key)
+    return super().__getitem__(key)
+
+  def reset_access_record(self):
+    """Resets the record of config field accesses."""
+    for value in self._fields.values():
+      if isinstance(value, type(self)):
+        value.reset_access_record()
+    # object.__setattr__ avoids triggering ConfigDict's __getattr__:
+    object.__setattr__(self, '_access_record', set())
+
+  def get_not_accessed(self, prefix: str = 'config') -> Set[str]:
+    """Returns the set of fields that were not accessed since the last reset."""
+    not_accessed = set()
+    for key, value in self._fields.items():
+      path = f'{prefix}.{key}'
+      if isinstance(value, type(self)):
+        not_accessed |= value.get_not_accessed(prefix=path)
+      else:
+        if key not in self._access_record and key != '_access_record':
+          not_accessed.add(path)
+    return not_accessed
