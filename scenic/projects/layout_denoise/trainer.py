@@ -393,9 +393,10 @@ def train(
   steps_per_eval = {}
   for ds_name in datasets_metadata.keys():
     # Ceil rounding such that we include the last incomplete batch.
+    eval_batch_size = config.get('eval_batch_size', config.batch_size)
     total_eval_steps = int(
         np.ceil(datasets_metadata[ds_name]['num_eval_examples'] /
-                config.eval_batch_size))
+                eval_batch_size))
     steps_per_eval[ds_name] = config.get('steps_per_eval') or total_eval_steps
 
   metrics_normalizer_fn = functools.partial(

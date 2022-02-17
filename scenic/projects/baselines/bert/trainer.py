@@ -347,8 +347,9 @@ def train(
   log_summary_steps = config.get('log_summary_steps') or log_eval_steps
 
   # Ceil rounding such that we include the last incomplete batch.
+  eval_batch_size = config.get('eval_batch_size', config.batch_size)
   total_eval_steps = int(
-      np.ceil(dataset.meta_data['num_eval_examples'] / config.batch_size))
+      np.ceil(dataset.meta_data['num_eval_examples'] / eval_batch_size))
   steps_per_eval = config.get('steps_per_eval') or total_eval_steps
 
   # If `global_metrics` are set in the config and we are the the lead host

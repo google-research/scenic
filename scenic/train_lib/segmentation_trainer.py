@@ -324,8 +324,9 @@ def train(
   )
 
   # Ceil rounding such that we include the last incomplete batch.
+  eval_batch_size = config.get('eval_batch_size', config.batch_size)
   total_eval_steps = int(
-      np.ceil(dataset.meta_data['num_eval_examples'] / config.batch_size))
+      np.ceil(dataset.meta_data['num_eval_examples'] / eval_batch_size))
   steps_per_eval = config.get('steps_per_eval') or total_eval_steps
 
   def evaluate(train_state: train_utils.TrainState,
