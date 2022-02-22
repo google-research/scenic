@@ -15,8 +15,10 @@
 """Utilities for logging, debugging, profiling, testing, and visualization."""
 
 import collections
+from concurrent import futures
 import json
 import operator
+import threading
 from typing import Any, Callable, Optional, Sequence, Set, Tuple, Union
 
 from absl import logging
@@ -225,3 +227,40 @@ class ConfigDictWithAccessRecord(ml_collections.ConfigDict):
         if key not in self._access_record and key != '_access_record':
           not_accessed.add(path)
     return not_accessed
+
+
+class DummyExecutor(futures.Executor):
+  """A mock executor that operates serially. Useful for debugging.
+
+  Example usage:
+
+  # Runs concurrently, difficult to debug:
+  pool = futures.ThreadPoolExecutor(max_workers=max_workers)
+  pool.submit(my_function)
+
+  # For debugging:
+  pool = DummyExecutor()
+  pool.submit(my_function)  # Will block and run serially.
+  """
+
+  def __init__(self):
+    self._shutdown = False
+    self._shutdown_lock = threading.Lock()
+
+  def submit(self, fn: Callable[..., Any], *args, **kwargs) -> futures.Future:
+    with self._shutdown_lock:
+      if self._shutdown:
+        raise RuntimeError('Cannot schedule new futures after shutdown.')
+
+      future = futures.Future()
+      try:
+        result = fn(*args, **kwargs)
+      except BaseException as e:  # pylint: disable=broad-except
+        future.set_exception(e)
+      else:
+        future.set_result(result)
+      return future
+
+  def shutdown(self, wait: bool = True):
+    with self._shutdown_lock:
+      self._shutdown = True
