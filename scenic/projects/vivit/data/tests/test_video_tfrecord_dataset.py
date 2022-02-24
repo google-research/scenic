@@ -9,7 +9,7 @@ from scenic.projects.vivit.data import video_tfrecord_dataset
 
 
 class VideoTFRecordDatsetTest(parameterized.TestCase):
-  """Unit tests for video_sstable_dataset.py."""
+  """Unit tests for video_tfrecord_dataset.py."""
 
   @parameterized.named_parameters(
       ('1 test clip', 1, False, 0),
