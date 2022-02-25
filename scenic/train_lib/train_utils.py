@@ -420,6 +420,7 @@ def get_num_training_steps(
     return config.num_training_steps, steps_per_epoch or None
   else:
     assert config.num_training_epochs and not config.get('num_training_steps')
+    assert steps_per_epoch > 0, 'num_train_examples should be defined.'
     return int(steps_per_epoch * config.num_training_epochs), steps_per_epoch
 
 
