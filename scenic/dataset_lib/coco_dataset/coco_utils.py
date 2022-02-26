@@ -19,6 +19,8 @@ import json
 from typing import Dict, Optional
 
 
+OBJECTS365_LABEL_MAP_PATH = (
+    'scenic/dataset_lib/coco_dataset/data/objects365_class_names.txt')
 LVIS_LABEL_MAP_PATH = (
     'scenic/dataset_lib/coco_dataset/data/lvis_label_map.json')
 OI_LABEL_MAP_PATH = {
@@ -266,6 +268,8 @@ def get_label_map(tfds_name: str) -> Dict[int, str]:
     return {0: 'padding', **REF_COCO}
   elif tfds_name == 'lvis':
     return get_lvis_label_map()
+  elif tfds_name == 'objects365':
+    return get_objects365_label_map()
   elif tfds_name.startswith('open_images'):
     return get_openimages_label_map(tfds_name)
   else:
