@@ -120,7 +120,6 @@ def decode_coco_detection_example(example, input_range=None):
   keep = tf.where(tf.logical_and(boxes[:, 2] > boxes[:, 0],
                                  boxes[:, 3] > boxes[:, 1]))[:, 0]
   target_kept = {k: tf.gather(v, keep) for k, v in target.items()}
-  target_kept = target
 
   target_kept['orig_size'] = tf.cast(tf.shape(image)[0:2], dtype=tf.int32)
   target_kept['size'] = tf.identity(target_kept['orig_size'])
