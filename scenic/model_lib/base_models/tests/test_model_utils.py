@@ -22,6 +22,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from scenic.model_lib.base_models import model_utils
+from shapely import geometry
 
 
 def sample_cxcywh_bbox(key, batch_shape):
@@ -75,6 +76,33 @@ class BoxUtilsTest(parameterized.TestCase):
     cxcywh_loop = model_utils.box_xyxy_to_cxcywh(xyxy)
     self.assertSequenceAlmostEqual(cxcywh_loop.flatten(), cxcywh.flatten(),
                                    places=5)
+
+
+class RBoxUtilsTest(parameterized.TestCase):
+  """Tests all the rotated bounding box related utilities."""
+
+  def test_intersect_line_segments(self):
+    """Test for correctness of the intersect_lines operation."""
+    key = jax.random.PRNGKey(0)
+    key, subkey = jax.random.split(key)
+    lines1 = jax.random.uniform(subkey, (100, 2, 2))
+    lines2 = jax.random.uniform(key, (100, 2, 2))
+    intersect_line_segments = jax.jit(
+        jax.vmap(model_utils.intersect_line_segments))
+    intersections = intersect_line_segments(lines1, lines2)
+    self.assertEqual(intersections.shape, (100, 2))
+
+    expected_intersections = []
+    for i in range(len(lines1)):
+      line1 = geometry.LineString(lines1[i])
+      line2 = geometry.LineString(lines2[i])
+      it = line1.intersection(line2)
+      it_coord = (
+          it.coords[0]
+          if isinstance(it, geometry.Point) else jnp.asarray([jnp.nan] * 2))
+      expected_intersections.append(it_coord)
+
+    np.testing.assert_allclose(intersections, expected_intersections, atol=1e-7)
 
 
 class IoUTest(parameterized.TestCase):

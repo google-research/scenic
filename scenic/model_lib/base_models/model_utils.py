@@ -55,10 +55,10 @@ def apply_weights(output: jnp.ndarray, weights: jnp.ndarray) -> jnp.ndarray:
   `[batch, len]`) so we need to broadcast it to the output shape.
 
   Args:
-    output: Computed output, which can be loss or the correctly
-      classified examples, etc.
-    weights: Weights of inputs in the batch, which can be None or
-      array of shape [batch, ...].
+    output: Computed output, which can be loss or the correctly classified
+      examples, etc.
+    weights: Weights of inputs in the batch, which can be None or array of shape
+      [batch, ...].
 
   Returns:
     Weighted output.
@@ -487,15 +487,15 @@ def weighted_box_l1_loss(
 
   Args:
     pred: Prediction boxes of shape (..., 4), where the last dimension has form
-        (x_min, y_min, x_max, y_max).
+      (x_min, y_min, x_max, y_max).
     tgt: Target boxes of shape (..., 4), where the last dimension has form
-        (x_min, y_min, x_max, y_max).
+      (x_min, y_min, x_max, y_max).
     weights: Weights to apply to the loss.
     reduction: Type of reduction, which is from [None, 'mean'].
     tight: If True, returns the vanilla L1 loss on the bounding box coordinates.
-        If False, returns loose bounding-box L1 loss, where prediction edges
-        only generate loss when they stretch outside the target box, but not
-        when they are within it.
+      If False, returns loose bounding-box L1 loss, where prediction edges only
+      generate loss when they stretch outside the target box, but not when they
+      are within it.
 
   Returns:
     reduction(jnp.abs(src - tgt)). 'mean' reduction takes the global mean. To
@@ -808,8 +808,8 @@ def simple_gather(x: jnp.ndarray, idx: jnp.ndarray) -> jnp.ndarray:
 
   Args:
     x: Inputs of shape [bs, n, d].
-    idx: An array of shape [bs, m] and dtype jnp.int32 or int64 that
-      specifies indexes we want to gather from x.
+    idx: An array of shape [bs, m] and dtype jnp.int32 or int64 that specifies
+      indexes we want to gather from x.
 
   Returns:
     Gathered output of shape [bs, m, d].
@@ -863,10 +863,11 @@ def box_iou(boxes1: Array,
 
   Args:
     boxes1: Predicted bounding-boxes in shape [bs, n, 4].
-    boxes2: Target bounding-boxes in shape [bs, m, 4]. Can have a
-      different number of boxes if all_pairs is True.
+    boxes2: Target bounding-boxes in shape [bs, m, 4]. Can have a different
+      number of boxes if all_pairs is True.
     np_backbone: numpy module: Either the regular numpy package or jax.numpy.
     all_pairs: Whether to compute IoU between all pairs of boxes or not.
+
   Returns:
     If all_pairs == True, returns the pairwise IoU cost matrix of shape
     [bs, n, m]. If all_pairs == False, returns the IoU between corresponding
@@ -969,6 +970,53 @@ def generalized_box_iou(boxes1: Array,
   # Finally, compute generalized IoU from IoU, union, and area.
   # Somehow the PyTorch implementation does not use +1e-6 to avoid 1/0 cases.
   return iou - (area - union) / (area + 1e-6)
+
+
+# Rotated box utils implemented based on:
+# https://github.com/lilanxiao/Rotated_IoU
+def intersect_line_segments(line1: jnp.array,
+                            line2: jnp.array,
+                            eps: float = 1e-8) -> jnp.array:
+  """Intersect two line segments.
+
+  Given two 2D line segments, where a line segment is defined as two 2D points.
+  Finds the point of intersection or returns [nan, nan] if no point exists.
+
+  See https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection (Given two
+  points on each line segment).
+
+  Performance Note: At the calling point, we expect user to appropriately vmap
+  function to work on batches of lines.
+  Args:
+    line1: [2, 2]-ndarray, [[x1, y1], [x2, y2]] for line.
+    line2: [2, 2]-ndarray, [[x3, y3], [x4, y4]] for other line.
+    eps: Epsilon for numerical stability.
+
+  Returns:
+    Intersection point [2,]-ndarray or [nan, nan] if no point exists. Since we
+    are intersecting line segments in 2D, this happens if lines are parallel or
+    the intersection of the infinite line would occur outside of both segments.
+  """
+  assert line1.shape == (2, 2) and line2.shape == (2, 2)
+  # Variable names follow reference algorithm documentation.
+  x1, y1 = line1[0, :]
+  x2, y2 = line1[1, :]
+  x3, y3 = line2[0, :]
+  x4, y4 = line2[1, :]
+  den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+  num_t = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)
+  num_u = (x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)
+  # t and u are parameterizations of line1 and line2 respectively and are left
+  # as variable names from the original algorithm documentation.
+  t = num_t / (den + eps)
+  u = -num_u / (den + eps)
+  intersection_pt = jnp.asarray([x1 + t * (x2 - x1), y1 + t * (y2 - y1)])
+  are_parallel = jnp.abs(den) < eps
+  not_on_line1 = jnp.logical_or(u < 0, u > 1)
+  not_on_line2 = jnp.logical_or(t < 0, t > 1)
+  not_possible = jnp.any(jnp.array([are_parallel, not_on_line1, not_on_line2]))
+  return jax.lax.cond(not_possible, lambda: jnp.array([jnp.nan, jnp.nan]),
+                      lambda: intersection_pt)
 
 
 def confusion_matrix(y_true: Array,
