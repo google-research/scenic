@@ -30,7 +30,7 @@ datasets:
 
 | Model | Dataset | Pretraining | ImageNet Accuracy | Checkpoint |
 |-------|:-:|:-:|:-:|:-:|
-| ViT-B/16            | ImageNet |       -        |  74.1 |  [Link](https://storage.googleapis.com/scenic-bucket/baselines/ViT_B_16_ImageNet1k) |
+| ViT-B/16            | ImageNet |       -        |  73.7* |  [Link](https://storage.googleapis.com/scenic-bucket/baselines/ViT_B_16_ImageNet1k) |
 | ViT-AugReg-B/16     | ImageNet |       -        |  79.7 |  [Link](https://storage.googleapis.com/scenic-bucket/baselines/ViT-AugReg_B_16_ImageNet1k) |
 | ViT-B/32            |     -    |  ImageNet-21K  |   -   |  [Link](https://storage.googleapis.com/scenic-bucket/baselines/ViT_B_32_ImageNet21k) |
 | ViT-B/16            |     -    |  ImageNet-21K  |   -   |  [Link](https://storage.googleapis.com/scenic-bucket/baselines/ViT_B_16_ImageNet21k) |
@@ -38,6 +38,11 @@ datasets:
 | ViT-L/16            |     -    |  ImageNet-21K  |   -   |  [Link](https://storage.googleapis.com/scenic-bucket/baselines/ViT_L_16_ImageNet21k) |
 | ViT-AugReg-B/32     |     -    |  ImageNet-21K  |  79.1 |  [Link](https://storage.googleapis.com/vit_models/augreg/B_32-i21k-300ep-lr_0.001-aug_light1-wd_0.1-do_0.0-sd_0.0.npz) |
 | ViT-AugReg-B/16     |     -    |  ImageNet-21K  |  84.0 |  [Link](https://storage.googleapis.com/vit_models/augreg/B_16-i21k-300ep-lr_0.001-aug_medium1-wd_0.1-do_0.0-sd_0.0.npz) |
+
+*Note that 73.7 is the accuracy on ImageNet1k validation set, for a model that
+is trained for 90 epochs from scratch. The scores reported in [How to train your ViT?](https://arxiv.org/abs/2106.10270) paper for vanilla ViT (74.1) is with 300
+epochs of pre-training on ImageNet1k followed by fine-tuning on ImageNet1k.
+
 
 The AugReg params can be directly loaded into a `train_state`:
 
