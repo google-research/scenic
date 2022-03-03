@@ -10,6 +10,7 @@ import ml_collections
 import numpy as np
 from scenic.model_lib import matchers
 from scenic.model_lib.base_models import base_model
+from scenic.model_lib.base_models import box_utils
 from scenic.model_lib.base_models import model_utils
 
 ArrayDict = Dict[str, jnp.ndarray]
@@ -85,9 +86,9 @@ def compute_cost(
     cost_upper_bound = cost_upper_bound + bbox_loss_coef * 4.0  # cost_bbox <= 4
 
     # [B, N, M]
-    cost_giou = -model_utils.generalized_box_iou(
-        model_utils.box_cxcywh_to_xyxy(out_bbox),
-        model_utils.box_cxcywh_to_xyxy(tgt_bbox),
+    cost_giou = -box_utils.generalized_box_iou(
+        box_utils.box_cxcywh_to_xyxy(out_bbox),
+        box_utils.box_cxcywh_to_xyxy(tgt_bbox),
         all_pairs=True)
     cost = cost + giou_loss_coef * cost_giou
 
@@ -662,9 +663,9 @@ class ObjectDetectionWithMatchingModel(BaseModelWithMatching):
     # Align this with the model predictions using simple_gather.
     tgt_not_padding = model_utils.simple_gather(tgt_not_padding, indices[:, 1])
 
-    src_boxes_xyxy = model_utils.box_cxcywh_to_xyxy(src_boxes)
-    tgt_boxes_xyxy = model_utils.box_cxcywh_to_xyxy(tgt_boxes)
-    unnormalized_loss_giou = 1 - model_utils.generalized_box_iou(
+    src_boxes_xyxy = box_utils.box_cxcywh_to_xyxy(src_boxes)
+    tgt_boxes_xyxy = box_utils.box_cxcywh_to_xyxy(tgt_boxes)
+    unnormalized_loss_giou = 1 - box_utils.generalized_box_iou(
         src_boxes_xyxy, tgt_boxes_xyxy, all_pairs=False)
 
     if 'loose_box' in batch['label']:

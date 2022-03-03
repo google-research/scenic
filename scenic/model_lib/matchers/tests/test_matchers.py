@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for functions in model_utils.py."""
+"""Unit tests for functions in matchers."""
 
 
 from typing import Optional
@@ -23,7 +23,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from scenic.model_lib import matchers
-from scenic.model_lib.base_models import model_utils
+from scenic.model_lib.base_models import box_utils
 import scipy.optimize as sciopt
 
 
@@ -112,9 +112,9 @@ def compute_cost(
     cost_upper_bound = cost_upper_bound + bbox_loss_coef * 4.0  # cost_bbox <= 4
 
     # [B, N, M]
-    cost_giou = -model_utils.generalized_box_iou(
-        model_utils.box_cxcywh_to_xyxy(out_bbox),
-        model_utils.box_cxcywh_to_xyxy(tgt_bbox),
+    cost_giou = -box_utils.generalized_box_iou(
+        box_utils.box_cxcywh_to_xyxy(out_bbox),
+        box_utils.box_cxcywh_to_xyxy(tgt_bbox),
         all_pairs=True)
     cost = cost + giou_loss_coef * cost_giou
 

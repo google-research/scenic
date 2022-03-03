@@ -18,7 +18,7 @@ import PIL.ImageDraw
 import PIL.ImageFont
 from scenic.common_lib import image_utils
 from scenic.dataset_lib.coco_dataset import coco_eval
-from scenic.model_lib.base_models import model_utils
+from scenic.model_lib.base_models import box_utils
 from scenic.train_lib import optimizers as scenic_optimizers
 from scenic.train_lib import train_utils
 import scipy
@@ -55,7 +55,7 @@ class DetrGlobalEvaluator():
           (prediction['pred_logits'].shape[0], 4)) + 0.5
 
     # Convert from DETR [cx, cy, w, h] to COCO [x, y, w, h] bounding box format:
-    boxes = model_utils.box_cxcywh_to_xyxy(prediction['pred_boxes'])
+    boxes = box_utils.box_cxcywh_to_xyxy(prediction['pred_boxes'])
     boxes = np.array(boxes)
     boxes[:, 2] -= boxes[:, 0]
     boxes[:, 3] -= boxes[:, 1]
