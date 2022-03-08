@@ -183,7 +183,7 @@ class ResNetClassificationModel(ClassificationModel):
   def init_from_train_state(
       self, train_state: Any, restored_train_state: Any,
       restored_model_cfg: ml_collections.ConfigDict) -> Any:
-    """Updates the train_state with data from restored_train_state.
+    """Updates the train_state with data from `restored_train_state`.
 
     This function is writen to be used for 'fine-tuning' experiments. Here, we
     do some surgery to support larger resolutions (longer sequence length) in
@@ -192,9 +192,9 @@ class ResNetClassificationModel(ClassificationModel):
     Args:
       train_state: A raw TrainState for the model.
       restored_train_state: A TrainState that is loaded with parameters/state of
-        a  pretrained model.
+        a pretrained model.
       restored_model_cfg: Configuration of the model from which the
-        restored_train_state come from. Usually used for some asserts.
+        `restored_train_state` come from. Usually used for some asserts.
 
     Returns:
       Updated train_state.
