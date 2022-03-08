@@ -3,10 +3,13 @@
 import functools
 from typing import Tuple, Callable, Any, Optional, Union, Dict
 
+from absl import logging
+import flax
 import flax.linen as nn
 from jax.nn import initializers
 import jax.numpy as jnp
 import ml_collections
+from scenic.common_lib import debug_utils
 from scenic.model_lib.base_models.classification_model import ClassificationModel
 from scenic.model_lib.base_models.multilabel_classification_model import MultiLabelClassificationModel
 from scenic.model_lib.layers import nn_layers
@@ -20,22 +23,21 @@ class ResidualBlock(nn.Module):
   bottleneck: bool = True
 
   @nn.compact
-  def __call__(self,
-               x: jnp.ndarray,
-               train: bool = True) -> jnp.ndarray:
+  def __call__(self, x: jnp.ndarray, train: bool = True) -> jnp.ndarray:
     needs_projection = x.shape[-1] != self.filters * 4 or self.strides != (1, 1)
     nout = self.filters * 4 if self.bottleneck else self.filters
 
     batch_norm = functools.partial(
         nn.BatchNorm,
-        use_running_average=not train, momentum=0.9, epsilon=1e-5,
+        use_running_average=not train,
+        momentum=0.9,
+        epsilon=1e-5,
         dtype=self.dtype)
     conv = functools.partial(nn.Conv, use_bias=False, dtype=self.dtype)
 
     residual = x
     if needs_projection:
-      residual = conv(
-          nout, (1, 1), self.strides, name='proj_conv')(residual)
+      residual = conv(nout, (1, 1), self.strides, name='proj_conv')(residual)
       residual = batch_norm(name='proj_bn')(residual)
 
     if self.bottleneck:
@@ -81,11 +83,11 @@ class ResNet(nn.Module):
   dtype: jnp.dtype = jnp.float32
 
   @nn.compact
-  def __call__(self,
-               x: jnp.ndarray,
-               train: bool = False,
-               debug: bool = False
-               ) -> Union[jnp.ndarray, Dict[str, jnp.ndarray]]:
+  def __call__(
+      self,
+      x: jnp.ndarray,
+      train: bool = False,
+      debug: bool = False) -> Union[jnp.ndarray, Dict[str, jnp.ndarray]]:
     """Applies ResNet model to the inputs.
 
     Args:
@@ -100,18 +102,22 @@ class ResNet(nn.Module):
     if self.num_layers not in BLOCK_SIZE_OPTIONS:
       raise ValueError('Please provide a valid number of layers')
     block_sizes, bottleneck = BLOCK_SIZE_OPTIONS[self.num_layers]
-    x = nn.Conv(self.num_filters,
-                kernel_size=(7, 7),
-                strides=(2, 2),
-                padding=[(3, 3), (3, 3)],
-                use_bias=False,
-                dtype=self.dtype,
-                name='stem_conv')(x)
-    x = nn.BatchNorm(use_running_average=not train,
-                     momentum=0.9,
-                     epsilon=1e-5,
-                     dtype=self.dtype,
-                     name='init_bn')(x)
+    x = nn.Conv(
+        self.num_filters,
+        kernel_size=(7, 7),
+        strides=(2, 2),
+        padding=[(3, 3), (3, 3)],
+        use_bias=False,
+        dtype=self.dtype,
+        name='stem_conv')(
+            x)
+    x = nn.BatchNorm(
+        use_running_average=not train,
+        momentum=0.9,
+        epsilon=1e-5,
+        dtype=self.dtype,
+        name='init_bn')(
+            x)
     x = nn.relu(x)
     x = nn.max_pool(x, (3, 3), strides=(2, 2), padding=[(1, 1), (1, 1)])
 
@@ -125,7 +131,7 @@ class ResNet(nn.Module):
         x = residual_block(filters=filters, strides=strides)(x, train)
       representations[f'stage_{i + 1}'] = x
 
-    # head
+    # Head.
     if self.num_outputs:
       x = jnp.mean(x, axis=(1, 2))
       x = nn_layers.IdentityLayer(name='pre_logits')(x)
@@ -173,6 +179,43 @@ class ResNetClassificationModel(ClassificationModel):
 
   def default_flax_model_config(self) -> ml_collections.ConfigDict:
     return _get_default_configs_for_testing()
+
+  def init_from_train_state(
+      self, train_state: Any, restored_train_state: Any,
+      restored_model_cfg: ml_collections.ConfigDict) -> Any:
+    """Updates the train_state with data from restored_train_state.
+
+    This function is writen to be used for 'fine-tuning' experiments. Here, we
+    do some surgery to support larger resolutions (longer sequence length) in
+    the transformer block, with respect to the learned pos-embeddings.
+
+    Args:
+      train_state: A raw TrainState for the model.
+      restored_train_state: A TrainState that is loaded with parameters/state of
+        a  pretrained model.
+      restored_model_cfg: Configuration of the model from which the
+        restored_train_state come from. Usually used for some asserts.
+
+    Returns:
+      Updated train_state.
+    """
+    del restored_model_cfg
+    params = flax.core.unfreeze(train_state.optimizer.target)
+    restored_params = flax.core.unfreeze(restored_train_state.optimizer.target)
+    for pname, pvalue in restored_params.items():
+      if pname == 'output_projection':
+        # The `output_projection` is used as the name of the linear lyaer at the
+        # head of the model that maps the representation to the label space.
+        # By default, for finetuning to another dataset, we drop this layer as
+        # the label space is different.
+        continue
+      else:
+        params[pname] = pvalue
+    logging.info('Parameter summary after initialising from train state:')
+    debug_utils.log_param_shapes(params)
+    return train_state.replace(
+        optimizer=train_state.optimizer.replace(
+            target=flax.core.freeze(params)))
 
 
 class ResNetMultiLabelClassificationModel(MultiLabelClassificationModel):
