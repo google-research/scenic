@@ -6,7 +6,7 @@ r"""Default configs for ViT on structural variant classification using coverage 
 import ml_collections
 
 _TRAIN_SIZE = 31_316 * 24
-VARIANT = 'Ti/8'
+VARIANT = 'Ti/4'
 
 
 def get_config(runlocal=''):
@@ -67,9 +67,9 @@ def get_config(runlocal=''):
   config.l2_decay_factor = None
   config.max_grad_norm = 1.0
   config.label_smoothing = None
-  config.num_training_epochs = 500
+  config.num_training_epochs = 200
   config.log_eval_steps = 1000
-  config.batch_size = 8 if runlocal else 4096
+  config.batch_size = 8 if runlocal else 512
   config.rng_seed = 42
   config.init_head_bias = -10.0
 
