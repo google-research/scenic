@@ -287,10 +287,12 @@ def get_dataset(*,
   augment_ex = functools.partial(
       augment_example, dtype=dtype, resize=target_size, area_min=30,
       area_max=100)
+
+  train_split = dataset_configs.get('train_split', 'train')
   train_ds, _ = dataset_utils.load_split_from_tfds(
       'cityscapes',
       batch_size,
-      split='train',
+      split=train_split,
       preprocess_example=preprocess_ex_train,
       augment_train_example=augment_ex,
       shuffle_seed=shuffle_seed)
@@ -344,7 +346,7 @@ def get_dataset(*,
       'input_shape':
           input_shape,
       'num_train_examples':
-          dataset_utils.get_num_examples('cityscapes', 'train'),
+          dataset_utils.get_num_examples('cityscapes', train_split),
       'num_eval_examples':
           dataset_utils.get_num_examples('cityscapes', 'validation'),
       'input_dtype':
