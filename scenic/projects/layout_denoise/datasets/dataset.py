@@ -19,7 +19,6 @@ import tensorflow as tf
 MEAN_RGB = [0.48, 0.456, 0.406]
 STDDEV_RGB = [0.229, 0.224, 0.225]
 
-
 LAYOUT_LABEL_MAP = {
     0: 'INVALID',
     1: 'IMAGE',
@@ -66,7 +65,7 @@ def preprocess_fn(max_size=1333, train=True):
   ])
 
 
-def decode_layout_example(example, input_range=None):
+def decode_layout_example(example, input_range=None, add_node_id=False):
   """Given an instance and raw labels, creates <inputs, label> pair.
 
   Decoding includes.
@@ -80,6 +79,7 @@ def decode_layout_example(example, input_range=None):
     example: dict; Input image and raw labels.
     input_range: tuple; Range of input. By default we use Mean and StdDev
       normalization.
+    add_node_id: bool; Whether to add the node id feature.
 
   Returns:
     A dictionary of {'inputs': input image, 'labels': task label}.
@@ -105,6 +105,10 @@ def decode_layout_example(example, input_range=None):
       'name_id': example['objects']['name_id'],
       'obj_mask': example['objects']['obj_mask'],
   }
+  if add_node_id:
+    target.update({
+        'node_id': example['objects']['node_id'],
+    })
 
   # Filters objects to exclude degenerate boxes.
   valid_bbx = tf.logical_and(boxes[:, 2] > boxes[:, 0],

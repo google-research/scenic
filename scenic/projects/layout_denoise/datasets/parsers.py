@@ -10,7 +10,7 @@ START = 3
 MAX_WORD_NUM = 10
 
 
-def parse(example_proto):
+def parse(example_proto, add_node_id=False):
   """Parses the rico dataset."""
   feature_description = {
       'image/view_hierarchy/description/word_id':
@@ -32,7 +32,11 @@ def parse(example_proto):
       'image/encoded':
           tf.io.FixedLenFeature([], tf.string),
   }
-
+  if add_node_id:
+    feature_description.update({
+        'image/view_hierarchy/node_id':
+            tf.io.FixedLenSequenceFeature([], tf.string, allow_missing=True),
+    })
   example = tf.io.parse_single_example(example_proto, feature_description)
 
   # Map to DETR features
@@ -67,5 +71,7 @@ def parse(example_proto):
   # 1: invalid, 0: valid objects.
   obj_dict['binary_label'] = tf.cast(tf.equal(obj_dict['label'], 0), tf.int32)
   obj_dict['obj_mask'] = tf.ones_like(obj_dict['label'], dtype=tf.int32)
+  if add_node_id:
+    obj_dict['node_id'] = example['image/view_hierarchy/node_id']
 
   return coco_features
