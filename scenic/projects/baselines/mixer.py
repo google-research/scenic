@@ -3,7 +3,6 @@
 from typing import Optional, Sequence
 
 import flax.linen as nn
-import jax
 import jax.numpy as jnp
 import ml_collections
 from scenic.model_lib.base_models.multilabel_classification_model import MultiLabelClassificationModel
@@ -30,25 +29,6 @@ class MixerBlock(nn.Module):
   dropout_rate: float = 0.0
   stochastic_depth: float = 0.0
   layer_scale: Optional[float] = None
-
-  def get_stochastic_depth_mask(self, x: jnp.ndarray,
-                                deterministic: bool) -> jnp.ndarray:
-    """Generate the stochastic depth mask in order to apply layer-drop.
-
-    Args:
-      x: Input tensor.
-      deterministic: Weather we are in the deterministic mode (e.g inference
-        time) or not.
-
-    Returns:
-      Stochastic depth mask.
-    """
-    if not deterministic and self.stochastic_depth:
-      shape = (x.shape[0],) + (1,) * (x.ndim - 1)
-      return jax.random.bernoulli(
-          self.make_rng('dropout'), self.stochastic_depth, shape)
-    else:
-      return 0.0
 
   # Having this as a separate function makes it possible to capture the
   # intermediate representation via capture_intermediandarrates.
@@ -81,7 +61,7 @@ class MixerBlock(nn.Module):
     if self.layer_scale is not None:
       x = nn_layers.Affine(scale_init=layerscale_init, use_bias=False)(x)
 
-    x *= 1.0 - self.get_stochastic_depth_mask(x, deterministic)
+    x = nn_layers.StochasticDepth(rate=self.stochastic_depth)(x, deterministic)
     x = self.combine_branches(x, inputs)
 
     # Channel-mixing part, which provides within-patch communication.
@@ -95,7 +75,7 @@ class MixerBlock(nn.Module):
     if self.layer_scale is not None:
       x = nn_layers.Affine(scale_init=layerscale_init, use_bias=False)(x)
 
-    y *= 1.0 - self.get_stochastic_depth_mask(y, deterministic)
+    y = nn_layers.StochasticDepth(rate=self.stochastic_depth)(y, deterministic)
     return self.combine_branches(y, x)
 
 

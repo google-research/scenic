@@ -62,25 +62,6 @@ class Encoder1DBlock(nn.Module):
   attention_dropout_rate: float = 0.1
   stochastic_depth: float = 0.0
 
-  def get_stochastic_depth_mask(self, x: jnp.ndarray,
-                                deterministic: bool) -> jnp.ndarray:
-    """Generate the stochastic depth mask in order to apply layer-drop.
-
-    Args:
-      x: Input tensor.
-      deterministic: Weather we are in the deterministic mode (e.g inference
-        time) or not.
-
-    Returns:
-      Stochastic depth mask.
-    """
-    if not deterministic and self.stochastic_depth:
-      shape = (x.shape[0],) + (1,) * (x.ndim - 1)
-      return jax.random.bernoulli(
-          self.make_rng('dropout'), self.stochastic_depth, shape)
-    else:
-      return 0.0
-
   @nn.compact
   def __call__(self, inputs: jnp.ndarray, deterministic: bool) -> jnp.ndarray:
     """Applies Encoder1DBlock module.
@@ -103,7 +84,8 @@ class Encoder1DBlock(nn.Module):
         deterministic=deterministic,
         dropout_rate=self.attention_dropout_rate)(x, x)
     x = nn.Dropout(rate=self.dropout_rate)(x, deterministic)
-    x = x * (1.0 - self.get_stochastic_depth_mask(x, deterministic)) + inputs
+    x = nn_layers.StochasticDepth(rate=self.stochastic_depth)(x, deterministic)
+    x = x + inputs
 
     # MLP block.
     y = nn.LayerNorm(dtype=self.dtype)(x)
@@ -115,8 +97,8 @@ class Encoder1DBlock(nn.Module):
         kernel_init=nn.initializers.xavier_uniform(),
         bias_init=nn.initializers.normal(stddev=1e-6))(
             y, deterministic=deterministic)
-
-    return y * (1.0 - self.get_stochastic_depth_mask(x, deterministic)) + x
+    y = nn_layers.StochasticDepth(rate=self.stochastic_depth)(y, deterministic)
+    return y + x
 
 
 class Encoder(nn.Module):

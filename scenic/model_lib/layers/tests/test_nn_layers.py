@@ -67,6 +67,35 @@ class NNLayersTest(parameterized.TestCase):
     outputs, _ = squeeze_and_excite_def.init_with_output(rng, inputs)
     self.assertEqual(outputs.shape, inputs_shape)
 
+  def test_stochastic_depth(self):
+    """Test the StochasticDepth module."""
+    rng = random.PRNGKey(0)
+    rngs = {'dropout': rng}
+
+    inputs_shape = (1024, 8, 8, 8)  # Use many batches so averages work out.
+    inputs = jnp.array(np.random.normal(size=inputs_shape))
+    inputs_np = np.asarray(inputs)
+
+    drop_none = nn_layers.StochasticDepth(rate=0.0)
+    out_none = drop_none.apply({}, inputs, deterministic=False, rngs=rngs)
+    np.testing.assert_equal(np.asarray(out_none), inputs_np)
+
+    # Make sure we zero out roughly half the samples when rate = 0.5.
+    drop_half = nn_layers.StochasticDepth(rate=0.5)
+    ones = jnp.ones_like(inputs)
+    out_half = drop_half.apply({}, ones, deterministic=False, rngs=rngs)
+    self.assertAlmostEqual(jnp.mean(out_half), 0.5, places=1)
+
+    # Make sure that we always drop full samples.
+    for row in out_half:
+      assert jnp.all(row == 0.0) or jnp.all(row == 1.0)
+
+    out_half_det = drop_half.apply({}, inputs, deterministic=True, rngs=rngs)
+    np.testing.assert_equal(np.asarray(out_half_det), inputs_np)
+
+    drop_all = nn_layers.StochasticDepth(rate=1.0)
+    out_all = drop_all.apply({}, inputs, deterministic=False, rngs=rngs)
+    np.testing.assert_equal(np.asarray(out_all), 0.0)
 
 if __name__ == '__main__':
   absltest.main()
