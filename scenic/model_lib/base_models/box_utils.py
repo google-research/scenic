@@ -178,6 +178,34 @@ def generalized_box_iou(boxes1: Array,
   return iou - (area - union) / (area + 1e-6)
 
 
+### Rotated Box Utilties ###
+
+
+def cxcywha_to_corners(cxcywha: jnp.ndarray) -> jnp.ndarray:
+  """Convert [cx, cy, w, h, a] to four corners of [x, y].
+
+  Args:
+    cxcywha: [..., 5]-ndarray of [center-x, center-y, width, height, angle]
+    representation of rotated boxes. Angle is in radians and center of rotation
+    is defined by [center-x, center-y] point.
+
+  Returns:
+    [..., 4, 2]-ndarray of four corners of the rotated box as [x, y] points.
+  """
+  assert cxcywha.shape[-1] == 5, 'Expected [..., [cx, cy, w, h, a] input.'
+  bs = cxcywha.shape[:-1]
+  cx, cy, w, h, a = jnp.split(cxcywha, indices_or_sections=5, axis=-1)
+  xs = jnp.array([.5, .5, -.5, -.5]) * w
+  ys = jnp.array([-.5, .5, .5, -.5]) * h
+  pts = jnp.stack([xs, ys], axis=-1)
+  sin = jnp.sin(a)
+  cos = jnp.cos(a)
+  rot = jnp.concatenate([cos, -sin, sin, cos], axis=-1).reshape((*bs, 2, 2))
+  offset = jnp.concatenate([cx, cy], -1).reshape((*bs, 1, 2))
+  corners = pts @ rot + offset
+  return corners
+
+
 def intersect_line_segments(line1: jnp.array,
                             line2: jnp.array,
                             eps: float = 1e-8) -> jnp.array:

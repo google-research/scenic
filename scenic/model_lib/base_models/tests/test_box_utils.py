@@ -76,8 +76,32 @@ class BoxUtilsTest(parameterized.TestCase):
         cxcywh_loop.flatten(), cxcywh.flatten(), places=5)
 
 
+def sample_cxcywha(key, batch_shape):
+  """Sample rotated bounding boxes [cx, cy, w, h, a (radians)]."""
+  scale = jnp.array([0.3, 0.3, 0.5, 0.5, 1.0])
+  offset = jnp.array([0.35, 0.35, 0, 0, 0])
+  return jax.random.uniform(key, shape=(*batch_shape, 5)) * scale + offset
+
+
 class RBoxUtilsTest(parameterized.TestCase):
   """Tests all the rotated bounding box related utilities."""
+
+  def test_convert_cxcywha_to_corners(self):
+    key = jax.random.PRNGKey(0)
+    cxcywha = sample_cxcywha(key, batch_shape=(300, 200))
+    self.assertEqual(cxcywha.shape, (300, 200, 5))
+
+    corners = box_utils.cxcywha_to_corners(cxcywha)
+    self.assertEqual(corners.shape, (300, 200, 4, 2))
+    # This criteria depends on sample function sampling within unit square.
+    self.assertTrue(jnp.all(corners >= 0))
+    self.assertTrue(jnp.all(corners <= 1))
+
+  def test_convert_cxcywha_to_corners_single_rotated(self):
+    cxcywha = jnp.array([1, 1, jnp.sqrt(2), jnp.sqrt(2), 45. * jnp.pi / 180.])
+    corners = box_utils.cxcywha_to_corners(cxcywha)
+    expected_corners = [[1, 0], [2, 1], [1, 2], [0, 1]]
+    np.testing.assert_allclose(corners, expected_corners, atol=1e-7)
 
   def test_intersect_line_segments(self):
     """Test for correctness of the intersect_lines operation."""
