@@ -35,6 +35,10 @@
     > CLAY is a Transformer-based pipeline for mobile UI layout denoising. Read
     > more about this project in CLAY [paper](https://arxiv.org/abs/2201.04100).
 
+*   [SVViT](svvit)
+
+    > SVViT is a transformer model for genotyping structrual variants using
+    > short read sequencing data.
 
 <a name="projects"></a>
 ## Scenic projects
