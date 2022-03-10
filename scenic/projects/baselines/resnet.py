@@ -215,7 +215,8 @@ class ResNetClassificationModel(ClassificationModel):
     debug_utils.log_param_shapes(params)
     return train_state.replace(
         optimizer=train_state.optimizer.replace(
-            target=flax.core.freeze(params)))
+            target=flax.core.freeze(params)),
+        model_state=restored_train_state.model_state)
 
 
 class ResNetMultiLabelClassificationModel(MultiLabelClassificationModel):
