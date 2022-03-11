@@ -126,6 +126,33 @@ class RBoxUtilsTest(parameterized.TestCase):
 
     np.testing.assert_allclose(intersections, expected_intersections, atol=1e-7)
 
+  def test_intersect_rbox_edges_same_box(self):
+    """Test for correctness of the intersect_rbox_edges operation."""
+    rbox1 = jnp.array([0.5, 0.5, 1.0, 1.0, 0])
+    rbox2 = rbox1
+    corners1 = box_utils.cxcywha_to_corners(rbox1)
+    corners2 = box_utils.cxcywha_to_corners(rbox2)
+    it_points = box_utils.intersect_rbox_edges(corners1, corners2)
+    self.assertEqual(it_points.shape, (4, 4, 2))
+    it_points = it_points[~jnp.any(jnp.isnan(it_points), -1)]
+    it_points = sorted([(x, y) for x, y in np.array(it_points)])
+    expected_points = sorted([(0, 0), (0, 1), (1, 0), (1, 1)] * 2)
+    self.assertSequenceEqual(it_points, expected_points)
+
+  def test_intersect_rbox_edges_rotated_box(self):
+    """Test rboxe inscribes the other with 45 degree angle."""
+    rbox1 = jnp.array([1.0, 1.0, 1.0, 1.0, 0])
+    rbox2 = jnp.array([1.0, 1.0, jnp.sqrt(2), jnp.sqrt(2), 45. * np.pi / 180.])
+    corners1 = box_utils.cxcywha_to_corners(rbox1)
+    corners2 = box_utils.cxcywha_to_corners(rbox2)
+    it_points = box_utils.intersect_rbox_edges(corners1, corners2)
+    it_points = jnp.round(
+        it_points[~jnp.any(jnp.isnan(it_points), -1)], decimals=4)
+    it_points = sorted([(x, y) for x, y in np.array(it_points)])
+    # Expect intersection at unrotated box vertices.
+    expected_pts = sorted([(1.5, 1.5), (1.5, 0.5), (0.5, 0.5), (0.5, 1.5)] * 2)
+    self.assertSequenceEqual(it_points, expected_pts)
+
 
 class IoUTest(parameterized.TestCase):
   """Test box_iou and generalized_box_iou functions."""

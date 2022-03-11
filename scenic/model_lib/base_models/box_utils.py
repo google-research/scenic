@@ -22,7 +22,6 @@ https://github.com/lilanxiao/Rotated_IoU.
 """
 from typing import Any, Union
 
-import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -206,8 +205,8 @@ def cxcywha_to_corners(cxcywha: jnp.ndarray) -> jnp.ndarray:
   return corners
 
 
-def intersect_line_segments(line1: jnp.array,
-                            line2: jnp.array,
+def intersect_line_segments(lines1: jnp.array,
+                            lines2: jnp.array,
                             eps: float = 1e-8) -> jnp.array:
   """Intersect two line segments.
 
@@ -220,21 +219,21 @@ def intersect_line_segments(line1: jnp.array,
   Performance Note: At the calling point, we expect user to appropriately vmap
   function to work on batches of lines.
   Args:
-    line1: [2, 2]-ndarray, [[x1, y1], [x2, y2]] for line.
-    line2: [2, 2]-ndarray, [[x3, y3], [x4, y4]] for other line.
+    lines1: [..., 2, 2]-ndarray, [[x1, y1], [x2, y2]] for lines.
+    lines2: [..., 2, 2]-ndarray, [[x3, y3], [x4, y4]] for other lines.
     eps: Epsilon for numerical stability.
 
   Returns:
-    Intersection point [2,]-ndarray or [nan, nan] if no point exists. Since we
-    are intersecting line segments in 2D, this happens if lines are parallel or
-    the intersection of the infinite line would occur outside of both segments.
+    Intersection points [..., 2]-ndarray or [..., [nan, nan]] if no point
+    exists. Since we are intersecting line segments in 2D, this happens if
+    lines are parallel or the intersection of the infinite line would occur
+    outside of both segments.
   """
-  assert line1.shape == (2, 2) and line2.shape == (2, 2)
-  # Variable names follow reference algorithm documentation.
-  x1, y1 = line1[0, :]
-  x2, y2 = line1[1, :]
-  x3, y3 = line2[0, :]
-  x4, y4 = line2[1, :]
+  assert lines1.shape[-2:] == (2, 2) and lines2.shape[-2:] == (2, 2)
+  x1, y1 = jnp.split(lines1[..., 0, :], 2, -1)
+  x2, y2 = jnp.split(lines1[..., 1, :], 2, -1)
+  x3, y3 = jnp.split(lines2[..., 0, :], 2, -1)
+  x4, y4 = jnp.split(lines2[..., 1, :], 2, -1)
   den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
   num_t = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)
   num_u = (x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)
@@ -242,10 +241,41 @@ def intersect_line_segments(line1: jnp.array,
   # as variable names from the original algorithm documentation.
   t = num_t / (den + eps)
   u = -num_u / (den + eps)
-  intersection_pt = jnp.asarray([x1 + t * (x2 - x1), y1 + t * (y2 - y1)])
+
+  intersection_pt = jnp.concatenate([x1 + t * (x2 - x1), y1 + t * (y2 - y1)],
+                                    -1)
   are_parallel = jnp.abs(den) < eps
   not_on_line1 = jnp.logical_or(u < 0, u > 1)
   not_on_line2 = jnp.logical_or(t < 0, t > 1)
-  not_possible = jnp.any(jnp.array([are_parallel, not_on_line1, not_on_line2]))
-  return jax.lax.cond(not_possible, lambda: jnp.array([jnp.nan, jnp.nan]),
-                      lambda: intersection_pt)
+
+  not_possible = jnp.any(
+      jnp.concatenate([are_parallel, not_on_line1, not_on_line2], -1), -1)
+  nan_pt = jnp.ones_like(intersection_pt) * jnp.nan
+  return jnp.where(not_possible[..., None], nan_pt, intersection_pt)
+
+
+def intersect_rbox_edges(corners1: jnp.ndarray,
+                         corners2: jnp.ndarray) -> jnp.ndarray:
+  """Find intersection points between all four edges of both rotated boxes.
+
+  Note that you are expected to explicitly use vmap to control batching.
+
+  Args:
+    corners1: (4, 2)-ndarray of corners for rbox1.
+    corners2: (4, 2)-ndarray of corners for rbox2.
+
+  Returns:
+    intersections: (4, 4, 2)-ndarray (i, j, :) means intersection of i-th
+    edge of rbox1 with j-th of rbox2.
+  """
+  intersections = []
+  # Apparently for-loop is 2-4x faster than vectorized implementation on TPU
+  # because it has much higher memory bandwidth. On GPU, the for-loop
+  # implementation is 1.5x slower than vectorized.
+  for i in range(4):
+    line1 = jnp.stack([corners1[i, :], corners1[(i + 1) % 4, :]], axis=0)
+    for j in range(4):
+      line2 = jnp.stack([corners2[j, :], corners2[(j + 1) % 4, :]], axis=0)
+      intersections.append(intersect_line_segments(line1, line2))
+  intersections = jnp.reshape(jnp.stack(intersections), (4, 4, 2))
+  return intersections
