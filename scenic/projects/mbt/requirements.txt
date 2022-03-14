@@ -1,0 +1,2 @@
+dmvr @ git+https://github.com/deepmind/dmvr.git
+lingvo==0.11.0

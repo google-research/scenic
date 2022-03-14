@@ -36,6 +36,13 @@
     > more about this project in CLAY [paper](https://arxiv.org/abs/2201.04100).
 
 
+*   [MBT](mbt)
+
+    > MBT presents a transformer based architecture that uses "fusion
+    > bottlenecks" for modality fusion at multiple layers.
+    > Details can be found in the [paper](https://arxiv.org/abs/2201.04100).
+
+
 <a name="projects"></a>
 ## Scenic projects
 A typical project consists of models, trainers, configs, a runner, and some utility functions developed for the project.
