@@ -2,7 +2,7 @@
 
 ### [Project Page](https://a-nagrani.github.io/mbt.html) | [Paper](https://arxiv.org/pdf/2107.00135.pdf)
 
-<img src="bottlenecks.png" width="700" height="200" />
+<img src="bottlenecks.png" width="700" height="150" />
 
 ## What is MBT?
 
@@ -32,7 +32,7 @@ To train a model, please download a pretrained ViT image model trained using
 [Scenic](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines)
 or the [original implementation](https://github.com/google-research/vision_transformer).
 
-Additionally, pre-process the training dataset in the same way as done by the ViViT project [here](https://github.com/google-researchscenic/tree/main/scenic/projects/vivit/data/data.md).
+Additionally, pre-process the training dataset in the same way as done by the ViViT project [here](https://github.com/google-research/scenic/tree/main/scenic/projects/vivit/data/data.md).
 
 An example command-line to train MBT-B/16x2 on the balanced AudioSet dataset (AS-mini in the paper)
 using this [config file](configs/audioset/balanced_audioset_base.py)
