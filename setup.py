@@ -63,7 +63,7 @@ class InstallCommand(install.install):
 install_requires_projects = [
     "ott-jax>=0.2.0",
     "sklearn",
-    "lingvo",
+    "lingvo==0.11.0",
     "seaborn>=0.11.2",
     "dmvr @ git+https://github.com/deepmind/dmvr.git",
 ]
@@ -75,12 +75,12 @@ install_requires_core = [
     "jaxlib>=0.1.74",
     "flax>=0.4.0",
     "ml-collections>=0.1.1",
-    "tensorflow",
+    "tensorflow>=2.7",
     "tensorflow-addons>=0.15.0",
     "immutabledict>=2.2.1",
     "clu>=0.0.6",
-    "tfds-nightly>=4.5.2.dev,<5",
-    "tf-models-nightly>=2.7.0.dev,<3",
+    "tensorflow-datasets",
+    "tf-models-official",
 ]
 
 tests_require = [
