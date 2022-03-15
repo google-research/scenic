@@ -1,6 +1,6 @@
 # MBT: Multimodal Bottleneck Transformers
 
-### [Project Page](https://a-nagrani.github.io/mbt.html) | [Paper](https://arxiv.org/pdf/2107.00135.pdf)
+### [Project Page](https://a-nagrani.github.io/mbt.html) | [arXiv](https://arxiv.org/pdf/2107.00135.pdf)
 
 <img src="bottlenecks.png" width="700" height="150" />
 
@@ -10,7 +10,7 @@ MBT is a transformer based model for multimodal fusion in video. The model
 restricts the flow of cross-modal information between latent units through tight
 fusion ‘bottlenecks’, that force the model to collect and ‘condense’ the most
 relevant inputs in each modality. Here the model is applied to RGB and
-spectrogram patches directly. More details can be found in the [paper](https://arxiv.org/pdf/2107.00135.pdf).
+spectrogram patches directly. More details can be found in the [paper](https://proceedings.neurips.cc/paper/2021/file/76ba9f564ebbc35b1014ac498fafadd0-Paper.pdf).
 
 ## Datasets
 
@@ -44,6 +44,7 @@ $ python -m scenic.projects.mbt.main \
   --workdir=mbt_base/
 ```
 
+Pre-trained models will be released soon.
 ## Citation
 
 If you use MBT, please use the following BibTeX entry.
