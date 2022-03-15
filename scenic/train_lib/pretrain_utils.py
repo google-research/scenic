@@ -34,7 +34,8 @@ PyTree = Union[Mapping[str, Mapping], Any]
 
 
 def get_params_and_model_state_dict(
-    restored_train_state: PyTree) -> Tuple[PyTree, Optional[PyTree]]:
+    restored_train_state: Union[PyTree, train_utils.TrainState],
+) -> Tuple[PyTree, Optional[PyTree]]:
   """Restores the params and model state.
 
   This function also applies the conversion needed for pre-Linen checkpoints.
@@ -108,7 +109,7 @@ def _replace_dict(model: PyTree,
 
 def init_from_pretrain_state(
     train_state: train_utils.TrainState,
-    pretrain_state: Mapping[str, Any],
+    pretrain_state: Union[PyTree, train_utils.TrainState],
     ckpt_prefix_path: Optional[List[str]] = None,
     model_prefix_path: Optional[List[str]] = None,
     name_mapping: Optional[Mapping[str, str]] = None,
