@@ -23,8 +23,9 @@ import jax.numpy as jnp
 import numpy as np
 from scenic.dataset_lib import dataset_utils
 from scenic.dataset_lib import datasets
-# Unused imports are to register preprocessing ops:
 from scenic.dataset_lib.big_transfer import builder
+# Unused imports are to register preprocessing ops:
+from scenic.dataset_lib.big_transfer.preprocessing import vtab_ops  # pylint: disable=unused-import
 
 
 def tf_to_numpy(batch):

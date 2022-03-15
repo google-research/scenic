@@ -21,7 +21,7 @@ field "image" being modified. Potentially, other fields can also be modified
 or added.
 """
 import numpy as np
-from scenic.dataset_lib.big_transfer import utils
+from scenic.dataset_lib.big_transfer.preprocessing import utils
 from scenic.dataset_lib.big_transfer.registry import Registry
 import tensorflow.compat.v1 as tf
 import tensorflow.compat.v2 as tf2

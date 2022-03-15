@@ -161,14 +161,14 @@ class Registry(object):
     return Registry._GLOBAL_REGISTRY
 
   @staticmethod
-  def register(name, item_type):
+  def register(name, item_type, replace=False):
     """Creates a function that registers its input."""
 
     if item_type not in ["object", "function", "factory", "class"]:
       raise ValueError("Unknown item type: %s" % item_type)
 
     def _register(item):
-      if name in Registry.global_registry():
+      if name in Registry.global_registry() and not replace:
         raise KeyError(
             "The name {!r} was already registered in with type {!r}".format(
                 name, item_type))

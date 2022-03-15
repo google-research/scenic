@@ -17,8 +17,8 @@
 """
 
 from absl import logging
-from scenic.dataset_lib.big_transfer import ops as pp_ops
 from scenic.dataset_lib.big_transfer import registry
+from scenic.dataset_lib.big_transfer.preprocessing import ops as pp_ops
 import tensorflow.compat.v1 as tf
 
 TPU_SUPPORTED_DTYPES = [
@@ -84,9 +84,9 @@ def get_preprocess_fn(pp_pipeline, remove_tpu_dtypes=True, log_data=True):
       for key in list(data.keys()):
         if data[key].dtype not in TPU_SUPPORTED_DTYPES:
           tf.logging.warning(
-              "Removing key '{}' from data dict because its dtype {} is not in "
-              " the supported dtypes: {}".format(key, data[key].dtype,
-                                                 TPU_SUPPORTED_DTYPES))
+              "Removing key %s from data dict because its dtype %s is not in "
+              " the supported dtypes: %s", key, data[key].dtype,
+              TPU_SUPPORTED_DTYPES)
           data = pp_ops.get_delete_field(key)(data)
     if log_data:
       logging.info("Data after pre-processing:\n%s", data)
