@@ -1274,9 +1274,11 @@ class FastAttentionviaLowRankDecomposition(FastAttention):
     query_prime = self.kernel_feature_creator(query, self.projection_matrix,
                                               attention_dims_t, batch_dims_t,
                                               precision, True)
+    query_prime = query_prime.astype(dtype)
     key_prime = self.kernel_feature_creator(key, self.projection_matrix,
                                             attention_dims_t, batch_dims_t,
                                             precision, False)
+    key_prime = key_prime.astype(dtype)
 
     if self.unidirectional:
       index = attention_dims_t[0]
@@ -1340,6 +1342,7 @@ class FastAttentionviaLowRankDecomposition(FastAttention):
         # Bidirectional, normalized attention.
         thick_all_ones = jnp.zeros(key.shape[0:-1]) + jnp.ones(
             key_extra.shape[0:len(axis)])
+        thick_all_ones = thick_all_ones.astype(dtype)
         contract_key = tuple(
             range(len(batch_dims),
                   len(batch_dims) + len(axis)))
