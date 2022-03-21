@@ -33,12 +33,14 @@ MATCHER_FUNCTIONS = {
     'hungarian_scan_tpu': matchers.hungarian_scan_tpu_matcher,
     'sinkhorn': matchers.sinkhorn_matcher,
     'greedy': matchers.greedy_matcher,
-    'lazy': matchers.lazy_matcher
+    'lazy': matchers.lazy_matcher,
+    'hungarian_cover_tpu': matchers.hungarian_cover_tpu_matcher
 }
-EXACT_MATCHERS = ['hungarian', 'hungarian_tpu', 'hungarian_scan_tpu']
-RECT_MATCHERS = ['hungarian', 'hungarian_tpu', 'hungarian_scan_tpu']
+EXACT_MATCHERS = ['hungarian', 'hungarian_tpu', 'hungarian_scan_tpu',
+                  'hungarian_cover_tpu']
+RECT_MATCHERS = ['hungarian', 'hungarian_tpu', 'hungarian_scan_tpu',
+                 'hungarian_cover_tpu']
 CPU_MATCHERS = ['hungarian']
-
 
 EPS = 1e-4
 
@@ -292,9 +294,25 @@ class MatchingTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
       *[(name, MATCHER_FUNCTIONS[name]) for name in RECT_MATCHERS])
-  def test_cost_matches_scipy_rect(self, matcher_fn):
-    """Can recover the matching returned by Scipy for rectangular matrices?"""
+  def test_cost_matches_scipy_rect_n_bigger_m(self, matcher_fn):
+    """Can recover the matching returned by Scipy for m > n matrices?"""
+    # Test where n > m.
     cost_matrix = self.cost_matrix[:, :, self.cost_matrix.shape[2] // 2:]
+    sp_ind = np.array(list(map(lambda x: tuple(sciopt.linear_sum_assignment(x)),
+                               cost_matrix)))
+    ind = matcher_fn(cost_matrix)
+
+    for i, ((sp_row, sp_col), (row, col)) in enumerate(zip(sp_ind, ind)):
+      sp_cost = cost_matrix[i, sp_row, sp_col].sum()
+      cost = cost_matrix[i, row, col].sum()
+      self.assertAlmostEqual(sp_cost, cost, places=4)
+
+  @parameterized.named_parameters(
+      *[(name, MATCHER_FUNCTIONS[name]) for name in RECT_MATCHERS])
+  def test_cost_matches_scipy_rect_n_smaller_m(self, matcher_fn):
+    """Can recover the matching returned by Scipy for n < m matrices?"""
+    # Test where n < m.
+    cost_matrix = self.cost_matrix[:, self.cost_matrix.shape[1] // 2:, :]
     sp_ind = np.array(list(map(lambda x: tuple(sciopt.linear_sum_assignment(x)),
                                cost_matrix)))
     ind = matcher_fn(cost_matrix)
@@ -356,6 +374,28 @@ class MatchingTest(parameterized.TestCase):
       impl_cost = cost[i, impl_row, impl_col].sum()
       slicer_cost = cost[i, slicer_row, slicer_col].sum()
       self.assertAlmostEqual(impl_cost, slicer_cost, places=3)
+
+  @parameterized.named_parameters(
+      *[(name, MATCHER_FUNCTIONS[name]) for name in RECT_MATCHERS])
+  def test_manual_cost_matrix(self, matcher_fn):
+    """Test case from bencaine@ for repro."""
+    cost_matrix = jnp.asarray([
+        # We expect (0, 0) and (1, 1) to be matched.
+        [[-100, 100],
+         [100, -100],
+         [100, 100]],
+        # We expect (0, 0) and (2, 1) to be matched.
+        [[-100, 100],
+         [100, 100],
+         [100, -100]]], dtype=jnp.float32)
+
+    sp_ind = np.array(list(map(lambda x: tuple(sciopt.linear_sum_assignment(x)),
+                               cost_matrix)))
+    ind = matcher_fn(cost_matrix)
+    for i, ((sp_row, sp_col), (row, col)) in enumerate(zip(sp_ind, ind)):
+      sp_cost = cost_matrix[i, sp_row, sp_col].sum()
+      cost = cost_matrix[i, row, col].sum()
+      self.assertAlmostEqual(sp_cost, cost, places=4)
 
   class TestLazyMatcher(parameterized.TestCase):
     """Test lazy_matcher function."""

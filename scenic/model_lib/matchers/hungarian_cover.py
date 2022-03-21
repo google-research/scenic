@@ -428,6 +428,17 @@ def hungarian_cover_matcher(weights: jnp.ndarray,
     weights = jnp.transpose(weights, axes=(0, 2, 1))
     n, m = m, n
 
+  # TODO(agritsenko): Figure out a more efficient way of correctly handling
+  # rectangular cost matrices.
+  if n != m:  # So n < m based on the code block above.
+    pad_n = 1  # `m - n` is guaranteed to be correct, but 1 also works.
+    pad_values = jnp.max(weights, axis=(1, 2), keepdims=True) * 1.1
+    pad_values = jnp.broadcast_to(pad_values, (b, pad_n, m))
+    weights = jnp.concatenate((weights, pad_values), axis=1)
+    n += pad_n
+  else:
+    pad_n = 0
+
   weights = _prepare(weights)
   adj_matrix = jnp.abs(weights) < eps
   state, assignment = _maximum_bipartite_matching(adj_matrix)
@@ -454,6 +465,11 @@ def hungarian_cover_matcher(weights: jnp.ndarray,
 
   workers_ind = jnp.broadcast_to(jnp.arange(n), (b, n))
   jobs_ind = jnp.argmax(assignment, axis=2)
+
+  # Remove padded indices.
+  workers_ind = workers_ind[:, :n - pad_n]
+  jobs_ind = jobs_ind[:, :n - pad_n]
+
   if not should_transpose:
     ind = jnp.stack([workers_ind, jobs_ind], axis=1)
   else:
