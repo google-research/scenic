@@ -18,6 +18,7 @@ import numpy as np
 from scenic.model_lib.base_models import base_model
 from scenic.model_lib.base_models import classification_model
 from scenic.model_lib.base_models import multilabel_classification_model
+from scenic.model_lib.layers import attention_layers
 from scenic.model_lib.layers import nn_layers
 from scenic.projects.baselines import vit
 from scenic.projects.vivit import model as vivit_model
@@ -112,9 +113,11 @@ class TokenLearnerModuleV11(nn.Module):
 
   Attributes:
     num_tokens: Number of tokens.
+    bottleneck_dim: The size of hidden units in the MLP for spatial attention.
     dropout_rate: Dropout rate.
   """
   num_tokens: int
+  bottleneck_dim: int = 64
   dropout_rate: float = 0.
 
   @nn.compact
@@ -129,30 +132,27 @@ class TokenLearnerModuleV11(nn.Module):
     Returns:
       Output of shape `[bs, n_token, c]`.
     """
+    if inputs.ndim == 3:
+      n, hw, c = inputs.shape
+      h = int(math.sqrt(hw))
+      inputs = jnp.reshape(inputs, [n, h, h, c])
+
+      if h * h != hw:
+        raise ValueError('Only square inputs supported.')
+
     feature_shape = inputs.shape
 
     selected = inputs
 
     selected = nn.LayerNorm()(selected)
 
-    num_groups = 1 if feature_shape[-1] < 256 else feature_shape[-1] // 128
-
-    for _ in range(1):
-      selected = nn.Conv(
-          feature_shape[-1],
-          kernel_size=(1, 1),
-          strides=(1, 1),
-          padding='SAME',
-          feature_group_count=num_groups,
-          use_bias=False)(selected)  # Shape: [bs, h, w, channels].
-      selected = nn.gelu(selected)
-
-    selected = nn.Conv(
-        self.num_tokens,
-        kernel_size=(1, 1),
-        strides=(1, 1),
-        padding='SAME',
-        use_bias=False)(selected)  # Shape: [bs, h, w, n_token].
+    selected = attention_layers.MlpBlock(
+        mlp_dim=self.bottleneck_dim,
+        out_dim=self.num_tokens,
+        dropout_rate=self.dropout_rate,
+        activation_fn=nn.gelu,
+        name='token_masking')(
+            selected, deterministic=deterministic)
 
     selected = jnp.reshape(
         selected, [feature_shape[0], feature_shape[1] * feature_shape[2], -1
@@ -161,20 +161,13 @@ class TokenLearnerModuleV11(nn.Module):
     selected = jax.nn.softmax(selected, axis=-1)
 
     feat = inputs
-    feat = nn.Conv(
-        feature_shape[-1],
-        kernel_size=(1, 1),
-        strides=(1, 1),
-        padding='SAME',
-        feature_group_count=num_groups,
-        use_bias=False)(feat)  # Shape: [bs, h, w, channels].
     feat = jnp.reshape(
         feat, [feature_shape[0], feature_shape[1] * feature_shape[2], -1
               ])  # Shape: [bs, h*w, c].
 
     feat = jnp.einsum('...si,...id->...sd', selected, feat)
 
-    return nn.Dropout(rate=self.dropout_rate)(feat, deterministic=deterministic)
+    return feat
 
 
 class TokenLearnerModuleMixer(nn.Module):
@@ -248,10 +241,12 @@ class TokenFuser(nn.Module):
   Attributes:
     use_normalization: Whether to use LayerNorm layers. This is needed when
       using sum pooling in the TokenLearner module.
+    bottleneck_dim: The size of hidden units in the MLP for spatial attention.
     dropout_rate: Dropout rate.
   """
 
   use_normalization: bool = True
+  bottleneck_dim: int = 64
   dropout_rate: float = 0.
 
   @nn.compact
@@ -284,12 +279,13 @@ class TokenFuser(nn.Module):
       inputs = nn.LayerNorm(name='fuser_mix_norm2')(inputs)
 
     original = nn.LayerNorm()(original)
-    mix = nn.Conv(
-        num_tokens,
-        kernel_size=(1, 1),
-        strides=(1, 1),
-        padding='SAME',
-        use_bias=False)(original)
+    mix = attention_layers.MlpBlock(
+        mlp_dim=self.bottleneck_dim,
+        out_dim=num_tokens,
+        dropout_rate=self.dropout_rate,
+        activation_fn=nn.gelu,
+        name='token_masking')(
+            original, deterministic=deterministic)
     mix = nn.sigmoid(mix)[..., None]
 
     inputs = inputs[:, None, None, ...]
