@@ -572,14 +572,17 @@ def get_dataset_tfds(dataset, split, shuffle_files=True, data_dir=None):
         tfds.core.ReadInstruction(split, unit='abs', from_=start, to=end))
 
   # Each host is responsible for a fixed subset of data
+  # TODO(sthoppay) Initial builder expected all datasets to have 'image' as
+  # one of the key, here conceptnet does not have image.
+  # Removed additional parameter: decoders={'image': tfds.decode.SkipDecoding()
+  # as temporary fix. Needed to find permanant solution with scenic owners.
   return builder.as_dataset(
       split=sum(host_ris[1:], host_ris[0]),  # API wants a sum, not a list O.o
       shuffle_files=shuffle_files,
       read_config=tfds.ReadConfig(
           skip_prefetch=True,  # We prefetch after pipeline.
           try_autocache=False,  # We control this, esp. for few-shot.
-      ),
-      decoders={'image': tfds.decode.SkipDecoding()})
+      ))
 
 
 def make_pipeline(data,
