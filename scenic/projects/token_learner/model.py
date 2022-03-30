@@ -602,6 +602,8 @@ class TokenLearnerViTRepresentation(nn.Module):
     hidden_size: Size of the hidden state of the output of model's stem.
     representation_size: Size of the representation layer in the model's head.
       if None, we skip the extra projection + tanh activation at the end.
+    use_concat_final: Whether to use the concatenation instead of mean pooling
+      at the end of the network.
     dropout_rate: Dropout rate.
     attention_dropout_rate: Dropout for attention heads.
     dtype: JAX data type for activations.
@@ -613,6 +615,7 @@ class TokenLearnerViTRepresentation(nn.Module):
   tokenizer: ml_collections.ConfigDict
   hidden_size: int
   target_channel_dim: int
+  use_concat_final: bool = False
   dropout_rate: float = 0.1
   attention_dropout_rate: float = 0.1
   dtype: Any = jnp.float32
@@ -621,14 +624,19 @@ class TokenLearnerViTRepresentation(nn.Module):
   def __call__(self, x: jnp.ndarray, *, train: bool, debug: bool = False):
 
     fh, fw = self.tokenizer.patches.size
+    if len(x.shape) == 5:
+      n, t, h, w, _ = x.shape
+      x = jnp.reshape(x, [n * t, h, w, -1])
+    else:
+      t = 1
+
     x = nn.Conv(
         self.hidden_size, (fh, fw),
         strides=(fh, fw),
         padding='VALID',
         name='embedding')(
             x)
-    n, h, w, c = x.shape
-    x = jnp.reshape(x, [n, h * w, c])
+    x = jnp.reshape(x, [n, -1, self.hidden_size])
 
     use_v11 = self.tokenizer.get('use_v11', False)
 
@@ -643,6 +651,7 @@ class TokenLearnerViTRepresentation(nn.Module):
           num_tokens=self.tokenizer.num_tokens,
           tokenlearner_loc=self.tokenizer.tokenlearner_loc,
           use_v11=use_v11,
+          temporal_dimensions=t,
           dtype=self.dtype,
           name='Transformer')(
               x, train=train)
@@ -657,17 +666,30 @@ class TokenLearnerViTRepresentation(nn.Module):
           num_tokens=self.tokenizer.num_tokens,
           tokenlearner_loc=self.tokenizer.tokenlearner_loc,
           use_v11=use_v11,
+          temporal_dimensions=t,
           dtype=self.dtype,
           name='Transformer')(
               x, train=train)
 
-    x = jnp.mean(x, axis=1)
+    if self.use_concat_final:
+      n, hw, _ = x.shape
+      per_loc_channel_dim = self.target_channel_dim // hw
+      x = nn.Dense(
+          per_loc_channel_dim,
+          kernel_init=nn.initializers.zeros,
+          name='output_projection')(
+              x)
 
-    x = nn.Dense(
-        self.target_channel_dim,
-        kernel_init=nn.initializers.zeros,
-        name='output_projection')(
-            x)
+      x = nn.tanh(x)
+      x = jnp.reshape(x, [n, -1])
+    else:
+      x = jnp.mean(x, axis=1)
+
+      x = nn.Dense(
+          self.target_channel_dim,
+          kernel_init=nn.initializers.zeros,
+          name='output_projection')(
+              x)
     return x
 
 
