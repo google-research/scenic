@@ -23,3 +23,24 @@ class ViTClassificationModel(ClassificationModel):
                                                      0.1),
         dtype='float32',
     )
+
+  def init_from_train_state(
+      self, train_state, restored_train_state, restored_model_cfg):
+    """Updates the train_state with data from restored_train_state.
+
+    This function is written to be used for 'fine-tuning' experiments. Here, we
+    do some surgery to support larger resolutions (longer sequence length) in
+    the transformer block, with respect to the learned pos-embeddings.
+
+    Args:
+      train_state: A raw TrainState for the model.
+      restored_train_state: A TrainState that is loaded with parameters/state of
+        a  pretrained model.
+      restored_model_cfg: Configuration of the model from which the
+        restored_train_state come from. Usually used for some asserts.
+
+    Returns:
+      Updated train_state.
+    """
+    return vit.init_vit_from_train_state(train_state, restored_train_state,
+                                         self.config, restored_model_cfg)
