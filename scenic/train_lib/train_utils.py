@@ -292,7 +292,7 @@ def get_dataset(config: ml_collections.ConfigDict, data_rng: PRNGKey, *,
 def initialize_multitask_model(
     *,
     model_def: nn.Module,
-    input_spec: Dict[Tuple[Tuple[str, str], ...],
+    input_spec: Dict[Tuple[Tuple[str, Any], ...],
                      Sequence[Union[Tuple[Tuple[int, ...], jnp.dtype],
                                     Tuple[int, ...]]]],
     config: ml_collections.ConfigDict,
