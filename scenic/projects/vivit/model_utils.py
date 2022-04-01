@@ -369,12 +369,17 @@ def initialise_from_train_state(
       optimizer=train_state.optimizer.replace(target=flax.core.freeze(params)))
 
 
-def init_posemb(to_params, from_params, config, restored_model_cfg,
-                is_temporal):
+def init_posemb(to_params,
+                from_params,
+                config,
+                restored_model_cfg,
+                is_temporal,
+                posemb_name='posembed_input',
+                restored_posemb_name='posembed_input'):
   """Initialize the positional embeddings."""
   if config.init_from.restore_positional_embedding:
-    posemb = to_params['posembed_input']['pos_embedding']
-    restored_posemb = from_params['posembed_input']['pos_embedding']
+    posemb = to_params[posemb_name]['pos_embedding']
+    restored_posemb = from_params[restored_posemb_name]['pos_embedding']
     if restored_posemb.shape != posemb.shape:
       # Rescale the grid of pos, embeddings.
       # Default parameter shape is (1, N, 768)
@@ -395,7 +400,7 @@ def init_posemb(to_params, from_params, config, restored_model_cfg,
           (restored_model_cfg.model.classifier == 'token')):
         logging.warning('Only one of target and restored model uses'
                         'classification token')
-        if restored_posemb_grid == ntok:
+        if len(restored_posemb_grid) == ntok:
           # In case the following `if` is not going to run, lets add batch dim:
           restored_posemb = restored_posemb_grid[None, ...]
 
@@ -440,7 +445,7 @@ def init_posemb(to_params, from_params, config, restored_model_cfg,
         else:
           restored_posemb = restored_posemb_grid
 
-    to_params['posembed_input']['pos_embedding'] = restored_posemb
+    to_params[posemb_name]['pos_embedding'] = restored_posemb
   else:
     logging.info('Not restoring positional encodings from pretrained model')
 

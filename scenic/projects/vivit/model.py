@@ -93,7 +93,11 @@ def embed_2d_patch(x, patches, embedding_dim):
   return x
 
 
-def embed_3d_patch(x, patches, embedding_dim, kernel_init_method):
+def embed_3d_patch(x,
+                   patches,
+                   embedding_dim,
+                   kernel_init_method,
+                   name='embedding'):
   """Embed 3D input patches into tokens."""
 
   assert patches.get('size') is not None, 'patches.size must be defined'
@@ -116,8 +120,9 @@ def embed_3d_patch(x, patches, embedding_dim, kernel_init_method):
       embedding_dim, (ft, fh, fw),
       strides=(ft, fh, fw),
       padding='VALID',
-      name='embedding',
-      kernel_init=kernel_initializer)(x)
+      name=name,
+      kernel_init=kernel_initializer)(
+          x)
 
   return x
 
@@ -126,7 +131,8 @@ def temporal_encode(x,
                     temporal_encoding_config,
                     patches,
                     hidden_size,
-                    return_1d=True):
+                    return_1d=True,
+                    name='embedding'):
   """Encode video for feeding into ViT."""
 
   n, _, in_h, in_w, c = x.shape
@@ -149,7 +155,7 @@ def temporal_encode(x,
   elif temporal_encoding_config.method == '3d_conv':
     kernel_init_method = temporal_encoding_config.get('kernel_init_method',
                                                       None)
-    x = embed_3d_patch(x, patches, hidden_size, kernel_init_method)
+    x = embed_3d_patch(x, patches, hidden_size, kernel_init_method, name)
     temporal_dims = x.shape[1]
     if return_1d:
       n, t, h, w, c = x.shape
