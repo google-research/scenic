@@ -33,14 +33,21 @@ import tensorflow as tf
 from official.vision.image_classification import augment
 
 
-def crop_resize(frames: tf.Tensor,
-                output_h: int,
-                output_w: int,
-                num_frames: int,
-                num_channels: int,
-                area_range=(0.3, 1),
-                unused_state=None) -> tf.Tensor:
+def random_resized_crop(frames: tf.Tensor,
+                        output_h: int,
+                        output_w: int,
+                        num_frames: int,
+                        num_channels: int,
+                        area_range=(0.3, 1),
+                        unused_state=None) -> tf.Tensor:
   """First crop clip with jittering and then resizes to (output_h, output_w).
+
+  Takes a crop of random fraction (uniform in area_range) of the original size
+  and with a random aspect ratio (uniform from 3/4 to 4/3) of the original. The
+  crop is then resized to the target output size.
+
+  This is equivalent to "torchvision.transforms.RandomResizedCrop" in PyTorch,
+  or inception_crop in big_vision.
 
   Args:
     frames: A Tensor of dimension [timesteps, input_h, input_w, channels].
@@ -80,7 +87,7 @@ def crop_resize(frames: tf.Tensor,
   frames = tf.slice(frames, offset, size)
   frames = tf.cast(
       tf.image.resize(
-          frames, (output_h, output_w), method=tf.image.ResizeMethod.BICUBIC),
+          frames, (output_h, output_w), method=tf.image.ResizeMethod.BILINEAR),
       frames.dtype)
   frames.set_shape((num_frames, output_h, output_w, num_channels))
   return frames
@@ -265,37 +272,36 @@ def additional_augmentations(ds_factory, augmentation_params, crop_size,
 
   rgb_feature_name = builders.IMAGE_FEATURE_NAME
 
-  do_simclr_crop_resize = augmentation_params.get('do_simclr_crop_resize',
-                                                  False)
+  do_random_resized_crop = augmentation_params.get('do_random_resized_crop',
+                                                   False)
   do_simclr_style_augmentations = augmentation_params.get(
       'do_simclr_style_augmentations', False)
   do_rand_augment = augmentation_params.get('do_rand_augment', False)
   do_color_augment = augmentation_params.get('do_color_augment', False)
+  do_jitter_scale = augmentation_params.get('do_color_augment', False)
 
-  if do_simclr_crop_resize and augmentation_params.do_jitter_scale:
-    logging.warning('Only doing simclr_crop_resize.'
+  if do_random_resized_crop and do_jitter_scale:
+    logging.warning('Only doing do_random_resized_crop.'
                     'Not compatible with jitter_scale')
 
-  if do_simclr_crop_resize:
-    area_range = (augmentation_params.get('simclr_area_lower_bound', 0.5), 1)
+  if do_random_resized_crop:
+    min_area = augmentation_params.get('random_resized_crop_min_area', 0.5)
 
-    # Remove resize_smallest and random_crop. Replace with crop_resize
-    ds_factory.preprocessor_builder.remove_fn(
-        f'{rgb_feature_name}_resize_smallest')
+    # Replace random_crop with crop_resize.
     ds_factory.preprocessor_builder.remove_fn(f'{rgb_feature_name}_random_crop')
     ds_factory.preprocessor_builder.add_fn(
         functools.partial(
-            crop_resize,
+            random_resized_crop,
             num_frames=num_frames,
             output_h=crop_size,
             output_w=crop_size,
             num_channels=3,
-            area_range=area_range),
+            area_range=(min_area, 1.0)),
         feature_name=rgb_feature_name,
-        fn_name=f'{rgb_feature_name}_crop_resize',
+        fn_name=f'{rgb_feature_name}_random_resized_crop',
         add_before_fn_name=f'{rgb_feature_name}_random_flip')
 
-  elif augmentation_params.get('do_jitter_scale'):
+  elif do_jitter_scale:
     ds_factory.preprocessor_builder.add_fn(
         functools.partial(
             dmvr_processors.scale_jitter_augm,
