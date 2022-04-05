@@ -2,6 +2,7 @@
 <div style="text-align: left">
 <img align="right" src="https://raw.githubusercontent.com/google-research/scenic/main/images/scenic_logo.png" width="200" alt="scenic logo"></img>
 </div>
+
 *Scenic* is a codebase with a focus on research around attention-based models
 for computer vision. Scenic has been successfully used to develop
 classification, segmentation, and detection models for multiple modalities
@@ -41,6 +42,7 @@ There are some SOTA models and baselines in Scenic which were either developed
 using Scenic, or have been reimplemented in Scenic:
 
 Projects that were developed in Scenic or used it for their experiments:
+
 * [ViViT: A Video Vision Transformer](https://arxiv.org/abs/2103.15691)
 * [OmniNet: Omnidirectional Representations from Transformers](https://arxiv.org/abs/2103.01075)
 * [Attention Bottlenecks for Multimodal Fusion](https://arxiv.org/abs/2107.00135)
@@ -58,6 +60,7 @@ Projects that were developed in Scenic or used it for their experiments:
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 
 Baselines that were reproduced in Scenic:
+
 * [(ViT) An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929)
 * [(DETR) End-to-End Object Detection with Transformers](https://arxiv.org/abs/2005.12872)
 * [(CLIP) Learning Transferable Visual Models From Natural Language Supervision](https://arxiv.org/abs/2103.00020)
