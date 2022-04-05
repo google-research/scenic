@@ -483,11 +483,13 @@ class Add1DPositionEmbedding(nn.Module):
     max_len: int; Maximum possible length for the input. If None, the max_len is
       set to the inputs sequence length.
     posemb_init: Positional embedding initializer.
+    param_name: The name of the parameter that stores the positional embedding.
   """
 
   rescale_from: Optional[Sequence[int]] = None
   max_len: Optional[int] = None
   posemb_init: Optional[Initializer] = None
+  param_name: str = 'pos_embedding'
 
   @nn.compact
   def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:
@@ -515,7 +517,7 @@ class Add1DPositionEmbedding(nn.Module):
                                                                 pos_emb_shape,
                                                                 None)
     else:
-      pos_embedding = self.param('pos_embedding', self.posemb_init,
+      pos_embedding = self.param(self.param_name, self.posemb_init,
                                  pos_emb_shape)
     pe = pos_embedding[:, :length, :]
 
