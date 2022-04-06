@@ -69,6 +69,11 @@ def get_optimizer(config: ml_collections.ConfigDict) -> optimizers.OptimizerDef:
         eps=config.optimizer_configs.get('epsilon', 1e-8),
         weight_decay=config.optimizer_configs.get('weight_decay', 0.0),
     )
+  if config.optimizer == 'lars':
+    return optimizers.LARS(
+        learning_rate=config.lr_configs['base_learning_rate'],
+        beta=config.optimizer_configs.get('momentum', 0.9),
+        weight_decay=config.optimizer_configs.get('weight_decay', 0.0))
 
   else:
     raise NotImplementedError('Optimizer {} not implemented'.format(
