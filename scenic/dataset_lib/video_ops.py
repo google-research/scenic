@@ -30,6 +30,7 @@ from dmvr import builders
 from dmvr import processors as dmvr_processors
 import simclr.tf2.data_util as simclr_data
 import tensorflow as tf
+import tensorflow_probability as tfp
 from official.vision.image_classification import augment
 
 
@@ -402,129 +403,61 @@ def random_sample_sequence_with_centre(
   return output
 
 
-def cutout(big_image, pad_size, num_frames, replace=0) -> tf.Tensor:
-  """Apply cutout (https://arxiv.org/abs/1708.04552) to image.
-
-  This operation applies a (2*pad_size x 2*pad_size) mask of zeros to
-  a random location within `img`. The pixel values filled in will be of the
-  value `replace`. The located where the mask will be applied is randomly
-  chosen uniformly over the whole image.
+def _create_vectorized_fn(name, frames, prob, magnitude, replace_value,
+                          cutout_const, translate_const):
+  """Creates a function that applies `name` to all frames.
 
   Args:
-    big_image: An image Tensor of type uint8. Shape is [t * h, w, c]
-    pad_size: Specifies how big the zero mask that will be generated is that is
-      applied to the image. The mask will be of size (2*pad_size x 2*pad_size).
-    num_frames: Specifies the t dimension in the input shape.
-    replace: What pixel value to fill in the image in the area that has the
-      cutout mask applied to it.
+    name: Name of the function.
+    frames: The frames to apply the function to.
+    prob: the probability of actually applying this instead of applying the
+      identity function.
+    magnitude: magnitude of the distortion applied by the function.
+    replace_value: See augment module.
+    cutout_const:  See augment module.
+    translate_const: See augment module.
 
   Returns:
-    An image Tensor that is of type uint8.
+    A function that when called will return either a distorted version of
+    frames (with probability prob) or the untouched frames (with probability
+    1.0-prob).
   """
-  image = tf.reshape(big_image, [
-      num_frames, big_image.shape[0] // num_frames, big_image.shape[1],
-      big_image.shape[2]
-  ])
-  image_height = tf.shape(image)[1]
-  image_width = tf.shape(image)[2]
+  func = augment.NAME_TO_FUNC[name]
+  args = augment.level_to_arg(cutout_const, translate_const)[name](magnitude)
 
-  # Sample the center location in the image where the zero mask will be applied.
-  cutout_center_height = tf.random.uniform(
-      shape=[], minval=0, maxval=image_height, dtype=tf.int32)
-
-  cutout_center_width = tf.random.uniform(
-      shape=[], minval=0, maxval=image_width, dtype=tf.int32)
-
-  lower_pad = tf.maximum(0, cutout_center_height - pad_size)
-  upper_pad = tf.maximum(0, image_height - cutout_center_height - pad_size)
-  left_pad = tf.maximum(0, cutout_center_width - pad_size)
-  right_pad = tf.maximum(0, image_width - cutout_center_width - pad_size)
-
-  cutout_shape = [
-      image_height - (lower_pad + upper_pad),
-      image_width - (left_pad + right_pad)
-  ]
-  padding_dims = [[lower_pad, upper_pad], [left_pad, right_pad]]
-  mask = tf.pad(
-      tf.zeros(cutout_shape, dtype=image.dtype),
-      padding_dims,
-      constant_values=1)
-  mask = tf.expand_dims(mask, -1)
-  mask = tf.expand_dims(mask, 0)
-  mask = tf.tile(mask, [num_frames, 1, 1, 3])
-  image = tf.where(
-      tf.equal(mask, 0),
-      tf.ones_like(image, dtype=image.dtype) * replace, image)
-
-  big_image = tf.reshape(image, [num_frames * image_height, image_width, 3])
-  return big_image
-
-
-NAME_TO_FUNC = {
-    'AutoContrast': augment.autocontrast,
-    'Equalize': augment.equalize,
-    'Invert': augment.invert,
-    # 'Rotate': wrapped_rotate,
-    'Posterize': augment.posterize,
-    'Solarize': augment.solarize,
-    'SolarizeAdd': augment.solarize_add,
-    'Color': augment.color,
-    'Contrast': augment.contrast,
-    'Brightness': augment.brightness,
-    'Sharpness': augment.sharpness,
-    # 'ShearX': shear_x,
-    # 'ShearY': shear_y,
-    # 'TranslateX': translate_x,
-    # 'TranslateY': translate_y,
-    'Cutout': cutout,
-}
-
-# Functions that have a 'replace' parameter
-REPLACE_FUNCS = frozenset({
-    'Rotate',
-    'TranslateX',
-    'ShearX',
-    'ShearY',
-    'TranslateY',
-    'Cutout',
-})
-
-
-def _parse_policy_info(name, prob, level, replace_value, cutout_const,
-                       translate_const):
-  """Return the function that corresponds to `name` and update `level` param."""
-  func = NAME_TO_FUNC[name]
-  args = augment.level_to_arg(cutout_const, translate_const)[name](level)
-
-  if name in REPLACE_FUNCS:
+  if name in augment.REPLACE_FUNCS:
     # Add in replace arg if it is required for the function that is called.
     args = tuple(list(args) + [replace_value])
 
-  return func, prob, args
+  def vectorized_fn():
+    should_apply_op = tf.cast(
+        tf.floor(tf.random.uniform([], dtype=tf.float32) + prob), tf.bool)
+    return tf.cond(
+        should_apply_op,
+        lambda: tf.map_fn((lambda f: func(f, *args)), frames),  # pylint: disable=unnecessary-lambda
+        lambda: frames)
+  return vectorized_fn
 
 
 def distort_image_with_randaugment(frames,
                                    num_layers,
                                    magnitude,
+                                   skip_probability=0.5,
                                    cutout_const=40,
                                    translate_const=100):
-  """Applies the RandAugment policy to `image`.
-
-  The original rand_augment implementation is for images. To be temporally
-  consistent in video, we
-    -- Reshape the video clip [t, h, w, c] to [t * h, w, c]
-    -- Only apply functions that do not depend on spatial extent (ie rotate,
-        shear, translate)
-    -- We do, however, use a modified cutout.
+  """Applies the RandAugment policy to `frames`.
 
   Args:
-    frames: `Tensor` of shape [t, h, w, 3] representing an image.
+    frames: `Tensor` of shape [t, h, w, 3] with values in range [0-225] (will
+      be clipped to this range if necessary) that represents a video.
     num_layers: Integer, the number of augmentation transformations to apply
-      sequentially to an image. Represented as (N) in the paper. Usually best
+      sequentially to the frames. Represented as (N) in the paper. Usually best
       values will be in the range [1, 3].
     magnitude: Integer, shared magnitude across all augmentation operations.
       Represented as (M) in the paper. Usually best values are in the range [5,
       10].
+    skip_probability: the probability of picking the identity function as
+      an augmentation (i.e., the probability of skipping a layer).
     cutout_const: multiplier for applying cutout.
     translate_const: multiplier for applying translation.
 
@@ -532,61 +465,46 @@ def distort_image_with_randaugment(frames,
     The augmented version of `frames`.
   """
   available_ops = [
-      'AutoContrast',
-      'Equalize',
-      'Invert',
-      'Posterize',
-      'Solarize',
-      'Color',
-      'Contrast',
-      'Brightness',
-      'Sharpness',
-      'Cutout',
-      'SolarizeAdd',
-      # 'Rotate', 'ShearX', 'ShearY', 'TranslateX', 'TranslateY',
+      ('AutoContrast', 0.025),
+      ('Equalize', 0.005),
+      ('Invert', 0.0),
+      ('Posterize', 0.0),
+      ('Solarize', 0.005),
+      ('Color', 0.025),
+      ('Contrast', 0.005),
+      ('Brightness', 0.005),
+      ('Sharpness', 0.025),
+      # 'Cutout',
+      ('SolarizeAdd', 0.005),
+      ('Rotate', 0.3),
+      ('ShearX', 0.2),
+      ('ShearY', 0.2),
+      ('TranslateX', 0.1),
+      ('TranslateY', 0.1),
   ]
 
   input_shape = frames.shape
-  num_frames = input_shape[0]
-  image = tf.reshape(frames, [-1, frames.shape[2], frames.shape[3]])
-  input_image_type = image.dtype
+  dtype = frames.dtype
 
-  if input_image_type != tf.uint8:
-    image = tf.clip_by_value(image, 0.0, 255.0)
-    image = tf.cast(image, dtype=tf.uint8)
+  if dtype != tf.uint8:
+    frames = tf.clip_by_value(frames, 0.0, 255.0)
+    frames = tf.cast(frames, dtype=tf.uint8)
 
   replace_value = [128] * 3
-  min_prob, max_prob = 0.2, 0.8
-
+  keep_prob = 1.0 - skip_probability
+  op_dist = tfp.distributions.Categorical(probs=[p for _, p in available_ops])
   for _ in range(num_layers):
-    op_to_select = tf.random.uniform([],
-                                     maxval=len(available_ops) + 1,
-                                     dtype=tf.int32)
-
+    # Create list of all possible augmentations of the current frames
     branch_fns = []
-    for (i, op_name) in enumerate(available_ops):
-      prob = tf.random.uniform([],
-                               minval=min_prob,
-                               maxval=max_prob,
-                               dtype=tf.float32)
-      func, _, args = _parse_policy_info(op_name, prob, magnitude,
-                                         replace_value, cutout_const,
-                                         translate_const)
+    for op_name, _ in available_ops:
+      fn = _create_vectorized_fn(op_name, frames, magnitude, keep_prob,
+                                 replace_value, cutout_const, translate_const)
+      branch_fns.append(fn)
 
-      if op_name == 'Cutout':
-        args = (args[0], num_frames)
-
-      branch_fns.append((
-          i,
-          # pylint:disable=g-long-lambda
-          lambda selected_func=func, selected_args=args: selected_func(
-              image, *selected_args)))
-      # pylint:enable=g-long-lambda
-
-    image = tf.switch_case(
-        branch_index=op_to_select,
+    frames = tf.switch_case(
+        branch_index=op_dist.sample(),
         branch_fns=branch_fns,
-        default=lambda: tf.identity(image))
+        default=lambda: tf.identity(frames))
 
-  image = tf.cast(image, dtype=input_image_type)
-  return tf.reshape(image, input_shape)
+  frames = tf.cast(frames, dtype=dtype)
+  return tf.reshape(frames, input_shape)
