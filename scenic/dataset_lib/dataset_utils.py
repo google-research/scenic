@@ -276,7 +276,7 @@ def load_split_from_tfds(dataset_name,
     dataset_name: str; Name of the dataset to be used to load from tfds.
     batch_size: int; The batch size returned by the data pipeline.
     split: str; Name of  the split to be loaded.
-    data_dir: srt; Data directory.
+    data_dir: str; Data directory.
     preprocess_example: function; A function that given an example, returns the
       preprocessed example. Note that the preprocessing is done BEFORE caching
       to re-use them.
