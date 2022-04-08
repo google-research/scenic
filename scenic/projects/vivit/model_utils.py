@@ -388,21 +388,27 @@ def init_posemb(to_params,
       ntok = posemb.shape[1]
       if restored_model_cfg.model.classifier == 'token':
         # The first token is the CLS token.
-        cls_tok = restored_posemb[:, :1]
         restored_posemb_grid = restored_posemb[0, 1:]
+        if config.model.classifier == 'token':
+          # CLS token in restored model and in target.
+          cls_tok = restored_posemb[:, :1]
+          ntok -= 1
+        else:
+          # CLS token in restored model, but not target.
+          cls_tok = restored_posemb[:, :0]
       else:
-        cls_tok = restored_posemb[:, :0]
         restored_posemb_grid = restored_posemb[0]
-      if config.model.classifier == 'token':
-        ntok -= 1
-
+        if config.model.classifier == 'token':
+          # CLS token in target, but not restored model.
+          cls_tok = posemb[:, :1]
+          ntok -= 1
+        else:
+          # CLS token not in target or restored model.
+          cls_tok = restored_posemb[:, :0]
       if ((config.model.classifier == 'token') !=
           (restored_model_cfg.model.classifier == 'token')):
-        logging.warning('Only one of target and restored model uses'
-                        'classification token')
-        if len(restored_posemb_grid) == ntok:
-          # In case the following `if` is not going to run, lets add batch dim:
-          restored_posemb = restored_posemb_grid[None, ...]
+        logging.warning('Only one of target and restored model uses a '
+                        'classification token.')
 
       if len(restored_posemb_grid) != ntok:  # We need a resolution change.
         if is_temporal:
@@ -438,12 +444,16 @@ def init_posemb(to_params,
         else:
           raise AssertionError(
               'Unknown positional embedding size changing method')
-        # Attach the CLS token again.
-        if config.model.classifier == 'token':
-          restored_posemb = jnp.array(
-              np.concatenate([cls_tok, restored_posemb_grid], axis=1))
-        else:
-          restored_posemb = restored_posemb_grid
+      else:  # Sequence lengths are the same.
+        # Adds batch dimension.
+        restored_posemb_grid = restored_posemb_grid[None, ...]
+
+      # Attach the CLS token again.
+      if config.model.classifier == 'token':
+        restored_posemb = jnp.array(
+            np.concatenate([cls_tok, restored_posemb_grid], axis=1))
+      else:
+        restored_posemb = restored_posemb_grid
 
     to_params[posemb_name]['pos_embedding'] = restored_posemb
   else:
