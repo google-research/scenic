@@ -6,7 +6,7 @@
 
 ## What is MBT?
 
-MBT is a transformer based model for multimodal fusion in video introduced in "Attention Bottlenecks for Multimodal Fusion". The model
+MBT is a transformer based model for multimodal fusion in video introduced in ["Attention Bottlenecks for Multimodal Fusion"](https://proceedings.neurips.cc/paper/2021/file/76ba9f564ebbc35b1014ac498fafadd0-Paper.pdf) at NeurIPS 2021. The model
 restricts the flow of cross-modal information between latent units through tight
 fusion ‘bottlenecks’, that force the model to collect and ‘condense’ the most
 relevant inputs in each modality. Here the model is applied to RGB and
