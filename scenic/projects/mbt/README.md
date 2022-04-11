@@ -55,12 +55,12 @@ Note that the numbers are likely to fluctuate slightly as the test set for this 
 
 | Model           | Modalities  | Dataset       | mAP | Checkpoint                                                                                                                                                                                                                                         |
 |:------------:|:-----------:|:------------:|:---:|:----------------------------------------------------------------------------------------------------------------:|
-| MBT-B/16x2    | Spec  | AS-mini          |   30.9 | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-mini_spec)  |
-| MBT-B/16x2 FE | RGB  | AS-mini          | 27.0  | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-mini_rgb)  |
-| MBT-B/16x2 FE | RGB+Spec  | AS-mini           |  43.9   | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-mini_rgb-spec)  |
-| MBT-B/16x2 FE | Spec  | AS-500k          | 44.0   | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-500k_spec)  |
-| MBT-B/16x2 FE | RGB | AS-500K           |  33.9   | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-500k_rgb)  |
-| MBT-B/16x2 FE | RGB+Spec | AS-500K           |  52.3  | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-500k_rgb-spec)  |
+| MBT-B | Spec  | AS-mini          |   30.9 | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-mini_spec)  |
+| MBT-B | RGB  | AS-mini          | 27.0  | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-mini_rgb)  |
+| MBT-B | RGB+Spec  | AS-mini           |  43.9   | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-mini_rgb-spec)  |
+| MBT-B | Spec  | AS-500k          | 44.0   | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-500k_spec)  |
+| MBT-B | RGB | AS-500K           |  33.9   | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-500k_rgb)  |
+| MBT-B | RGB+Spec | AS-500K           |  52.3  | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-500k_rgb-spec)  |
 
 
 ## Citation
