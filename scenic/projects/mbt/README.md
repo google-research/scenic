@@ -6,7 +6,7 @@
 
 ## What is MBT?
 
-MBT is a transformer based model for multimodal fusion in video. The model
+MBT is a transformer based model for multimodal fusion in video introduced in "Attention Bottlenecks for Multimodal Fusion". The model
 restricts the flow of cross-modal information between latent units through tight
 fusion ‘bottlenecks’, that force the model to collect and ‘condense’ the most
 relevant inputs in each modality. Here the model is applied to RGB and
@@ -32,7 +32,8 @@ To train a model, please download a pretrained ViT image model trained using
 [Scenic](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines)
 or the [original implementation](https://github.com/google-research/vision_transformer).
 
-Additionally, pre-process the training dataset in the same way as done by the ViViT project [here](https://github.com/google-research/scenic/tree/main/scenic/projects/vivit/data/data.md).
+Additionally, pre-process the training dataset in the same way as done by the ViViT project [here](https://github.com/google-research/scenic/tree/main/scenic/projects/vivit/data/data.md). Spectrograms must be
+extracted following the details in Sec. 4.2 of the [paper](https://proceedings.neurips.cc/paper/2021/file/76ba9f564ebbc35b1014ac498fafadd0-Paper.pdf).
 
 An example command-line to train MBT-B/16x2 on the balanced AudioSet dataset (AS-mini in the paper)
 using this [config file](configs/audioset/balanced_audioset_base.py)
