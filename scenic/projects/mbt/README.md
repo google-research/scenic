@@ -45,7 +45,24 @@ $ python -m scenic.projects.mbt.main \
   --workdir=mbt_base/
 ```
 
-Pre-trained models will be released soon.
+
+## Model Zoo
+
+We release some pretrained MBT models trained under different settings. Checkpoints are provided as Scenic checkpoints compatible with
+[Flax](https://github.com/google/flax). AS-mini and AS-500K refer to different AudioSet training splits as described in the [paper](https://proceedings.neurips.cc/paper/2021/file/76ba9f564ebbc35b1014ac498fafadd0-Paper.pdf).
+Note that the numbers are likely to fluctuate slightly as the test set for this dataset varies when videos are taken down.
+
+
+| Model           | Modalities  | Dataset       | mAP | Checkpoint                                                                                                                                                                                                                                         |
+|:------------:|:-----------:|:------------:|:---:|:----------------------------------------------------------------------------------------------------------------:|
+| MBT-B/16x2    | Spec  | AS-mini          |   30.9 | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-mini_spec)  |
+| MBT-B/16x2 FE | RGB  | AS-mini          | 27.0  | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-mini_rgb)  |
+| MBT-B/16x2 FE | RGB+Spec  | AS-mini           |  43.9   | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-mini_rgb-spec)  |
+| MBT-B/16x2 FE | Spec  | AS-500k          | 44.0   | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-500k_spec)  |
+| MBT-B/16x2 FE | RGB | AS-500K           |  33.9   | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-500k_rgb)  |
+| MBT-B/16x2 FE | RGB+Spec | AS-500K           |  52.3  | [Checkpoint](https://storage.googleapis.com/scenic-bucket/mbt/mbtb32_as-500k_rgb-spec)  |
+
+
 ## Citation
 
 If you use MBT, please use the following BibTeX entry.
@@ -58,4 +75,6 @@ If you use MBT, please use the following BibTeX entry.
   year={2021}
 }
 ```
+
+
 
