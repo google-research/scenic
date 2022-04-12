@@ -94,12 +94,12 @@ def _replace_dict(model: PyTree,
       m_key = tuple(to_replace if k == name else k for k in m_key)
     # pytype: enable=attribute-error
     m_key_str = '/'.join(m_key)
+    if skip_regex and re.findall(skip_regex, m_key_str):
+      logging.info('Skip loading parameter %s.', m_key_str)
+      continue
     if m_key not in model_flat:
       logging.warning(
           '%s in checkpoint doesn\'t exist in model. Skip.', m_key_str)
-      continue
-    if skip_regex and re.findall(skip_regex, m_key_str):
-      logging.info('Skip loading parameter %s.', m_key_str)
       continue
     logging.info('Loading %s from checkpoint into model', m_key_str)
     model_flat[m_key] = m_params
