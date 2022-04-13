@@ -260,10 +260,11 @@ def three_spatial_crops(images, crop_size):
 
 
 def additional_augmentations(ds_factory, augmentation_params, crop_size,
-                             num_frames, zero_centering):
+                             num_frames, zero_centering, rgb_feature_name=None):
   """Apply additional data augmentations in the DMVR pre-processsing graph."""
 
-  rgb_feature_name = builders.IMAGE_FEATURE_NAME
+  if not rgb_feature_name:
+    rgb_feature_name = builders.IMAGE_FEATURE_NAME
 
   do_simclr_crop_resize = augmentation_params.get('do_simclr_crop_resize',
                                                   False)
