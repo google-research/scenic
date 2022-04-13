@@ -244,19 +244,22 @@ def augment_random_crop_flip(image,
   return image
 
 
-def normalize(image, dtype=tf.float32):
+def normalize(image, dtype=tf.float32, mean=0.0, std=255.0):
   """Normalizes the value of pixels in the given image.
 
   Args:
     image: `Tensor` representing an image binary of arbitrary size.
     dtype: Tensorflow data type, Data type of the image.
+    mean: `Float` representing mean subtracted from the image.
+    std: `Float` representing std divided from the image.
 
   Returns:
     A normalized image `Tensor`.
   """
   image = tf.cast(image, dtype=dtype)
   if dtype not in [tf.int32, tf.int64, tf.uint32, tf.uint64]:
-    image /= tf.constant(255.0, shape=[1, 1, 1], dtype=dtype)
+    image -= tf.constant(mean, shape=[1, 1, 1], dtype=dtype)
+    image /= tf.constant(std, shape=[1, 1, 1], dtype=dtype)
   return image
 
 

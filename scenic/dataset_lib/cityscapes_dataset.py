@@ -128,7 +128,8 @@ PIXELS_PER_CID = {
 }
 
 
-def preprocess_example(example, train, dtype=tf.float32, resize=None):
+def preprocess_example(example, train, dtype=tf.float32, resize=None,
+                       mean=0.0, std=255.0):
   """Preprocesses the given image.
 
   Args:
@@ -136,11 +137,14 @@ def preprocess_example(example, train, dtype=tf.float32, resize=None):
     train: bool; Whether to apply training-specific preprocessing or not.
     dtype: Tensorflow data type; Data type of the image.
     resize: sequence; [H, W] to which image and labels should be resized.
+    mean: `Float` representing mean subtracted from image during normalization.
+    std: `Float` representing std divided from image during normalization.
 
   Returns:
     An example dict as required by the model.
   """
-  image = dataset_utils.normalize(example['image_left'], dtype)
+  image = dataset_utils.normalize(example['image_left'], dtype=dtype, mean=mean,
+                                  std=std)
   mask = example['segmentation_label']
 
   # Resize test images (train images are cropped/resized during augmentation):
@@ -282,8 +286,14 @@ def get_dataset(*,
   target_size = dataset_configs.get('target_size', None)
 
   logging.info('Loading train split of the Cityscapes dataset.')
+
+  # pass alternative preprocess function
+  normalize_mean = dataset_configs.get('normalize_mean', 0.0)
+  normalize_std = dataset_configs.get('normalize_std', 255.0)
+
   preprocess_ex_train = functools.partial(
-      preprocess_example, train=True, dtype=dtype, resize=None)
+      preprocess_example, train=True, dtype=dtype, resize=None,
+      mean=normalize_mean, std=normalize_std)
   augment_ex = functools.partial(
       augment_example, dtype=dtype, resize=target_size, area_min=30,
       area_max=100)
@@ -308,7 +318,8 @@ def get_dataset(*,
 
   logging.info('Loading validation split of the Cityscapes dataset.')
   preprocess_ex_eval = functools.partial(
-      preprocess_example, train=False, dtype=dtype, resize=target_size)
+      preprocess_example, train=False, dtype=dtype, resize=target_size,
+      mean=normalize_mean, std=normalize_std)
   eval_ds, _ = dataset_utils.load_split_from_tfds(
       'cityscapes', eval_batch_size, split='validation',
       preprocess_example=preprocess_ex_eval)
