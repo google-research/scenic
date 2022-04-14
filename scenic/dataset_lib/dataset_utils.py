@@ -391,6 +391,8 @@ def target_to_one_hot(batch, num_classes):
 def mixup(batch: Dict['str', jnp.ndarray],
           alpha: float = 1.0,
           image_format: str = 'NHWC',
+          input_key: str = 'inputs',
+          label_key: str = 'label',
           rng: Optional[Any] = None) -> Dict['str', jnp.ndarray]:
   """Mixes images and labels within a single batch.
 
@@ -409,13 +411,17 @@ def mixup(batch: Dict['str', jnp.ndarray],
     alpha: float; Used to control the beta distribution that weight is sampled
       from.
     image_format: string; The format of the input images.
+    input_key: The key in the `batch` dictionary corresponding to the input
+      images. Default is `inputs`.
+    label_key: The key in the `batch` dictionary corresponding to the labels.
+      Default is `labels`.
     rng: JAX rng key. If given, JAX numpy will be used as the backend, and if
       None (default value), normal numpy will be used.
 
   Returns:
     Tuple (mixed_images, mixed_labels).
   """
-  images, labels = batch['inputs'], batch['label']
+  images, labels = batch[input_key], batch[label_key]
   if labels.shape[-1] == 1:
     raise ValueError('Mixup requires one-hot targets.')
   if 'N' not in image_format:
@@ -430,10 +436,12 @@ def mixup(batch: Dict['str', jnp.ndarray],
   else:
     np_backend = jnp  # JAX numpy
     weight = jax.random.beta(rng, alpha, alpha)
-  weight *= np_backend.ones((batch_size, 1))
+  label_weight_shape = np.ones((labels.ndim))
+  label_weight_shape[image_format.index('N')] = batch_size
+  weight *= np_backend.ones(label_weight_shape.astype(np_backend.int32))
 
   # Mixup labels.
-  batch['label'] = weight * labels + (1.0 - weight) * labels[::-1]
+  batch[label_key] = weight * labels + (1.0 - weight) * labels[::-1]
 
   # Mixup inputs.
   # Shape calculations use np to avoid device memory fragmentation:
@@ -444,7 +452,7 @@ def mixup(batch: Dict['str', jnp.ndarray],
   reverse = tuple(
       slice(images.shape[i]) if d != 'N' else slice(-1, None, -1)
       for i, d in enumerate(image_format))
-  batch['inputs'] = weight * images + (1.0 - weight) * images[reverse]
+  batch[input_key] = weight * images + (1.0 - weight) * images[reverse]
 
   return batch
 
