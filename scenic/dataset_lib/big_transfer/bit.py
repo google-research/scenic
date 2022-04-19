@@ -107,8 +107,10 @@ def get_dataset(*,
     assert shuffle_buffer_size is not None
     train_ds = dataset_utils.distribute(train_ds, dataset_service_address)
 
-  n_train_ex = dataset_utils.get_num_examples(dataset_configs.dataset,
-                                              dataset_configs.train_split)
+  n_train_ex = dataset_utils.get_num_examples(
+      dataset_configs.dataset,
+      dataset_configs.train_split,
+      data_dir=dataset_configs.get('dataset_dir'))
 
   maybe_pad_batches_train = functools.partial(
       dataset_utils.maybe_pad_batch, train=True, batch_size=batch_size)
@@ -148,21 +150,24 @@ def get_dataset(*,
 
     return valid_iter
 
-  def _get_num_eval_examples(dataset, split):
-    return dataset_utils.get_num_examples(dataset, split)
+  def _get_num_eval_examples(dataset, split, data_dir):
+    return dataset_utils.get_num_examples(dataset, split, data_dir)
 
   if isinstance(dataset_configs.val_split, str):
     valid_iter = _get_eval_iter(dataset_configs.dataset,
                                 dataset_configs.val_split,
                                 dataset_configs.pp_eval)
-    n_eval_ex = _get_num_eval_examples(dataset_configs.dataset,
-                                       dataset_configs.val_split)
+    n_eval_ex = _get_num_eval_examples(
+        dataset_configs.dataset,
+        dataset_configs.val_split,
+        data_dir=dataset_configs.get('dataset_dir'))
   else:
     valid_iter, n_eval_ex = {}, {}
     for eval_spec in dataset_configs.val_split:
       name, dataset, split, pp_eval = eval_spec
       valid_iter[name] = _get_eval_iter(dataset, split, pp_eval)
-      n_eval_ex[name] = _get_num_eval_examples(dataset, split)
+      n_eval_ex[name] = _get_num_eval_examples(
+          dataset, split, data_dir=dataset_configs.get('dataset_dir'))
 
   input_shape = (-1,) + tuple(train_ds.element_spec['inputs'].shape[1:])
 
