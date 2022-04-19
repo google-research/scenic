@@ -426,11 +426,13 @@ def mixup(batch: Dict['str', jnp.ndarray],
   # Setup the the numpy backend and prepare mixup weights.
   if rng is None:
     np_backend = np  # Ordinary numpy
-    weight = np_backend.random.beta(alpha, alpha)
+    weight = np_backend.random.beta(alpha, alpha, size=(batch_size, 1))
   else:
     np_backend = jnp  # JAX numpy
-    weight = jax.random.beta(rng, alpha, alpha)
-  weight *= np_backend.ones((batch_size, 1))
+    weight = jax.random.beta(rng, alpha, alpha, shape=(batch_size, 1))
+
+  # Make sure the original image has the higher weight during mixup
+  weight = np_backend.maximum(weight, 1.0 - weight)
 
   # Mixup labels.
   batch['label'] = weight * labels + (1.0 - weight) * labels[::-1]
