@@ -649,7 +649,7 @@ def get_data(dataset,
       split=split,
       shuffle_files=shuffle_files,
       data_dir=data_dir)
-  if split != 'train':
+  if 'train' not in split:
     dataset_service_address = None
   return make_pipeline(
       data=data,
