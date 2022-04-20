@@ -1,4 +1,3 @@
-# Lint as: python3
 """Data augmentation transforms for data loading."""
 
 from typing import Any, Dict
