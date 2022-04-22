@@ -4,11 +4,14 @@ Ported from:
 https://github.com/google-research/big_transfer/blob/master/bit_jax/models.py
 """
 
-from typing import Dict, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
+from absl import logging
 
+import flax
 import flax.linen as nn
 import jax.numpy as jnp
 import ml_collections
+from scenic.common_lib import debug_utils
 from scenic.model_lib.base_models.classification_model import ClassificationModel
 from scenic.model_lib.base_models.multilabel_classification_model import MultiLabelClassificationModel
 from scenic.model_lib.layers import nn_layers
@@ -245,6 +248,54 @@ class BitResNetClassificationModel(ClassificationModel):
 
   def default_flax_model_config(self) -> ml_collections.ConfigDict:
     return _get_default_configs_for_testing()
+
+  def init_from_train_state(
+      self, train_state: Any, restored_train_state: Any,
+      restored_model_cfg: ml_collections.ConfigDict) -> Any:
+    """Updates the train_state with data from `restored_train_state`.
+
+    This function is writen to be used for 'fine-tuning' experiments.
+    As defined in the ResNet definition above output head is called
+    `output_projection` and not loaded since often target tasks have a
+    new output head, possibly with different shape.
+
+    Args:
+      train_state: A raw TrainState for the model.
+      restored_train_state: A TrainState that is loaded with parameters/state of
+        a pretrained model.
+      restored_model_cfg: Configuration of the model from which the
+        `restored_train_state` come from. Usually used for some asserts.
+
+    Returns:
+      Updated train_state.
+    """
+    del restored_model_cfg
+    params = flax.core.unfreeze(train_state.optimizer.target)
+    restored_params = flax.core.unfreeze(restored_train_state.optimizer.target)
+    # Check all parameters are loaded.
+    params_to_load = set(params.keys())
+    params_to_load.remove('output_projection')
+    for pname, pvalue in restored_params.items():
+      if pname == 'output_projection':
+        # The `output_projection` is used as the name of the linear lyaer at the
+        # head of the model that maps the representation to the label space.
+        # By default, for finetuning to another dataset, we drop this layer as
+        # the label space is different.
+        continue
+      else:
+        if pname not in params:
+          raise ValueError(f'Loaded parameter {pname} doesnt exist in params.')
+        params[pname] = pvalue
+        params_to_load.remove(pname)
+    if params_to_load:
+      raise ValueError(
+          f'Paramater groups that are not loaded: {params_to_load}')
+    logging.info('Parameter summary after initialising from train state:')
+    debug_utils.log_param_shapes(params)
+    return train_state.replace(
+        optimizer=train_state.optimizer.replace(
+            target=flax.core.freeze(params)),
+        model_state=restored_train_state.model_state)
 
 
 class BitResNetMultiLabelClassificationModel(MultiLabelClassificationModel):

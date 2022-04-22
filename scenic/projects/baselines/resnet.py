@@ -204,7 +204,7 @@ class ResNetClassificationModel(ClassificationModel):
     restored_params = flax.core.unfreeze(restored_train_state.optimizer.target)
     for pname, pvalue in restored_params.items():
       if pname == 'output_projection':
-        # The `output_projection` is used as the name of the linear lyaer at the
+        # The `output_projection` is used as the name of the linear layer at the
         # head of the model that maps the representation to the label space.
         # By default, for finetuning to another dataset, we drop this layer as
         # the label space is different.
