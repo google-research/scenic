@@ -33,6 +33,7 @@ Note: you can also use ImageNet input pipeline from big transfer pipeline:
 
   # shuffle_buffer_size is per host, so small-ish is ok.
   config.dataset_configs.shuffle_buffer_size = 250_000
+
 ```
 
 """
@@ -78,7 +79,13 @@ def get_config(runlocal=''):
                              'B': 12,
                              'L': 24,
                              'H': 32}[version]
-  config.model.representation_size = None
+  # Representation Size has to be set to the hidden size, to match
+  # previous ImageNet-1k results.
+  config.model.representation_size = {'Ti': 192,
+                                      'S': 384,
+                                      'B': 768,
+                                      'L': 1024,
+                                      'H': 1280}[version]
   config.model.classifier = 'token'
   config.model.attention_dropout_rate = 0.
   config.model.dropout_rate = 0.1
@@ -107,7 +114,7 @@ def get_config(runlocal=''):
   base_lr = 3e-3
   config.lr_configs = ml_collections.ConfigDict()
   config.lr_configs.learning_rate_schedule = 'compound'
-  config.lr_configs.factors = 'constant*linear_warmup*linear_decay'
+  config.lr_configs.factors = 'constant*linear_warmup*cosine_decay'
   config.lr_configs.total_steps = total_steps
   config.lr_configs.end_learning_rate = 1e-5
   config.lr_configs.warmup_steps = 10_000
