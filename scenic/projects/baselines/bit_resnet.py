@@ -140,6 +140,8 @@ class BitResNet(nn.Module):
       lower that number by swapping strides with dilation in later stages. This
       is common in cases where stride 32 is too large, e.g., in dense prediciton
       tasks.
+    spatial_mean: Whether to perform a mean filter across the spatial dimensions
+      before the logits layer (default).
   """
 
   num_outputs: Optional[int] = 1000
@@ -147,6 +149,7 @@ class BitResNet(nn.Module):
   width_factor: int = 1
   num_layers: int = 50
   max_output_stride: int = 32
+  spatial_mean: bool = True
 
   @nn.compact
   def __call__(self,
@@ -207,7 +210,11 @@ class BitResNet(nn.Module):
 
     if self.num_outputs:
       # Head.
-      x = jnp.mean(x, axis=(1, 2))
+      if self.spatial_mean:
+        x = jnp.mean(x, axis=(1, 2))
+      else:
+        bs, h, w, c = x.shape
+        x = x.reshape((bs, h*w, c))
       x = nn_layers.IdentityLayer(name='pre_logits')(x)
       x = nn.Dense(
           self.num_outputs,
