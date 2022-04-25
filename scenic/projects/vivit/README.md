@@ -42,7 +42,7 @@ for inference.
 "FE" refers to ViViT Factorised Encoder models, as described in the [paper](https://arxiv.org/abs/2103.15691).
 Accuracy is reported from "multi-view evaluation", as common in the literature.
 In the table below, `x * y` denotes `x` temporal views, and `y` spatial views.
-All the models below are take in 32 frames as input.
+All the models below take in 32 frames as input.
 
 | Model           | Dataset       | Top 1 Accuracy | Views | Config                                                                                                             | Checkpoint                                                                                                                                                                                                                                         |
 |:------------:|:-----------:|:------------:|:---:|:----------------------------------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
