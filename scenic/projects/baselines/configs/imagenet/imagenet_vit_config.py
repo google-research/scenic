@@ -80,7 +80,7 @@ def get_config(runlocal=''):
                              'L': 24,
                              'H': 32}[version]
   # Representation Size has to be set to the hidden size, to match
-  # previous ImageNet-1k results.
+  # ImageNet-1k results reported in the original ViT paper.
   config.model.representation_size = {'Ti': 192,
                                       'S': 384,
                                       'B': 768,
@@ -116,6 +116,7 @@ def get_config(runlocal=''):
   config.lr_configs.learning_rate_schedule = 'compound'
   config.lr_configs.factors = 'constant*linear_warmup*cosine_decay'
   config.lr_configs.total_steps = total_steps
+  config.lr_configs.steps_per_cycle = total_steps
   config.lr_configs.end_learning_rate = 1e-5
   config.lr_configs.warmup_steps = 10_000
   config.lr_configs.base_learning_rate = base_lr
