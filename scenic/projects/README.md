@@ -42,6 +42,14 @@
     > bottlenecks" for modality fusion at multiple layers.
     > Details can be found in the [paper](https://arxiv.org/abs/2201.04100).
 
+*   [MTV](mtv)
+
+    > MTV presents a state-of-the-art transformer based architecture for video
+    > classification. MTV consists of separate encoders to represent different
+    > views of the input video with lateral connections and a global encoder to
+    > fuse information across views. More details are in the
+    > [paper](https://arxiv.org/abs/2201.04288).
+
 
 <a name="projects"></a>
 ## Scenic projects
