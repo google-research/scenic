@@ -32,6 +32,7 @@ import jax.numpy as jnp
 import ml_collections
 import numpy as np
 from scenic.common_lib import debug_utils
+from scenic.dataset_lib import dataset_utils
 from scenic.dataset_lib import datasets
 from scenic.train_lib_deprecated import optimizers
 from tensorflow.io import gfile
@@ -243,15 +244,38 @@ def initialize_model_with_pytree(
   return init_params, init_model_state, num_trainable_params, gflops
 
 
-def get_dataset(config: ml_collections.ConfigDict, data_rng: PRNGKey, *,
-                dataset_service_address: Optional[str] = None):
-  """Creates dataset from config."""
+def get_dataset(
+    config: ml_collections.ConfigDict,
+    data_rng: PRNGKey,
+    *,
+    dataset_service_address: Optional[str] = None,
+    dataset_name: Optional[str] = None,
+    dataset_configs: Optional[ml_collections.ConfigDict] = None
+) -> dataset_utils.Dataset:
+  """Creates dataset.
+
+  By default, the values in the config file are used.
+  However, if the optional `dataset_name` and `dataset_configs` are passed,
+    those are used instead.
+
+  Args:
+    config: The configuration of the experiment.
+    data_rng: Random number generator key to use for the dataset.
+    dataset_service_address: Used when using the tf.data.experimental.service
+    dataset_name: Name of dataset to load, if not reading from the config.
+    dataset_configs: Configuration of the dataset, if not reading directly
+      from the config.
+
+  Returns:
+    A dataset_utils.Dataset object.
+  """
   device_count = jax.device_count()
   logging.info('device_count: %d', device_count)
   logging.info('num_hosts : %d', jax.process_count())
   logging.info('host_id : %d', jax.process_index())
 
-  dataset_builder = datasets.get_dataset(config.dataset_name)
+  dataset_name = dataset_name or config.dataset_name
+  dataset_builder = datasets.get_dataset(dataset_name)
 
   batch_size = config.batch_size
   if batch_size % device_count > 0:
@@ -276,6 +300,7 @@ def get_dataset(config: ml_collections.ConfigDict, data_rng: PRNGKey, *,
                      'config.shuffle_seed = None to your config if you want '
                      'to run with dataset service.')
 
+  dataset_configs = dataset_configs or config.get('dataset_configs')
   dataset = dataset_builder(
       batch_size=local_batch_size,
       eval_batch_size=eval_local_batch_size,
@@ -283,7 +308,7 @@ def get_dataset(config: ml_collections.ConfigDict, data_rng: PRNGKey, *,
       dtype_str=config.data_dtype_str,
       rng=data_rng,
       shuffle_seed=shuffle_seed,
-      dataset_configs=config.get('dataset_configs'),
+      dataset_configs=dataset_configs,
       dataset_service_address=dataset_service_address)
 
   return dataset
