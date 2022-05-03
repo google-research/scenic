@@ -14,11 +14,14 @@
 
 """Common neural network funcitonality that doesn't require parameters."""
 
+from typing import Callable, Iterable
 import flax.linen as nn
 import jax
 from jax import lax
 import jax.numpy as jnp
 import numpy as np
+
+Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
 
 
 def extract_image_patches(lhs,
@@ -490,3 +493,28 @@ def compute_1d_relative_distance(query_len: int, key_len: int) -> np.ndarray:
   # such that the smallest index is zero.
   relative_positions -= np.min(relative_positions)
   return relative_positions
+
+
+def truncated_normal_initializer(stddev: float = 1e-2,
+                                 dtype: jnp.dtype = jnp.float_) -> Initializer:
+  """Returns a truncated normal parameter initializer.
+
+  The truncation bounds are -2 and +2 standard deviations.
+
+  Args:
+    stddev: The standard deviation of the truncated normal distribution.
+    dtype: The data type to use.
+
+  Returns:
+    Initializer function compatible with Flax modules.
+  """
+  def init(key, shape, dtype=dtype):
+    dtype = jax.dtypes.canonicalize_dtype(dtype)
+    if jnp.issubdtype(dtype, jnp.floating):
+      # constant is stddev of standard normal truncated to (-2, 2)
+      s = stddev / jnp.array(.87962566103423978, dtype)
+    else:
+      # constant is stddev of complex standard normal truncated to 2
+      s = stddev / jnp.array(.95311164380491208, dtype)
+    return jax.random.truncated_normal(key, -2, 2, shape, dtype) * s
+  return init

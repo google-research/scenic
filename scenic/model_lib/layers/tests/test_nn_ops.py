@@ -19,6 +19,7 @@ import functools
 from absl.testing import absltest
 from absl.testing import parameterized
 import flax.linen as nn
+import jax
 import jax.numpy as jnp
 import numpy as np
 from scenic.model_lib.layers import nn_ops
@@ -233,6 +234,14 @@ class NNOpsTest(parameterized.TestCase):
     self.assertEqual(relative_distance.min(), 0)
     self.assertEqual(relative_distance.max(), len_q + len_k - 2)
 
+  def test_truncated_normal_init(self):
+    """Tests truncated_normal_initializer."""
+    target_stddev = 0.4
+    key = jax.random.PRNGKey(42)
+    shape = (128, 128, 128)
+    init_fn = nn_ops.truncated_normal_initializer(stddev=target_stddev)
+    x = init_fn(key, shape, jnp.float32)
+    self.assertAlmostEqual(target_stddev, jnp.std(x), places=2)
 
 if __name__ == '__main__':
   absltest.main()
