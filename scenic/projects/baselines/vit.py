@@ -220,6 +220,8 @@ class ViT(nn.Module):
     elif self.classifier in ('gap', 'gmp', 'gsp'):
       fn = {'gap': jnp.mean, 'gmp': jnp.max, 'gsp': jnp.sum}[self.classifier]
       x = fn(x, axis=1)
+    else:
+      raise ValueError(f'Unknown classifier {self.classifier}')
 
     if self.representation_size is not None:
       x = nn.Dense(self.representation_size, name='pre_logits')(x)
