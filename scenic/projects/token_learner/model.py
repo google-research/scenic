@@ -114,10 +114,8 @@ class TokenLearnerModuleV11(nn.Module):
   """TokenLearner module Version 1.1, using slightly different conv. layers.
 
   Instead of using 4 conv. layers with small channels to implement spatial
-  attention, this version uses 2 grouped conv. layers with more channels. It
-  also uses softmax instead of sigmoid. We confirmed that this version works
-  better in general when having limited training data (except when using
-  ViT-Ti), such as training with ImageNet1K from scratch.
+  attention, this version uses a MLP with gelu inbetween. It also uses softmax
+  instead of sigmoid. We confirmed that this version works better in general.
 
   Attributes:
     num_tokens: Number of tokens.
@@ -211,11 +209,11 @@ class TokenFuser(nn.Module):
     if self.use_normalization:
       inputs = nn.LayerNorm(name='fuser_mix_norm1')(inputs)
 
-    inputs = jnp.transpose(inputs, axes=[0, 2, 1])
+    inputs = jnp.transpose(inputs, axes=[0, 2, 1])  # Shape: [bs, c, n_token].
     inputs = nn.Dense(
         num_tokens,
         kernel_init=nn.initializers.zeros)(inputs)
-    inputs = jnp.transpose(inputs, axes=[0, 2, 1])
+    inputs = jnp.transpose(inputs, axes=[0, 2, 1])  # Shape: [bs, n_token, c].
 
     if self.use_normalization:
       inputs = nn.LayerNorm(name='fuser_mix_norm2')(inputs)
@@ -227,10 +225,11 @@ class TokenFuser(nn.Module):
         dropout_rate=self.dropout_rate,
         activation_fn=nn.gelu,
         name='token_masking')(
-            original, deterministic=deterministic)
+            original, deterministic=deterministic)  # Shape: [bs, h*w, n_token].
     mix = nn.sigmoid(mix)
 
-    inputs = jnp.einsum('...sc,...hs->...hc', inputs, mix)
+    inputs = jnp.einsum('...sc,...hs->...hc',
+                        inputs, mix)  # Shape: [bs, h*w, c].
 
     inputs = nn.Dropout(rate=self.dropout_rate)(
         inputs, deterministic=deterministic)
@@ -269,7 +268,7 @@ class EncoderMod(nn.Module):
   temporal_dimensions: int = 1
   num_tokens: int = 8
   tokenlearner_loc: int = 12
-  use_v11: bool = False
+  use_v11: bool = True
   dtype: Any = jnp.float32
 
   @nn.compact
@@ -356,7 +355,7 @@ class EncoderModFuser(nn.Module):
   temporal_dimensions: int = 1
   num_tokens: int = 8
   tokenlearner_loc: int = 12
-  use_v11: bool = False
+  use_v11: bool = True
   dtype: Any = jnp.float32
 
   @nn.compact
@@ -481,7 +480,7 @@ class TokenLearnerViT(nn.Module):
     else:
       raise ValueError('Unknown tokenizer type')
 
-    use_v11 = self.tokenizer.get('use_v11', False)
+    use_v11 = self.tokenizer.get('use_v11', True)
 
     if self.tokenizer.use_tokenfuse:
       x = EncoderModFuser(
@@ -579,7 +578,7 @@ class TokenLearnerViTRepresentation(nn.Module):
             x)
     x = jnp.reshape(x, [n, -1, self.hidden_size])
 
-    use_v11 = self.tokenizer.get('use_v11', False)
+    use_v11 = self.tokenizer.get('use_v11', True)
 
     if self.tokenizer.use_tokenfuse:
       x = EncoderModFuser(
