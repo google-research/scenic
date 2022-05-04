@@ -18,12 +18,12 @@ from scenic.common_lib import video_utils
 from scenic.dataset_lib import dataset_utils
 from scenic.model_lib.base_models import base_model
 from scenic.projects.svvit import metrics as sv_metric
-from scenic.train_lib import lr_schedules
-from scenic.train_lib import optimizers
-from scenic.train_lib import pretrain_utils
-from scenic.train_lib import train_utils
-from scenic.train_lib.google.transfer import fewshot_utils
-from scenic.train_lib.google.transfer import linear_probe_utils
+from scenic.train_lib_deprecated import lr_schedules
+from scenic.train_lib_deprecated import optimizers
+from scenic.train_lib_deprecated import pretrain_utils
+from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib_deprecated.google.transfer import fewshot_utils
+from scenic.train_lib_deprecated.google.transfer import linear_probe_utils
 
 # Aliases for custom types:
 Batch = Dict[str, jnp.ndarray]

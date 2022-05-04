@@ -31,10 +31,9 @@ import numpy as np
 from scenic.dataset_lib import dataset_utils
 from scenic.model_lib.base_models import base_model
 from scenic.model_lib.base_models import model_utils
-from scenic.train_lib import lr_schedules
-from scenic.train_lib import optimizers
-from scenic.train_lib import train_utils
-
+from scenic.train_lib_deprecated import lr_schedules
+from scenic.train_lib_deprecated import optimizers
+from scenic.train_lib_deprecated import train_utils
 
 # Aliases for custom types:
 Batch = Dict[str, jnp.ndarray]
@@ -64,9 +63,9 @@ def train_step(
   (batch) arguments are donated to the computation.
 
   Args:
-    train_state: The state of training including the current
-      global_step, model_state, rng, and optimizer. The buffer of this argument
-      can be donated to the computation.
+    train_state: The state of training including the current global_step,
+      model_state, rng, and optimizer. The buffer of this argument can be
+      donated to the computation.
     batch: A single batch of data. The buffer of this argument can be donated to
       the computation.
     flax_model: A Flax model.
@@ -77,8 +76,8 @@ def train_step(
     metrics_fn: A metrics function that given logits and batch of data,
       calculates the metrics as well as the loss.
     config: Configurations of the experiment.
-    debug: Whether the debug mode is enabled during training.
-      `debug=True` enables model specific logging/storing some values using
+    debug: Whether the debug mode is enabled during training. `debug=True`
+      enables model specific logging/storing some values using
       jax.host_callback.
 
   Returns:
@@ -169,8 +168,8 @@ def eval_step(
     flax_model: A Flax model.
     metrics_fn: A metrics function, that given logits and batch of data,
       calculates the metrics as well as the loss.
-    debug: Whether the debug mode is enabled during evaluation.
-      `debug=True` enables model specific logging/storing some values using
+    debug: Whether the debug mode is enabled during evaluation. `debug=True`
+      enables model specific logging/storing some values using
       jax.host_callback.
 
   Returns:
@@ -335,8 +334,10 @@ def train(
     eval_all_confusion_mats = []
     # Sync model state across replicas.
     train_state = train_utils.sync_model_state_across_replicas(train_state)
+
     def to_cpu(x):
       return jax.device_get(dataset_utils.unshard(jax_utils.unreplicate(x)))
+
     for _ in range(steps_per_eval):
       eval_batch = next(dataset.valid_iter)
       e_batch, e_predictions, e_metrics, confusion_matrix = eval_step_pmapped(

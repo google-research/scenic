@@ -70,7 +70,7 @@ are registered directly in `model_lib.models`.
 Trainers implement the training and evaluation loops of the model. There are
 already standard trainers that are provided in Scenic for classification,
 segmentation, and adaptation (located in the `train_lib` module).
-These trainers are directly registered  in `train_lib/trainers` and given the
+These trainers are directly registered  in `train_lib_deprecated/trainers` and given the
 careful optimization of these trainers for fast and efficient training on
 accelerators (in particular TPUs), they can be forked by projects for further
 customization. Projects need to register the new trainers they define within
@@ -96,7 +96,7 @@ that maps a string name to an object, for instance, a python dictionary.
 Scenic defines a dataset registry that uses ad-hoc importing to lazy-load
 the code for the input pipeline of a requested dataset. This registry lives in
 `dataset_lib/datasets.py`. There are common trainers and models that are
-registered in  `train_lib/trainers.py` and `model_lib/models.py`. However,
+registered in  `train_lib_deprecated/trainers.py` and `model_lib/models.py`. However,
 a project can define its own dataset, model, and trainer and make a small
 registry for these objects within the project, e.g. in the project's `main.py`
 so that the right model, trainer, and dataset are selectable using the

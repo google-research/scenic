@@ -10,7 +10,7 @@ import ml_collections
 from scenic import app
 from scenic.projects.vivit import model as vivit_model
 from scenic.projects.vivit import trainer as vivit_trainer
-from scenic.train_lib import train_utils
+from scenic.train_lib_deprecated import train_utils
 
 FLAGS = flags.FLAGS
 

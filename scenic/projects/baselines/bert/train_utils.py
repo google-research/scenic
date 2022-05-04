@@ -14,9 +14,9 @@ import jax.profiler
 import ml_collections
 import numpy as np
 from scenic.common_lib import debug_utils
-from scenic.train_lib import optimizers
-from scenic.train_lib import train_utils
-from scenic.train_lib.google.transfer import fewshot_utils
+from scenic.train_lib_deprecated import optimizers
+from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib_deprecated.google.transfer import fewshot_utils
 import scipy
 import sklearn.metrics
 

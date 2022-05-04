@@ -17,8 +17,8 @@ from scenic.model_lib.base_models import classification_model
 from scenic.model_lib.base_models import multilabel_classification_model
 from scenic.projects.vivit import evaluation_lib
 from scenic.projects.vivit import train_utils as vivit_train_utils
-from scenic.train_lib import optimizers
-from scenic.train_lib import train_utils
+from scenic.train_lib_deprecated import optimizers
+from scenic.train_lib_deprecated import train_utils
 import tensorflow as tf
 
 

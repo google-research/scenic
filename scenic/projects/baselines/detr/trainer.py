@@ -19,9 +19,9 @@ from scenic.dataset_lib import dataset_utils
 
 
 from scenic.projects.baselines.detr import train_utils as detr_train_utils
-from scenic.train_lib import lr_schedules
-from scenic.train_lib import pretrain_utils
-from scenic.train_lib import train_utils
+from scenic.train_lib_deprecated import lr_schedules
+from scenic.train_lib_deprecated import pretrain_utils
+from scenic.train_lib_deprecated import train_utils
 
 
 def get_train_step(flax_model,

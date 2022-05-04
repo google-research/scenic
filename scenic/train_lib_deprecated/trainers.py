@@ -14,8 +14,8 @@
 
 """Registry for the available trainers."""
 
-from scenic.train_lib import classification_trainer
-from scenic.train_lib import segmentation_trainer
+from scenic.train_lib_deprecated import classification_trainer
+from scenic.train_lib_deprecated import segmentation_trainer
 
 ALL_TRAINERS = {
     'classification_trainer': classification_trainer.train,

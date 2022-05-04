@@ -19,8 +19,8 @@ import PIL.ImageFont
 from scenic.common_lib import image_utils
 from scenic.dataset_lib.coco_dataset import coco_eval
 from scenic.model_lib.base_models import box_utils
-from scenic.train_lib import optimizers as scenic_optimizers
-from scenic.train_lib import train_utils
+from scenic.train_lib_deprecated import optimizers as scenic_optimizers
+from scenic.train_lib_deprecated import train_utils
 import scipy
 import tensorflow as tf
 

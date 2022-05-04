@@ -16,8 +16,8 @@ from scenic.projects.svvit import xvit
 from scenic.projects.svvit.datasets import pileup_coverage_dataset
 from scenic.projects.svvit.datasets import pileup_window_dataset
 # pylint: enable=unused-import
-from scenic.train_lib import train_utils
-from scenic.train_lib import trainers
+from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib_deprecated import trainers
 
 FLAGS = flags.FLAGS
 

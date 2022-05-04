@@ -14,8 +14,8 @@ import ml_collections
 
 import numpy as np
 from scenic.common_lib import debug_utils
-from scenic.train_lib import optimizers
-from scenic.train_lib import train_utils
+from scenic.train_lib_deprecated import optimizers
+from scenic.train_lib_deprecated import train_utils
 
 # JAX team is working on type annotation for pytree:
 # https://github.com/google/jax/issues/1555

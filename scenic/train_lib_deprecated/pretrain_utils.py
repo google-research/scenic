@@ -25,7 +25,7 @@ from flax.training import checkpoints
 import jax
 import numpy as np
 
-from scenic.train_lib import train_utils
+from scenic.train_lib_deprecated import train_utils
 from tensorflow.io import gfile
 
 # JAX team is working on type annotation for pytree:

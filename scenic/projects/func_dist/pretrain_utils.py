@@ -5,7 +5,7 @@ import jax
 import ml_collections
 from scenic.projects.func_dist import model as scenic_model
 from scenic.projects.func_dist import train_utils
-from scenic.train_lib import pretrain_utils
+from scenic.train_lib_deprecated import pretrain_utils
 
 
 

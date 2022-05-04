@@ -17,10 +17,10 @@ import numpy as np
 from scenic.dataset_lib import dataset_utils
 from scenic.projects.baselines.bert import bert_base_model
 from scenic.projects.baselines.bert import train_utils as bert_train_utils
-from scenic.train_lib import lr_schedules
-from scenic.train_lib import optimizers
-from scenic.train_lib import pretrain_utils
-from scenic.train_lib import train_utils
+from scenic.train_lib_deprecated import lr_schedules
+from scenic.train_lib_deprecated import optimizers
+from scenic.train_lib_deprecated import pretrain_utils
+from scenic.train_lib_deprecated import train_utils
 
 
 def train_step(

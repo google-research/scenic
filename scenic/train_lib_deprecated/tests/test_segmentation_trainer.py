@@ -28,9 +28,9 @@ import jax.random
 import ml_collections
 import numpy as np
 from scenic.model_lib.base_models import segmentation_model
-from scenic.train_lib import optimizers
-from scenic.train_lib import segmentation_trainer
-from scenic.train_lib import train_utils
+from scenic.train_lib_deprecated import optimizers
+from scenic.train_lib_deprecated import segmentation_trainer
+from scenic.train_lib_deprecated import train_utils
 from sklearn import metrics as sk_metrics
 import tensorflow as tf
 

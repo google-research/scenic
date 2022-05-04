@@ -15,8 +15,8 @@ import ml_collections
 import numpy as np
 from scenic.dataset_lib import dataset_utils
 from scenic.model_lib.base_models import model_utils
-from scenic.train_lib import optimizers
-from scenic.train_lib import train_utils
+from scenic.train_lib_deprecated import optimizers
+from scenic.train_lib_deprecated import train_utils
 import seaborn as sns
 
 # Aliases for custom types:
@@ -407,4 +407,3 @@ def render_confusion_matrices(confusion_matrices: List[Array],
   image = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8)
   image = image.reshape(nrows, ncols, 3)
   return np.expand_dims(image, axis=0)
-

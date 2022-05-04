@@ -16,7 +16,7 @@
 
 from absl.testing import absltest
 import ml_collections
-from scenic.train_lib import lr_schedules
+from scenic.train_lib_deprecated import lr_schedules
 import tensorflow as tf
 
 

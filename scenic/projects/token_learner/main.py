@@ -8,8 +8,8 @@ import ml_collections
 from scenic import app
 from scenic.projects.token_learner import model
 from scenic.projects.vivit import trainer as vivit_trainer
-from scenic.train_lib import train_utils
-from scenic.train_lib import trainers
+from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib_deprecated import trainers
 
 FLAGS = flags.FLAGS
 
