@@ -41,6 +41,7 @@ from absl import logging
 
 from clu import metric_writers
 from clu import platform
+import flax.linen as nn
 import jax
 from ml_collections import config_flags
 import tensorflow as tf
@@ -70,6 +71,9 @@ def _run_main(argv, *, main):
   # Hide any GPUs form TensorFlow. Otherwise TF might reserve memory and make
   # it unavailable to JAX.
   tf.config.experimental.set_visible_devices([], 'GPU')
+
+  # Enable wrapping of all module calls in a named_call for easier profiling:
+  nn.enable_named_call()
 
   if FLAGS.jax_backend_target:
     logging.info('Using JAX backend target %s', FLAGS.jax_backend_target)

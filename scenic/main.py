@@ -16,7 +16,6 @@
 
 from absl import flags
 from clu import metric_writers
-import flax.linen as nn
 import jax
 import jax.numpy as jnp
 import ml_collections
@@ -31,9 +30,6 @@ FLAGS = flags.FLAGS
 def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,
          writer: metric_writers.MetricWriter):
   """Main function for the Scenic."""
-
-  # Enable wrapping of all module calls in a named_call for easier profiling:
-  nn.enable_named_call()
 
   model_cls = models.get_model_cls(config.model_name)
   data_rng, rng = jax.random.split(rng)
