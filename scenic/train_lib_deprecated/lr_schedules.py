@@ -40,9 +40,9 @@ def polynomial_lr_scheduler(step, decay_steps, end_factor, power):
     Scaling factor applied to the learning rate on the given step.
   """
 
-  step = min(decay_steps, step)
-  decayed_learning_rate = (1 - end_factor) * (1 - step / decay_steps)**(
-      power) + end_factor
+  decay = step <= decay_steps
+  decayed_learning_rate = (1 - end_factor) * (
+      decay * (1 - step / decay_steps))**(power) + end_factor
   return decayed_learning_rate
 
 
