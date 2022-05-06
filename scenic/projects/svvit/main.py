@@ -28,6 +28,8 @@ def get_model_cls(model_name: str) -> Any:
     return xvit.XViTClassificationModel
   elif model_name == 'vit_classification':
     return vit.ViTClassificationModel
+  elif model_name == 'topological_vit_classification':
+    return vit.TopologicalViTClassificationModel
   else:
     raise ValueError(f'Unrecognized model: {model_name}.')
 

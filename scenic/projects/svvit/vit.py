@@ -44,3 +44,5 @@ class ViTClassificationModel(ClassificationModel):
     """
     return vit.init_vit_from_train_state(train_state, restored_train_state,
                                          self.config, restored_model_cfg)
+
+
