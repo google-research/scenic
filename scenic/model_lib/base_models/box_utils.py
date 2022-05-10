@@ -180,29 +180,69 @@ def generalized_box_iou(boxes1: Array,
 ### Rotated Box Utilties ###
 
 
-def cxcywha_to_corners(cxcywha: jnp.ndarray) -> jnp.ndarray:
+def cxcywha_to_corners(cxcywha: Array, np_backbone: PyModule = jnp) -> Array:
   """Convert [cx, cy, w, h, a] to four corners of [x, y].
 
   Args:
     cxcywha: [..., 5]-ndarray of [center-x, center-y, width, height, angle]
     representation of rotated boxes. Angle is in radians and center of rotation
     is defined by [center-x, center-y] point.
+    np_backbone: Numpy module: Either the regular numpy package or jax.numpy.
 
   Returns:
     [..., 4, 2]-ndarray of four corners of the rotated box as [x, y] points.
   """
   assert cxcywha.shape[-1] == 5, 'Expected [..., [cx, cy, w, h, a] input.'
   bs = cxcywha.shape[:-1]
-  cx, cy, w, h, a = jnp.split(cxcywha, indices_or_sections=5, axis=-1)
-  xs = jnp.array([.5, .5, -.5, -.5]) * w
-  ys = jnp.array([-.5, .5, .5, -.5]) * h
-  pts = jnp.stack([xs, ys], axis=-1)
-  sin = jnp.sin(a)
-  cos = jnp.cos(a)
-  rot = jnp.concatenate([cos, -sin, sin, cos], axis=-1).reshape((*bs, 2, 2))
-  offset = jnp.concatenate([cx, cy], -1).reshape((*bs, 1, 2))
+  cx, cy, w, h, a = np_backbone.split(cxcywha, indices_or_sections=5, axis=-1)
+  xs = np_backbone.array([.5, .5, -.5, -.5]) * w
+  ys = np_backbone.array([-.5, .5, .5, -.5]) * h
+  pts = np_backbone.stack([xs, ys], axis=-1)
+  sin = np_backbone.sin(a)
+  cos = np_backbone.cos(a)
+  rot = np_backbone.concatenate([cos, -sin, sin, cos], axis=-1).reshape(
+      (*bs, 2, 2))
+  offset = np_backbone.concatenate([cx, cy], -1).reshape((*bs, 1, 2))
   corners = pts @ rot + offset
   return corners
+
+
+def corners_to_cxcywha(corners: jnp.ndarray,
+                       np_backbone: PyModule = jnp) -> jnp.ndarray:
+  """Convert four corners of [x, y] to [cx, cy, w, h, a].
+
+  Args:
+    corners: [..., 4, 2]-ndarray of four corners of the rotated box as [x, y]
+      points.
+    np_backbone: Numpy module: Either the regular numpy package or jax.numpy.
+
+  Returns:
+    [..., 5]-ndarray of [center-x, center-y, width, height, angle]
+    representation of rotated boxes. Angle is in radians and center of rotation
+    is defined by [center-x, center-y] point.
+  """
+  assert corners.shape[-2] == 4 and corners.shape[-1] == 2, (
+      'Expected [..., [cx, cy, w, h, a] input.')
+
+  cx = (corners[..., 0, 0] + corners[..., 1, 0] + corners[..., 2, 0] +
+        corners[..., 3, 0]) / 4
+  cy = (corners[..., 0, 1] + corners[..., 1, 1] + corners[..., 2, 1] +
+        corners[..., 3, 1]) / 4
+  wcornersx = (
+      corners[..., 0, 0] + corners[..., 1, 0] - corners[..., 2, 0] -
+      corners[..., 3, 0])
+  wcornersy = (
+      corners[..., 0, 1] + corners[..., 1, 1] - corners[..., 2, 1] -
+      corners[..., 3, 1])
+  hcornersy = (-corners[..., 0, 1] + corners[..., 1, 1] + corners[..., 2, 1] -
+               corners[..., 3, 1])
+  a = -np_backbone.arctan2(wcornersy, wcornersx)
+  cos = np_backbone.cos(a)
+  w = wcornersx / (2 * cos)
+  h = hcornersy / (2 * cos)
+  cxcywha = np_backbone.stack([cx, cy, w, h, a], axis=-1)
+
+  return cxcywha
 
 
 def intersect_line_segments(lines1: jnp.array,
