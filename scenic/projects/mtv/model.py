@@ -252,7 +252,7 @@ class CrossViewAttentionEncoderBlock(nn.Module):
       return 0.0
 
   def _apply_self_attentions(self, tokens: List[jnp.ndarray], cur_layer: int,
-                             deterministic: bool):
+                             deterministic: bool) -> List[jnp.ndarray]:
     """Applies self attentions for each view."""
     for view_idx, x in enumerate(tokens):
       if cur_layer >= self.view_configs[view_idx]['num_layers']:
@@ -270,6 +270,7 @@ class CrossViewAttentionEncoderBlock(nn.Module):
       tokens[view_idx] += y * (1.0 - self.get_stochastic_depth_mask(
           cur_layer, self.view_configs[view_idx]['num_layers'], y,
           deterministic))
+    return tokens
 
   def _apply_cross_attention(
       self,
@@ -277,7 +278,7 @@ class CrossViewAttentionEncoderBlock(nn.Module):
       cur_layer: int,
       deterministic: bool,
       fuse_in_descending_order: bool,
-  ) -> jnp.ndarray:
+  ) -> List[jnp.ndarray]:
     """Applies cross view attention."""
     xs = [
         nn.LayerNorm(dtype=self.dtype, name=f'cross_attention_ln_view{idx}')(x)
@@ -316,9 +317,10 @@ class CrossViewAttentionEncoderBlock(nn.Module):
           y * (1.0 - self.get_stochastic_depth_mask(
               cur_layer, self.view_configs[query_view_index]['num_layers'], y,
               deterministic)))
+    return tokens
 
   def _apply_mlp(self, tokens: List[jnp.ndarray], cur_layer: int,
-                 deterministic: bool):
+                 deterministic: bool) ->List[jnp.ndarray]:
     """Applies MLP block."""
     for view_idx, x in enumerate(tokens):
       if cur_layer >= self.view_configs[view_idx]['num_layers']:
@@ -337,6 +339,7 @@ class CrossViewAttentionEncoderBlock(nn.Module):
           y * (1.0 - self.get_stochastic_depth_mask(
               cur_layer, self.view_configs[view_idx]['num_layers'], y,
               deterministic)))
+    return tokens
 
   @nn.compact
   def __call__(self, tokens: List[jnp.ndarray], cur_layer: int,
@@ -351,11 +354,11 @@ class CrossViewAttentionEncoderBlock(nn.Module):
     Returns:
       Output tokens for each view.
     """
-    self._apply_cross_attention(
+    tokens = self._apply_cross_attention(
         tokens, cur_layer, deterministic,
         self.cross_view_fusion.get('fuse_in_descending_order', True))
-    self._apply_self_attentions(tokens, cur_layer, deterministic)
-    self._apply_mlp(tokens, cur_layer, deterministic)
+    tokens = self._apply_self_attentions(tokens, cur_layer, deterministic)
+    tokens = self._apply_mlp(tokens, cur_layer, deterministic)
     return tokens
 
 
