@@ -208,6 +208,7 @@ def preprocess_for_eval(image_bytes, dtype=tf.float32, image_size=IMAGE_SIZE):
 
 def imagenet_load_split(batch_size,
                         train,
+                        onehot_labels,
                         dtype=tf.float32,
                         image_size=IMAGE_SIZE,
                         prefetch_buffer_size=10,
@@ -223,6 +224,7 @@ def imagenet_load_split(batch_size,
   Args:
     batch_size: int; The batch size returned by the data pipeline.
     train: bool; Whether to load the train or evaluation split.
+    onehot_labels: Whether to transform the labels to one hot.
     dtype: TF data type; Data type of the image.
     image_size: int; The target size of the images.
     prefetch_buffer_size: int; Buffer size for the TFDS prefetch.
@@ -248,7 +250,10 @@ def imagenet_load_split(batch_size,
                                    data_augmentations)
     else:
       image = preprocess_for_eval(example['image'], dtype, image_size)
-    return {'inputs': image, 'label': example['label']}
+
+    label = example['label']
+    label = tf.one_hot(label, NUM_CLASSES) if onehot_labels else label
+    return {'inputs': image, 'label': label}
 
   dataset_builder = tfds.builder('imagenet2012:5.*.*')
   # Download dataset:
@@ -316,11 +321,13 @@ def get_dataset(*,
       raise ValueError(f'Data augmentation {data_augmentations} is not '
                        f'(yet) supported in the ImageNet dataset.')
   dtype = getattr(tf, dtype_str)
+  onehot_labels = dataset_configs.get('onehot_labels', False)
 
   logging.info('Loading train split of the ImageNet dataset.')
   train_ds = imagenet_load_split(
       batch_size,
       train=True,
+      onehot_labels=onehot_labels,
       dtype=dtype,
       shuffle_seed=shuffle_seed,
       data_augmentations=data_augmentations)
@@ -335,7 +342,8 @@ def get_dataset(*,
     train_ds = dataset_utils.distribute(train_ds, dataset_service_address)
 
   logging.info('Loading test split of the ImageNet dataset.')
-  eval_ds = imagenet_load_split(eval_batch_size, train=False, dtype=dtype)
+  eval_ds = imagenet_load_split(eval_batch_size, train=False,
+                                onehot_labels=onehot_labels, dtype=dtype)
 
   maybe_pad_batches_train = functools.partial(
       dataset_utils.maybe_pad_batch, train=True, batch_size=batch_size)
@@ -363,6 +371,6 @@ def get_dataset(*,
       'num_train_examples': TRAIN_IMAGES,
       'num_eval_examples': EVAL_IMAGES,
       'input_dtype': getattr(jnp, dtype_str),
-      'target_is_onehot': False,
+      'target_is_onehot': onehot_labels,
   }
   return dataset_utils.Dataset(train_iter, eval_iter, None, meta_data)
