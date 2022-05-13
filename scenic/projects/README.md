@@ -50,10 +50,20 @@
     > fuse information across views. More details are in the
     > [paper](https://arxiv.org/abs/2201.04288).
 
+*   [OWL-ViT](owl_vit)
+
+    > OWL-ViT is an open-vocabulary object detector that given an image and a
+    > free-text query, it finds objects matching that query in the image. It can
+    > also do one-shot object detection, i.e. detect objects based on a single
+    > example image. More details are in the
+    > [paper](https://arxiv.org/abs/2205.06230).
+
+
 
 <a name="projects"></a>
 ## Scenic projects
-A typical project consists of models, trainers, configs, a runner, and some utility functions developed for the project.
+A typical project consists of models, trainers, configs, a runner, and some
+utility functions developed for the project.
 
 ### Models
 Models are entities that define the network architecture, loss function, and

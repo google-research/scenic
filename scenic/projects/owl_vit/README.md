@@ -1,15 +1,15 @@
 OWL-ViT: Open-World Object Detection with Vision Transformers
 ==
-<img src="data/owl_vit_schematic.png" alt="ViT+ model schematic" width="800"/>
+<img src="data/owl_vit_schematic.png" alt="OWL-ViT model schematic" width="800"/>
 
-OWL-ViT is an **open-vocabulary object detector**. Given an image and a free-text query, it finds objects matching that query in the image. It can also do **one-shot object detection**, i.e. detect objects based on a single example image. ViT+ reaches state-of-the-art performance on both tasks, e.g. **31% zero-shot LVIS APr** with a ViT-L/14 backbone.
+OWL-ViT is an **open-vocabulary object detector**. Given an image and a free-text query, it finds objects matching that query in the image. It can also do **one-shot object detection**, i.e. detect objects based on a single example image. OWL-ViT reaches state-of-the-art performance on both tasks, e.g. **31% zero-shot LVIS APr** with a ViT-L/14 backbone.
 
-[[Paper]](https://arxiv.org/abs/2205.06230) [[Colab]](notebooks/OWL_ViT_minimal_example.ipynb)
+[[Paper]](https://arxiv.org/abs/2205.06230) [[Colab]](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb)
 
 ## Getting Started
 We currently provide code for running inference with pre-trained checkpoints. Training code will follow soon.
 
-The [minimal example Colab notebook](notebooks/OWL_ViT_minimal_example.ipynb) shows all steps necessary for running inference, including installing Scenic, instantiating a model, loading a checkpoint, preprocessing input images, getting predictions, and visualizing them.
+The [minimal example Colab notebook](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb) shows all steps necessary for running inference, including installing Scenic, instantiating a model, loading a checkpoint, preprocessing input images, getting predictions, and visualizing them.
 
 ## Model Variants
 
