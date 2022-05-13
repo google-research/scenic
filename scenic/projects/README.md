@@ -62,7 +62,8 @@
 
 <a name="projects"></a>
 ## Scenic projects
-A typical project consists of models, trainers, configs, a runner, and some utility functions developed for the project.
+A typical project consists of models, trainers, configs, a runner, and some
+utility functions developed for the project.
 
 ### Models
 Models are entities that define the network architecture, loss function, and
