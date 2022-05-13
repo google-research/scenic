@@ -80,9 +80,9 @@ are registered directly in `model_lib.models`.
 Trainers implement the training and evaluation loops of the model. There are
 already standard trainers that are provided in Scenic for classification,
 segmentation, and adaptation (located in the `train_lib` module).
-These trainers are directly registered  in `train_lib_deprecated/trainers` and given the
-careful optimization of these trainers for fast and efficient training on
-accelerators (in particular TPUs), they can be forked by projects for further
+These trainers are directly registered  in `train_lib_deprecated/trainers` and
+given the careful optimization of these trainers for fast and efficient training
+on accelerators (in particular TPUs), they can be forked by projects for further
 customization. Projects need to register the new trainers they define within
 their project, or they can simply use the standard Scenic trainers when no
 modification is needed.
