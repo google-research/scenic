@@ -17,7 +17,7 @@ class TextZeroShotDetectionModuleTest(parameterized.TestCase):
   @parameterized.parameters((224, True), (224, False), (1333, True))
   def test_clip_zero_shot_detection_module(self, img_size, normalize):
     """Tests CLIP detection model construction and application."""
-    batch_size, num_queries, seq_len, patch_size = 8, 10, 15, 32
+    batch_size, num_queries, seq_len, patch_size = 8, 10, 16, 32
     side_patches = int(np.ceil(img_size / patch_size))
     body_configs = ml_collections.ConfigDict(dict(
         type='clip',

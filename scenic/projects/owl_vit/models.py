@@ -36,7 +36,7 @@ class TextZeroShotDetectionModule(nn.Module):
   box_bias: str = 'both'
   mask_size: Optional[int] = None
 
-  def tokenize(self, text: str, max_token_len: int = 15) -> List[int]:
+  def tokenize(self, text: str, max_token_len: int = 16) -> List[int]:
     return clip_tokenizer.tokenize(text, max_token_len)
 
   @nn.nowrap

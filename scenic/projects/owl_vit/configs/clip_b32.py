@@ -19,6 +19,7 @@ def get_config():
   # Dataset.
   config.dataset_configs = ml_collections.ConfigDict()
   config.dataset_configs.input_size = 768
+  config.dataset_configs.max_query_length = 16
 
   # Model.
   config.model_name = 'text_zero_shot_detection'
