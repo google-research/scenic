@@ -59,8 +59,12 @@ PANOPTIC_ANNOTATIONS_DIR = (
 
 
 @functools.lru_cache(maxsize=1)
-def _load_json(path):
-  return json.load(gfile.GFile(path, 'r'))
+def _load_json(path, mode='r'):
+  """Loading json file."""
+
+
+  with gfile.GFile(path, mode) as f:
+    return json.load(f)
 
 
 class UniversalCOCO(COCO):
