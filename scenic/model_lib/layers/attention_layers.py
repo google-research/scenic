@@ -578,6 +578,62 @@ class Add2DPositionEmbedding(nn.Module):
     return inputs + pos
 
 
+class AddFixedSinCosPositionEmbedding(nn.Module):
+  """Provides a fixed position encoding for 2D and 3D coordinates.
+
+  The embedding follows the initialisation method used in multiple papers such
+  as "Attention is All You Need", https://arxiv.org/abs/1706.03762 and
+  "Better plain ViT baselines for ImageNet-1k", https://arxiv.org/abs/2205.01580
+
+  Attributes:
+    temperature: Temperature parameter.
+    dtype: dtype of the position encoding.
+  """
+  temperature: int = 10_000
+  dtype: jnp.dtype = jnp.float32
+
+  @nn.compact
+  def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:
+    """Adds the fixed embedding to the inputs.
+
+    Args:
+      inputs: Either an [N, W, H, C] or [N, T, W, H, C] input array.
+
+    Returns:
+      inputs with position encodings added to them.
+    """
+    assert inputs.ndim in (4, 5), f'Unsupported input shape: {inputs.shape}'
+    num_parts = 4 if inputs.ndim == 4 else 6
+    width = inputs.shape[-1]
+    assert width % num_parts == 0, f'Width must be mult of {num_parts}'
+    omega = jnp.arange(width // num_parts) / (width // num_parts - 1)
+    omega = 1. / (self.temperature**omega)
+
+    if inputs.ndim == 4:  # 2D input.
+      _, h, w, _ = inputs.shape
+      y, x = jnp.mgrid[:h, :w]
+      y = jnp.einsum('m,d->md', y.flatten(), omega)
+      x = jnp.einsum('m,d->md', x.flatten(), omega)
+      p = [jnp.sin(x), jnp.cos(x), jnp.sin(y), jnp.cos(y)]
+      shape = (1, h, w, width)
+    elif inputs.ndim == 5:  # 3D input.
+      _, t, h, w, _ = inputs.shape
+      z, y, x = jnp.mgrid[:t, :h, :w]
+      z = jnp.einsum('m,d->md', z.flatten(), omega)
+      y = jnp.einsum('m,d->md', y.flatten(), omega)
+      x = jnp.einsum('m,d->md', x.flatten(), omega)
+      p = [jnp.sin(z), jnp.cos(z),
+           jnp.sin(x), jnp.cos(x),
+           jnp.sin(y), jnp.cos(y)]
+      shape = (1, t, h, w, width)
+    else:  # Should never reach there because of assert at beginning.
+      raise ValueError(f'Unsupported input shape: {inputs.shape}')
+
+    pe = jnp.concatenate(p, axis=1)
+    pe_reshaped = jnp.asarray(pe, self.dtype).reshape(*shape)
+    return inputs + pe_reshaped
+
+
 class RelativeAttentionBias(nn.Module):
   """Provides learnable NxN relative attention bias.
 
