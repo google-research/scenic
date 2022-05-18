@@ -650,10 +650,11 @@ def train(
           step % config.linear_probe.log_eval_steps == 1) or (step
                                                               == total_steps):
         with report_progress.timed('linear_probe'):
-          results = linear_probe.run_all(train_state,
-                                         config.linear_probe.datasets)
-          linear_probe.log_summary(writer=writer, step=step, results=results)
-          del results
+          linear_probe.run_all(
+              train_state,
+              config.linear_probe.datasets,
+              writer=writer,
+              repr_step=step)
         writer.flush()
 
     chrono.resume()  # Un-pause now.
