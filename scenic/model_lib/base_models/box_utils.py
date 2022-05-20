@@ -180,29 +180,73 @@ def generalized_box_iou(boxes1: Array,
 ### Rotated Box Utilties ###
 
 
-def cxcywha_to_corners(cxcywha: jnp.ndarray) -> jnp.ndarray:
+def cxcywha_to_corners(cxcywha: Array, np_backbone: PyModule = jnp) -> Array:
   """Convert [cx, cy, w, h, a] to four corners of [x, y].
 
   Args:
     cxcywha: [..., 5]-ndarray of [center-x, center-y, width, height, angle]
     representation of rotated boxes. Angle is in radians and center of rotation
     is defined by [center-x, center-y] point.
+    np_backbone: Numpy module: Either the regular numpy package or jax.numpy.
 
   Returns:
     [..., 4, 2]-ndarray of four corners of the rotated box as [x, y] points.
   """
   assert cxcywha.shape[-1] == 5, 'Expected [..., [cx, cy, w, h, a] input.'
   bs = cxcywha.shape[:-1]
-  cx, cy, w, h, a = jnp.split(cxcywha, indices_or_sections=5, axis=-1)
-  xs = jnp.array([.5, .5, -.5, -.5]) * w
-  ys = jnp.array([-.5, .5, .5, -.5]) * h
-  pts = jnp.stack([xs, ys], axis=-1)
-  sin = jnp.sin(a)
-  cos = jnp.cos(a)
-  rot = jnp.concatenate([cos, -sin, sin, cos], axis=-1).reshape((*bs, 2, 2))
-  offset = jnp.concatenate([cx, cy], -1).reshape((*bs, 1, 2))
+  cx, cy, w, h, a = np_backbone.split(cxcywha, indices_or_sections=5, axis=-1)
+  xs = np_backbone.array([.5, .5, -.5, -.5]) * w
+  ys = np_backbone.array([-.5, .5, .5, -.5]) * h
+  pts = np_backbone.stack([xs, ys], axis=-1)
+  sin = np_backbone.sin(a)
+  cos = np_backbone.cos(a)
+  rot = np_backbone.concatenate([cos, -sin, sin, cos], axis=-1).reshape(
+      (*bs, 2, 2))
+  offset = np_backbone.concatenate([cx, cy], -1).reshape((*bs, 1, 2))
   corners = pts @ rot + offset
   return corners
+
+
+def corners_to_cxcywha(corners: jnp.ndarray,
+                       np_backbone: PyModule = jnp) -> jnp.ndarray:
+  """Convert four corners of [x, y] to [cx, cy, w, h, a].
+
+  Although the conversion is only guaranteed to produce an exact rbox when given
+  vertices that form an rbox, there is some graceful handling of nearly rbox
+  vertices by choosing the rbox with corners minimizing the square distance to
+  the rbox vertices. This solution is equivalent to taking the average of the
+  top and bottom edges (wcorners*) as well as the left and right edges
+  (hcornersy).
+
+  Args:
+    corners: [..., 4, 2]-ndarray of four corners of the rotated box as [x, y]
+      points.
+    np_backbone: Numpy module: Either the regular numpy package or jax.numpy.
+
+  Returns:
+    [..., 5]-ndarray of [center-x, center-y, width, height, angle]
+    representation of rotated boxes. Angle is in radians and center of rotation
+    is defined by [center-x, center-y] point.
+  """
+  assert corners.shape[-2] == 4 and corners.shape[-1] == 2, (
+      'Expected four corners [..., 4, 2] input.')
+
+  cornersx, cornersy = corners[..., 0], corners[..., 1]
+  cx = np_backbone.mean(cornersx, axis=-1)
+  cy = np_backbone.mean(cornersy, axis=-1)
+  wcornersx = (
+      cornersx[..., 0] + cornersx[..., 1] - cornersx[..., 2] - cornersx[..., 3])
+  wcornersy = (
+      cornersy[..., 0] + cornersy[..., 1] - cornersy[..., 2] - cornersy[..., 3])
+  hcornersy = (-cornersy[..., 0,] + cornersy[..., 1] + cornersy[..., 2] -
+               cornersy[..., 3])
+  a = -np_backbone.arctan2(wcornersy, wcornersx)
+  cos = np_backbone.cos(a)
+  w = wcornersx / (2 * cos)
+  h = hcornersy / (2 * cos)
+  cxcywha = np_backbone.stack([cx, cy, w, h, a], axis=-1)
+
+  return cxcywha
 
 
 def intersect_line_segments(lines1: jnp.array,

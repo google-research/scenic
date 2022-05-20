@@ -97,6 +97,15 @@ class RBoxUtilsTest(parameterized.TestCase):
     self.assertTrue(jnp.all(corners >= 0))
     self.assertTrue(jnp.all(corners <= 1))
 
+  def test_convert_corners_to_cxcywha(self):
+    key = jax.random.PRNGKey(0)
+    cxcywha = sample_cxcywha(key, batch_shape=(3, 2))
+    self.assertEqual(cxcywha.shape, (3, 2, 5))
+
+    corners = box_utils.cxcywha_to_corners(cxcywha)
+    cxcywha2 = box_utils.corners_to_cxcywha(corners)
+    np.testing.assert_allclose(cxcywha2, cxcywha, atol=1e-6)
+
   def test_convert_cxcywha_to_corners_single_rotated(self):
     cxcywha = jnp.array([1, 1, jnp.sqrt(2), jnp.sqrt(2), 45. * jnp.pi / 180.])
     corners = box_utils.cxcywha_to_corners(cxcywha)
