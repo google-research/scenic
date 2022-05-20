@@ -94,7 +94,7 @@ def get_dataset(*,
       preprocess_fn=functools.partial(pp_fn, how=dataset_configs.pp_train),
       shuffle_buffer_size=shuffle_buffer_size,
       prefetch=dataset_configs.get('prefetch_to_host', 2),
-      cache=False,
+      cache='loaded',
       ignore_errors=True)
 
   if dataset_service_address:
