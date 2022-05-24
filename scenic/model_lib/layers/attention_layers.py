@@ -604,9 +604,9 @@ class AddFixedSinCosPositionEmbedding(nn.Module):
     """
     assert inputs.ndim in (4, 5), f'Unsupported input shape: {inputs.shape}'
     num_parts = 4 if inputs.ndim == 4 else 6
-    width = inputs.shape[-1]
-    assert width % num_parts == 0, f'Width must be mult of {num_parts}'
-    omega = jnp.arange(width // num_parts) / (width // num_parts - 1)
+    channels = inputs.shape[-1]
+    assert channels % num_parts == 0, f'Channels must be multiple of {num_parts}'
+    omega = jnp.arange(channels // num_parts) / (channels // num_parts - 1)
     omega = 1. / (self.temperature**omega)
 
     if inputs.ndim == 4:  # 2D input.
@@ -615,7 +615,7 @@ class AddFixedSinCosPositionEmbedding(nn.Module):
       y = jnp.einsum('m,d->md', y.flatten(), omega)
       x = jnp.einsum('m,d->md', x.flatten(), omega)
       p = [jnp.sin(x), jnp.cos(x), jnp.sin(y), jnp.cos(y)]
-      shape = (1, h, w, width)
+      shape = (1, h, w, channels)
     elif inputs.ndim == 5:  # 3D input.
       _, t, h, w, _ = inputs.shape
       z, y, x = jnp.mgrid[:t, :h, :w]
@@ -625,7 +625,7 @@ class AddFixedSinCosPositionEmbedding(nn.Module):
       p = [jnp.sin(z), jnp.cos(z),
            jnp.sin(x), jnp.cos(x),
            jnp.sin(y), jnp.cos(y)]
-      shape = (1, t, h, w, width)
+      shape = (1, t, h, w, channels)
     else:  # Should never reach there because of assert at beginning.
       raise ValueError(f'Unsupported input shape: {inputs.shape}')
 
