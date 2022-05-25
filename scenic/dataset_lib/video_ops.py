@@ -272,18 +272,28 @@ def additional_augmentations(ds_factory, augmentation_params, crop_size,
       'do_simclr_style_augmentations', False)
   do_rand_augment = augmentation_params.get('do_rand_augment', False)
   do_color_augment = augmentation_params.get('do_color_augment', False)
+  do_jitter_scale = augmentation_params.get('do_jitter_scale', False)
 
-  if do_simclr_crop_resize and augmentation_params.do_jitter_scale:
+  if do_simclr_crop_resize and do_jitter_scale:
     logging.warning('Only doing simclr_crop_resize.'
                     'Not compatible with jitter_scale')
 
   if do_simclr_crop_resize:
     area_range = (augmentation_params.get('simclr_area_lower_bound', 0.5), 1)
 
-    # Remove resize_smallest and random_crop. Replace with crop_resize
+    # Remove resize_smallest and Replace random_crop with crop_resize
     ds_factory.preprocessor_builder.remove_fn(
         f'{rgb_feature_name}_resize_smallest')
-    ds_factory.preprocessor_builder.remove_fn(f'{rgb_feature_name}_random_crop')
+    # To replace random_crop with the crop_resize we need to find out which
+    # function comes next, as not all datasets have the same list of
+    # preprocessing functions (e.g. SSv2 doesn't have a random_flip)
+    randcrop_fn_name = f'{rgb_feature_name}_random_crop'
+    fns_list = ds_factory.preprocessor_builder.get_summary()
+    idx = [i for i, fd in enumerate(fns_list) if fd.fn_name == randcrop_fn_name]
+    if not idx:
+      raise ValueError(f'No {randcrop_fn_name} in Preprocessing Builder.')
+    next_fn_name = fns_list[idx[0] + 1].fn_name
+    ds_factory.preprocessor_builder.remove_fn(randcrop_fn_name)
     ds_factory.preprocessor_builder.add_fn(
         functools.partial(
             crop_resize,
@@ -294,9 +304,9 @@ def additional_augmentations(ds_factory, augmentation_params, crop_size,
             area_range=area_range),
         feature_name=rgb_feature_name,
         fn_name=f'{rgb_feature_name}_crop_resize',
-        add_before_fn_name=f'{rgb_feature_name}_random_flip')
+        add_before_fn_name=next_fn_name)
 
-  elif augmentation_params.get('do_jitter_scale'):
+  elif do_jitter_scale:
     ds_factory.preprocessor_builder.add_fn(
         functools.partial(
             dmvr_processors.scale_jitter_augm,
