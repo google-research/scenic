@@ -734,9 +734,10 @@ def get_randaug(num_layers: int = 2, magnitude: int = 10):
   """
 
   def _randaug(image):
-    return augment.RandAugment(
+    return autoaugment.distort_image_with_randaugment(
+        image=image,
         num_layers=num_layers,
         magnitude=magnitude,
-    ).distort(image)
+    )
 
   return _randaug
