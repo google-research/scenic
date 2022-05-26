@@ -74,6 +74,13 @@ def get_optimizer(config: ml_collections.ConfigDict) -> optimizers.OptimizerDef:
         learning_rate=config.lr_configs['base_learning_rate'],
         beta=config.optimizer_configs.get('momentum', 0.9),
         weight_decay=config.optimizer_configs.get('weight_decay', 0.0))
+  if config.optimizer == 'lamb':
+    return optimizers.LAMB(
+        learning_rate=config.lr_configs['base_learning_rate'],
+        beta1=config.optimizer_configs.get('beta1', 0.9),
+        beta2=config.optimizer_configs.get('beta2', 0.999),
+        eps=config.optimizer_configs.get('epsilon', 1e-8),
+        weight_decay=config.optimizer_configs.get('weight_decay', 0.0))
 
   else:
     raise NotImplementedError('Optimizer {} not implemented'.format(
