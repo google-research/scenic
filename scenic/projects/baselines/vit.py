@@ -107,7 +107,9 @@ class Encoder(nn.Module):
   Attributes:
     num_layers: Number of layers.
     mlp_dim: Dimension of the mlp on top of attention block.
-    inputs_positions: Input subsequence positions for packed examples.
+    num_heads: The number of heads for multi-head self-attention.
+    positional_embedding: The type of positional embeddings to add to the
+      input tokens. Options are {learned_1d, sinusoidal_2d, none}.
     dropout_rate: Dropout rate.
     stochastic_depth: probability of dropping a layer linearly grows
       from 0 to the provided value. Our implementation of stochastic depth
@@ -118,6 +120,7 @@ class Encoder(nn.Module):
   num_layers: int
   mlp_dim: int
   num_heads: int
+  positional_embedding: str = 'learned_1d'
   dropout_rate: float = 0.1
   attention_dropout_rate: float = 0.1
   stochastic_depth: float = 0.0
@@ -125,15 +128,38 @@ class Encoder(nn.Module):
 
   @nn.compact
   def __call__(self, inputs: jnp.ndarray, *, train: bool = False):
-    """Applies Transformer model on the inputs."""
+    """Applies Transformer model on the inputs.
+
+    Args:
+      inputs: Input tokens of shape [batch, num_tokens, channels].
+      train: If in training mode, dropout and stochastic depth is applied.
+
+    Returns:
+      Encoded tokens.
+    """
 
     assert inputs.ndim == 3  # Shape is `[batch, len, emb]`.
     dtype = jax.dtypes.canonicalize_dtype(self.dtype)
 
-    x = AddPositionEmbs(
-        posemb_init=nn.initializers.normal(stddev=0.02),  # from BERT.
-        name='posembed_input')(
-            inputs)
+    # Add positional embeddings to tokens.
+    if self.positional_embedding == 'learned_1d':
+      x = AddPositionEmbs(
+          posemb_init=nn.initializers.normal(stddev=0.02),  # from BERT.
+          name='posembed_input')(
+              inputs)
+    elif self.positional_embedding == 'sinusoidal_2d':
+      batch, num_tokens, hidden_dim = inputs.shape
+      height = width = int(np.sqrt(num_tokens))
+      if height * width != num_tokens:
+        raise ValueError('Input is assumed to be square for sinusoidal init.')
+      inputs_reshape = inputs.reshape([batch, height, width, hidden_dim])
+      x = attention_layers.AddFixedSinCosPositionEmbedding()(inputs_reshape)
+      x = x.reshape([batch, num_tokens, hidden_dim])
+    elif self.positional_embedding == 'none':
+      x = inputs
+    else:
+      raise ValueError('Unknown positional embedding: '
+                       f'{self.positional_embedding}')
     x = nn.Dropout(rate=self.dropout_rate)(x, deterministic=not train)
 
     # Input Encoder.
@@ -162,6 +188,9 @@ class ViT(nn.Module):
     num_heads: Number of self-attention heads.
     patches: Configuration of the patches extracted in the stem of the model.
     hidden_size: Size of the hidden state of the output of model's stem.
+    positional_embedding: The type of positional embeddings to add to the
+      tokens at the beginning of the transformer encoder. Options are
+      {learned_1d, sinusoidal_2d, none}.
     representation_size: Size of the representation layer in the model's head.
       if None, we skip the extra projection + tanh activation at the end.
     dropout_rate: Dropout rate.
@@ -177,6 +206,7 @@ class ViT(nn.Module):
   num_heads: int
   patches: ml_collections.ConfigDict
   hidden_size: int
+  positional_embedding: str = 'learned_1d'
   representation_size: Optional[int] = None
   dropout_rate: float = 0.1
   attention_dropout_rate: float = 0.1
@@ -208,6 +238,7 @@ class ViT(nn.Module):
         mlp_dim=self.mlp_dim,
         num_layers=self.num_layers,
         num_heads=self.num_heads,
+        positional_embedding=self.positional_embedding,
         dropout_rate=self.dropout_rate,
         attention_dropout_rate=self.attention_dropout_rate,
         stochastic_depth=self.stochastic_depth,
@@ -246,6 +277,8 @@ class ViTMultiLabelClassificationModel(MultiLabelClassificationModel):
         mlp_dim=self.config.model.mlp_dim,
         num_layers=self.config.model.num_layers,
         num_heads=self.config.model.num_heads,
+        positional_embedding=self.config.model.get('positional_embedding',
+                                                   'learned_1d'),
         representation_size=self.config.model.representation_size,
         patches=self.config.model.patches,
         hidden_size=self.config.model.hidden_size,
