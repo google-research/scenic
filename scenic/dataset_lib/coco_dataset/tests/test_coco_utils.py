@@ -36,6 +36,11 @@ class CocoUtilsTest(parameterized.TestCase):
     max_label = max(label_map.keys())
     self.assertSequenceEqual(range(max_label), label_map.keys())
 
+  def test_get_label_map_unknown(self):
+    """Test get_label_map for unknown TFDS name."""
+    with self.assertRaisesWithPredicateMatch(
+        ValueError, lambda m: m.args == ('Unsupported TFDS name: unknown',)):
+      coco_utils.get_label_map('unknown')
 
 if __name__ == '__main__':
   absltest.main()

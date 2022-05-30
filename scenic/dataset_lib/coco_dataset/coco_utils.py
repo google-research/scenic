@@ -276,6 +276,6 @@ def get_label_map(tfds_name: str) -> Dict[int, str]:
   elif tfds_name.startswith('open_images'):
     return get_openimages_label_map(tfds_name)
   else:
-    return collections.defaultdict(lambda: 'unknown')
+    raise ValueError(f'Unsupported TFDS name: {tfds_name}')
 
 
