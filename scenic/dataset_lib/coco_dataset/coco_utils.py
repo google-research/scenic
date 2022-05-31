@@ -26,9 +26,9 @@ LVIS_LABEL_MAP_PATH = (
 OI_LABEL_MAP_PATH = {
     'open_images_v4': (
         'scenic/dataset_lib/coco_dataset/data/open_images_v4-classes.csv'),
-    # For open_images_v5_masks_only, we use the subset of classes that has
+    # For open_images_v5_boxes_with_masks, we use the subset of classes that has
     # segmentations.
-    'open_images_v5_masks_only': (
+    'open_images_v5_boxes_with_masks': (
         'scenic/dataset_lib/coco_dataset/data/'
         'open_images_v5-classes-segmentation.csv'),
     'open_images_v5': (
