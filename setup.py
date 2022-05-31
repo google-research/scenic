@@ -82,7 +82,7 @@ install_requires_core = [
     "tensorflow-datasets",
     "tf-models-official",
     # Specifying the tf_nightly version avoids slow (hours) pip install:
-    "tf_nightly==2.9.0.dev20220201",
+    "tf_nightly==2.9.0.dev20220401",
 ]
 
 tests_require = [
