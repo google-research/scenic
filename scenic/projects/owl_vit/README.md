@@ -6,6 +6,8 @@ OWL-ViT is an **open-vocabulary object detector**. Given an image and a free-tex
 
 [[Paper]](https://arxiv.org/abs/2205.06230) [[Colab]](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb)
 
+**Update (2022-05-31):** Added [Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_Export_JAX_model_to_TensorFlow_SavedModel.ipynb) showing how to export models to TensorFlow.
+
 ## Getting Started
 We currently provide code for running inference with pre-trained checkpoints. Training code will follow soon.
 
@@ -20,6 +22,10 @@ OWL-ViT models and their pre-trained checkpoints are specified in [configuration
 | ViT-B/32 | CLIP         | 19.3    | 16.9     | [clip_b32](configs/clip_b32.py) | 583 MiB | [download](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b32_b0203fc) |
 | ViT-B/16 | CLIP         | 20.8    | 17.1     | [clip_b16](configs/clip_b16.py) | 581 MiB | [download](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b16_6171dab) |
 | ViT-L/14 | CLIP         | 34.6    | 31.2     | [clip_l14](configs/clip_l14.py) | 1652 MiB | [download](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_l14_d83d374) |
+
+## Conversion to TensorFlow
+
+OWL-ViT models can be converted to TensorFlow using the [`tf.saved_model`](https://www.tensorflow.org/guide/saved_model) API. Please see the [export Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_Export_JAX_model_to_TensorFlow_SavedModel.ipynb) for an example.
 
 ## Reference
 

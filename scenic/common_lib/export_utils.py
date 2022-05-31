@@ -18,6 +18,7 @@ from typing import Any, Callable, Sequence, Optional, Union
 
 from jax.experimental import jax2tf
 import tensorflow as tf
+import tree as dm_tree
 
 # JAX team is working on type annotation for pytree:
 # https://github.com/google/jax/issues/1555
@@ -104,15 +105,15 @@ def convert_and_save_model(
       polymorphic_shapes=[None, polymorphic_shapes],
       enable_xla=enable_xla)
 
-  # Creates `tf.Variables` for the parameters. For more useful variable names
-  # it's possible use `tree.map_structure_with_path` from the `dm-tree` package.
-  param_vars = tf.nest.map_structure(
+  def get_tf_variable(path, param):
+    return tf.Variable(param, trainable=with_gradient, name="/".join(path))
+
+  param_vars = dm_tree.map_structure_with_path(
       # Due to a bug in SavedModel it is not possible to use `tf.GradientTape`
       # on a function converted with jax2tf and loaded from SavedModel. Thus, we
       # mark the variables as non-trainable to ensure that users of the
       # SavedModel will not try to fine tune them.
-      lambda param: tf.Variable(param, trainable=with_gradient),
-      params)
+      get_tf_variable, params)
   tf_graph = tf.function(
       lambda inputs: tf_fn(param_vars, inputs),
       autograph=False,
