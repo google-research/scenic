@@ -377,7 +377,7 @@ def init_posemb(to_params,
                 posemb_name='posembed_input',
                 restored_posemb_name='posembed_input'):
   """Initialize the positional embeddings."""
-  if config.init_from.restore_positional_embedding:
+  if config.init_from.get('restore_positional_embedding', True):
     posemb = to_params[posemb_name]['pos_embedding']
     restored_posemb = from_params[restored_posemb_name]['pos_embedding']
     if restored_posemb.shape != posemb.shape:
