@@ -21,16 +21,14 @@ field "image" being modified. Potentially, other fields can also be modified
 or added.
 """
 import numpy as np
+
+from scenic.dataset_lib.big_transfer.preprocessing import autoaugment
 from scenic.dataset_lib.big_transfer.preprocessing import utils
 from scenic.dataset_lib.big_transfer.registry import Registry
 import tensorflow.compat.v1 as tf
 import tensorflow.compat.v2 as tf2
-import tensorflow_hub as hub
 
-from official.legacy.image_classification import augment
 from tensorflow_addons import image as image_utils
-
-AUTOAUGMENT_MODULE = "@experimental/andresp/cl238414945/nas_imagenet/1"
 
 
 @Registry.register("preprocess_ops.color_distort", "function")
@@ -553,26 +551,6 @@ def get_delete_field(key):
     return datum
 
   return _delete_field
-
-
-@Registry.register("preprocess_ops.autoaugment", "function")
-@utils.InKeyOutKey()
-def get_autoaugment(size, is_training):
-  """Applies a pre-trained AutoAugment module to the image."""
-  m = hub.load(AUTOAUGMENT_MODULE)
-  # Note: workaround for b/130015386: make save_counter not trainable.
-  if hasattr(m, "save_counter") and m.save_counter.trainable:
-    tvars = tf.get_collection_ref(tf.GraphKeys.TRAINABLE_VARIABLES)
-    if m.save_counter in tvars:
-      tvars.remove(m.save_counter)
-
-  def _autoaugment(image):
-    """AutoAugment function."""
-    image = tf.expand_dims(image, 0)
-    image = m(image, size=size, training=is_training)
-    return tf.cast(tf.reshape(tf.squeeze(image, 0), size + [3]), tf.float32)
-
-  return _autoaugment
 
 
 @Registry.register("preprocess_ops.replicate", "function")
