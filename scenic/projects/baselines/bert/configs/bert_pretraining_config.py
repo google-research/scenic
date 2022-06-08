@@ -50,6 +50,7 @@ def get_config():
   wikibooks_train_loader.tfds_as_supervised = False
   wikibooks_train_loader.tfds_skip_decoding_feature = ''
   wikibooks_train_loader.global_batch_size = config.batch_size
+  wikibooks_train_loader.prefetch_buffer_size = None  # Autotune.
   # Validation data:
   config.dataset_configs.val_data_loader = ml_collections.ConfigDict()
   wikibooks_val_loader = config.dataset_configs.val_data_loader
@@ -72,6 +73,7 @@ def get_config():
   wikibooks_val_loader.tfds_as_supervised = False
   wikibooks_val_loader.tfds_skip_decoding_feature = ''
   wikibooks_val_loader.global_batch_size = config.batch_size
+  wikibooks_val_loader.prefetch_buffer_size = None  # Autotune.
 
   # Model.
   _, model_size = VARIANT.split('-')
