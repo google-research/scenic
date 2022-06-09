@@ -32,6 +32,7 @@ from scenic.model_lib import models
 from scenic.model_lib.base_models import classification_model
 from scenic.model_lib.base_models import multilabel_classification_model
 from scenic.train_lib import classification_trainer
+from scenic.train_lib import lr_schedules
 from scenic.train_lib import optimizers
 from scenic.train_lib import train_utils
 import tensorflow as tf
@@ -76,7 +77,9 @@ class ClassificationTrainerTest(absltest.TestCase):
     initial_params = FakeFlaxModel().init(rng, dummy_input).get(
         'params', flax.core.frozen_dict.FrozenDict({}))
     init_model_state = flax.core.frozen_dict.FrozenDict({})
-    tx, _ = optimizers.get_optimizer(config)
+    lr_fn = lr_schedules.get_learning_rate_fn(config)
+    optimizer_config = optimizers.get_optax_optimizer_config(config)
+    tx = optimizers.get_optimizer(optimizer_config, lr_fn)
     opt_state = jax.jit(tx.init, backend='cpu')(initial_params)
     init_train_state = jax_utils.replicate(
         train_utils.TrainState(

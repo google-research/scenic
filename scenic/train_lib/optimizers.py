@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """Defines different optimizers with optax."""
-
+import copy
 import dataclasses
 from typing import Any, Callable, Generator, List, Optional, Tuple, Union
 
@@ -24,21 +24,24 @@ import jax.numpy as jnp
 import ml_collections
 import numpy as np
 import optax
-from scenic.train_lib import lr_schedules
+
 
 # JAX team is working type checking for pytrees:
 # https://github.com/google/jax/issues/3340
 PyTree = Any
+ScalarOrSchedule = Union[float, optax.Schedule]
 
 
 def get_optimizer(
-    config: ml_collections.ConfigDict,
+    optimizer_config: ml_collections.ConfigDict,
+    learning_rate_fn: ScalarOrSchedule,
     params: Optional[PyTree] = None,
-    ) -> Tuple[optax.GradientTransformation, Union[float, Callable[[int], float]]]:  # pylint: disable=line-too-long
-  """Constructs  the optimizer from the given configuration.
+    ) -> optax.GradientTransformation:
+  """Constructs the optimizer from the given configuration.
 
   Args:
-    config: Configuration.
+    optimizer_config: Configuration specific to the optimizer.
+    learning_rate_fn: Learning rate schedule.
     params: Parameters pytree, used when we want to skip weight decay on bias
     and scale parameters.
 
@@ -46,73 +49,87 @@ def get_optimizer(
     An optax GradientTransformation, this consists of a pair of pure functions
     implementing a gradient transformation.
   """
+  # Avoid modifying original config and allow alteration.
+  config = copy.deepcopy(optimizer_config).unlock()
 
-  optimizer_configs = config.get('optimizer_configs',
-                                 ml_collections.ConfigDict())
-  # Learning rate.
-  lr_configs = config.get('lr_configs', ml_collections.ConfigDict())
-  learning_rate_fn = 0.
-  if 'learning_rate_schedule' in lr_configs:
-    learning_rate_fn = lr_schedules.get_learning_rate_fn(config)
-  elif 'base_learning_rate' in lr_configs:
-    learning_rate_fn = lr_configs.base_learning_rate
-  # Weight decay.
-  wd = optimizer_configs.get('weight_decay', 0.)
-  weight_decay_mask = None
   # Skip weight decay for BatchNorm scale or for the bias parameters.
-  if wd and params and config.get('skip_scale_and_bias_regularization', False):
-    weight_decay_mask = jax.tree_map(lambda x: x.ndim != 1, params)
+  weight_decay_mask = None
+  if 'skip_scale_and_bias_regularization' in config:
+    if (config.skip_scale_and_bias_regularization and
+        config.get('weight_decay', 0)):
+      if params is None:
+        raise ValueError('params must be given to obtain weight_decay_mask.')
+      weight_decay_mask = jax.tree_map(lambda x: x.ndim != 1, params)
+    del config.skip_scale_and_bias_regularization
+
   optim_ops = []
-  if config.optimizer in ['sgd', 'momentum', 'nesterov']:
-    if wd:
-      optim_ops.append(optax.add_decayed_weights(wd, weight_decay_mask))
-    if config.optimizer == 'sgd':
-      optim_ops.append(optax.sgd(learning_rate=learning_rate_fn, momentum=0))
-    elif config.optimizer == 'momentum':
-      optim_ops.append(optax.sgd(
-          learning_rate=learning_rate_fn,
-          momentum=optimizer_configs.get('momentum', 0.9)))
-    elif config.optimizer == 'nesterov':
-      optim_ops.append(optax.sgd(
-          learning_rate=learning_rate_fn, nesterov=True,
-          momentum=optimizer_configs.get('momentum', 0.9)))
-  elif config.optimizer == 'adamw':
-    optim_ops.append(optax.adamw(
-        learning_rate=learning_rate_fn,
-        b1=optimizer_configs.get('beta1', 0.9),
-        b2=optimizer_configs.get('beta2', 0.999),
-        eps=optimizer_configs.get('epsilon', 1e-8),
-        weight_decay=wd, mask=weight_decay_mask))
-  elif config.optimizer == 'adam':
-    optim_ops.append(optax.adam(
-        learning_rate=learning_rate_fn,
-        b1=optimizer_configs.get('beta1', 0.9),
-        b2=optimizer_configs.get('beta2', 0.999),
-        eps=optimizer_configs.get('epsilon', 1e-8)))
-  elif config.optimizer == 'adafactor':
-    optim_ops.append(optax.adafactor(
-        learning_rate=learning_rate_fn,
-        multiply_by_parameter_scale=False,
-        momentum=optimizer_configs.get('momentum', 0.9),
-        decay_rate=0.999,
-        weight_decay_rate=wd, weight_decay_mask=weight_decay_mask))
-  elif config.optimizer == 'lars':
-    optim_ops.append(optax.lars(
-        learning_rate=learning_rate_fn,
-        weight_decay=wd, weight_decay_mask=weight_decay_mask,
-        momentum=optimizer_configs.get('momentum', 0.9)))
-  elif config.optimizer == 'lamb':
-    optim_ops.append(optax.lamb(
-        learning_rate=learning_rate_fn,
-        weight_decay=wd, mask=weight_decay_mask,
-        b1=optimizer_configs.get('beta1', 0.9),
-        b2=optimizer_configs.get('beta2', 0.999),
-        eps=optimizer_configs.get('epsilon', 1e-8)))
+  # Add weight decay for sgd (possibly with momemtum and nesterov).
+  if config.optimizer == 'sgd' and 'weight_decay' in config:
+    optim_ops.append(
+        optax.add_decayed_weights(config.weight_decay, weight_decay_mask))
+    del config.weight_decay
 
-  else:
-    logging.info('Unknown optimizer "%s"', config.optimizer)
+  # Call the optax optimizer with exact arguments as in the config.
+  optimizer_fn = getattr(optax, config.optimizer)
+  del config.optimizer
+  optim_ops.append(optimizer_fn(learning_rate=learning_rate_fn, **config))
 
-  return optax.chain(*optim_ops), learning_rate_fn
+  return optax.chain(*optim_ops)
+
+
+def get_optax_optimizer_config(
+    config: ml_collections.ConfigDict) -> ml_collections.ConfigDict:
+  """Obtain optimizer from main config."""
+  optimizer_config = config.get('optimizer_configs',
+                                ml_collections.ConfigDict())
+
+  # New-style config: all optimizer-related fields are in optimizer_configs.
+  if 'optimizer' in optimizer_config:
+    return optimizer_config
+
+  # Backwards compatibility: copy optimizer field into the optimizer config.
+  optimizer_config = copy.deepcopy(optimizer_config).unlock()
+  if 'optimizer' in config:
+    optimizer_config.optimizer = config.optimizer
+
+    # The old optimizers have adam with weight decay. However, in optax this is
+    # done using the adamw optimizer.
+    if config.optimizer == 'adam' and 'weight_decay' in optimizer_config:
+      optimizer_config.optimizer = 'adamw'
+
+    if config.optimizer == 'momentum':
+      optimizer_config.optimizer = 'sgd'
+
+    if config.optimizer == 'nesterov':
+      optimizer_config.optimizer = 'sgd'
+      optimizer_config.nestorov = True
+
+  if 'skip_scale_and_bias_regularization' in config:
+    optimizer_config.skip_scale_and_bias_regularization = (
+        config.skip_scale_and_bias_regularization)
+
+  optimizer_config = _scenic_optimizer_args_to_optax_args(optimizer_config)
+  optimizer_config.lock()
+
+  logging.info('Optimizer config after backwards compatibility operations:\n%s',
+               optimizer_config)
+
+  return optimizer_config
+
+
+def _scenic_optimizer_args_to_optax_args(
+    config: ml_collections.ConfigDict) -> ml_collections.ConfigDict:
+  """Transform original scenic arguments to optax arguments."""
+  if 'beta1' in config:
+    config.b1 = config.beta1
+    del config.beta1
+  if 'beta2' in config:
+    config.b2 = config.beta2
+    del config.beta2
+  if 'epsilon' in config:
+    config.eps = config.epsilon
+    del config.epsilon
+  return config
 
 
 def _traverse_with_names(

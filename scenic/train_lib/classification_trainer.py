@@ -31,6 +31,7 @@ import numpy as np
 import optax
 from scenic.dataset_lib import dataset_utils
 from scenic.model_lib.base_models import base_model
+from scenic.train_lib import lr_schedules
 from scenic.train_lib import optimizers
 from scenic.train_lib import train_utils
 
@@ -225,7 +226,11 @@ def train(
        rngs=init_rng)
 
   # Create optimizer.
-  tx, lr_fn = optimizers.get_optimizer(config)
+  lr_fn = lr_schedules.get_learning_rate_fn(config)
+  optimizer_config = optimizers.get_optax_optimizer_config(config)
+  # If the config is already an optax-compatible config, better call directly:
+  #   optimizers.get_optimizer(config.optimizer_configs, lr_fn)
+  tx = optimizers.get_optimizer(optimizer_config, lr_fn)
   # We jit this, such that the arrays that are created are created on the same
   # device as the input is, in this case the CPU. Else they'd be on device[0].
   opt_state = jax.jit(tx.init, backend='cpu')(params)

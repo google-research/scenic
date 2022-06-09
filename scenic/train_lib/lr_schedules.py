@@ -281,12 +281,20 @@ def get_learning_rate_fn(config: ml_collections.ConfigDict):
   """Looks up for the learning rate scheduler and return lr_fn.
 
   Args:
-    config: Configurations of the learning rate function.
+    config: ConfigDict that has configuration ofthe learning rate function.
 
   Returns:
-    A function learning_rate(step): float -> {'learning_rate': float}, the
-    step-dependent lr.
+    An learning rate or a function learning_rate(step):  float ->
+    {'learning_rate': float}, the step-dependent lr.
 
   """
-  return lr_fn_dict[config.lr_configs['learning_rate_schedule']](
-      config.lr_configs)
+  if 'learning_rate_schedule' in config.lr_configs:
+    # A function that given the current step, returns the LR.
+    return lr_fn_dict[config.lr_configs['learning_rate_schedule']](
+        config.lr_configs)
+  else:
+    if 'base_learning_rate' not in config.lr_configs:
+      raise ValueError(
+          '`base_learning_rate` has to be defined in the lr_config.')
+    # LR as a scalar value.
+    return config.lr_configs.base_learning_rate
