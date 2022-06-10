@@ -63,10 +63,11 @@ def get_optimizer(
     del config.skip_scale_and_bias_regularization
 
   optim_ops = []
-  # Add weight decay for sgd (possibly with momemtum and nesterov).
+  # Add weight decay for sgd (possibly with momentum and nesterov).
   if config.optimizer == 'sgd' and 'weight_decay' in config:
-    optim_ops.append(
-        optax.add_decayed_weights(config.weight_decay, weight_decay_mask))
+    if config.weight_decay:
+      optim_ops.append(
+          optax.add_decayed_weights(config.weight_decay, weight_decay_mask))
     del config.weight_decay
 
   # Call the optax optimizer with exact arguments as in the config.
@@ -85,6 +86,11 @@ def get_optax_optimizer_config(
 
   # New-style config: all optimizer-related fields are in optimizer_configs.
   if 'optimizer' in optimizer_config:
+    if 'optimizer' in config:
+      raise ValueError(
+          'Both config.optimizer and config.optimizer_configs.optimizer are '
+          'defined. Define it only once to avoid possible contradictions. '
+          'The preferred location is in config.optimizer_configs.optimizer')
     return optimizer_config
 
   # Backwards compatibility: copy optimizer field into the optimizer config.
