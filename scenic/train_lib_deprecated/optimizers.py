@@ -81,7 +81,12 @@ def get_optimizer(config: ml_collections.ConfigDict) -> optimizers.OptimizerDef:
         beta2=config.optimizer_configs.get('beta2', 0.999),
         eps=config.optimizer_configs.get('epsilon', 1e-8),
         weight_decay=config.optimizer_configs.get('weight_decay', 0.0))
-
+  if config.optimizer == 'adabelief':
+    return optimizers.AdaBelief(
+        learning_rate=config.lr_configs['base_learning_rate'],
+        beta1=config.optimizer_configs.get('beta1', 0.9),
+        beta2=config.optimizer_configs.get('beta2', 0.999),
+    )
   else:
     raise NotImplementedError('Optimizer {} not implemented'.format(
         config.optimizer))
