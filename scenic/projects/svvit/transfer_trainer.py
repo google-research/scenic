@@ -611,14 +611,12 @@ def train(
     ################### EVALUATION #######################
     if (step % log_eval_steps == 1) or (step == total_steps):
       # Sync model state across replicas.
+      train_state = train_utils.sync_model_state_across_replicas(train_state)
       with report_progress.timed('eval'):
-        train_state = train_utils.sync_model_state_across_replicas(train_state)
         eval_summary = evaluate(train_state, step, dataset.valid_iter,
                                 dataset.meta_data['num_eval_examples'],
                                 'SV_test')
-      # Sync model state across replicas.
       with report_progress.timed('test'):
-        train_state = train_utils.sync_model_state_across_replicas(train_state)
         eval_summary = evaluate(train_state, step, dataset.test_iter,
                                 dataset.meta_data['num_test_examples'],
                                 'Indel_test')
