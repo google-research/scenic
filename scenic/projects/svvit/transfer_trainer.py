@@ -336,6 +336,59 @@ def representation_fn_video(
   return representation, batch['label'], batch['batch_mask']
 
 
+def init_state(
+    rng: jnp.ndarray,
+    config: ml_collections.ConfigDict,
+    model: Any,
+    dataset: dataset_utils.Dataset,
+    workdir: str,
+):
+  """Initialize the model state."""
+  rng, init_rng = jax.random.split(rng)
+  (params, model_state, num_trainable_params,
+   gflops) = train_utils.initialize_model(
+       model_def=model.flax_model,
+       input_spec=[(dataset.meta_data['input_shape'],
+                    dataset.meta_data.get('input_dtype', jnp.float32))],
+       config=config,
+       rngs=init_rng)
+
+  # Create optimizer.
+  # We jit this, such that the arrays that are created are created on the same
+  # device as the input is, in this case the CPU. Else they'd be on device[0].
+  optimizer = jax.jit(
+      optimizers.get_optimizer(config).create, backend='cpu')(
+          params)
+  del params  # Do not keep a copy of the initial params.
+  rng, train_rng = jax.random.split(rng)
+  train_state = train_utils.TrainState(
+      global_step=0,
+      optimizer=optimizer,
+      model_state=model_state,
+      rng=train_rng,
+      accum_train_time=0)
+  start_step = train_state.global_step
+  if config.checkpoint:
+    train_state, start_step = train_utils.restore_checkpoint(
+        workdir, train_state)
+
+  if (start_step == 0  # Which means "no" checkpoint is restored!
+      and config.get('init_from') is not None):
+    restored_model_cfg = config.init_from.get('model_config')
+    init_checkpoint_path = config.init_from.get('checkpoint_path')
+    if init_checkpoint_path is not None:
+      restored_train_state = pretrain_utils.restore_pretrained_checkpoint(
+          init_checkpoint_path, train_state, assert_exist=True)
+      # Load params from the init_model.
+      train_state = model.init_from_train_state(  # pytype: disable=attribute-error
+          train_state, restored_train_state, restored_model_cfg)
+      del restored_train_state
+  elif start_step == 0:
+    logging.info('Training completely from scratch.'
+                 'Not restoring from any checkpoint.')
+  return train_state, start_step, num_trainable_params, gflops
+
+
 def train(
     *,
     rng: jnp.ndarray,
@@ -371,48 +424,11 @@ def train(
   model = model_cls(config, dataset.meta_data)
 
   # Initialize model.
-  rng, init_rng = jax.random.split(rng)
-  (params, model_state, num_trainable_params,
-   gflops) = train_utils.initialize_model(
-       model_def=model.flax_model,
-       input_spec=[(dataset.meta_data['input_shape'],
-                    dataset.meta_data.get('input_dtype', jnp.float32))],
-       config=config,
-       rngs=init_rng)
-
-  # Create optimizer.
-  # We jit this, such that the arrays that are created are created on the same
-  # device as the input is, in this case the CPU. Else they'd be on device[0].
-  optimizer = jax.jit(
-      optimizers.get_optimizer(config).create, backend='cpu')(
-          params)
-  rng, train_rng = jax.random.split(rng)
-  train_state = train_utils.TrainState(
-      global_step=0,
-      optimizer=optimizer,
-      model_state=model_state,
-      rng=train_rng,
-      accum_train_time=0)
-  start_step = train_state.global_step
-  if config.checkpoint:
-    train_state, start_step = train_utils.restore_checkpoint(
-        workdir, train_state)
-
-  if (start_step == 0  # Which means "no" checkpoint is restored!
-      and config.get('init_from') is not None):
-    restored_model_cfg = config.init_from.get('model_config')
-    init_checkpoint_path = config.init_from.get('checkpoint_path')
-    if init_checkpoint_path is not None:
-      restored_train_state = pretrain_utils.restore_pretrained_checkpoint(
-          init_checkpoint_path, train_state, assert_exist=True)
-      # Load params from the init_model.
-      train_state = model.init_from_train_state(  # pytype: disable=attribute-error
-          train_state, restored_train_state, restored_model_cfg)
-      del restored_train_state
+  train_state, start_step, num_trainable_params, gflops = init_state(
+      rng, config, model, dataset, workdir)
 
   # Replicate the optimzier, state, and rng.
   train_state = jax_utils.replicate(train_state)
-  del params  # Do not keep a copy of the initial params.
 
   # Calculate the total number of training steps.
   total_steps, steps_per_epoch = train_utils.get_num_training_steps(

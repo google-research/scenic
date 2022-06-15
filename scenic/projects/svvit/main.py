@@ -9,6 +9,7 @@ import jax.numpy as jnp
 import ml_collections
 from scenic import app
 from scenic.projects.svvit import classification_trainer
+from scenic.projects.svvit import inference
 from scenic.projects.svvit import transfer_trainer
 from scenic.projects.svvit import vit
 from scenic.projects.svvit import xvit
@@ -49,16 +50,25 @@ def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,
   """Main function for SVViT."""
   model_cls = get_model_cls(config.model_name)
   data_rng, rng = jax.random.split(rng)
-  dataset = train_utils.get_dataset(
-      config, data_rng, dataset_service_address=FLAGS.dataset_service_address)
 
-  get_trainer(config.trainer_name)(
-      rng=rng,
-      config=config,
-      model_cls=model_cls,
-      dataset=dataset,
-      workdir=workdir,
-      writer=writer)
+  if config.trainer_name == 'inference':
+    inference.evaluate(
+        rng=rng,
+        eval_config=config,
+        model_cls=model_cls,
+        workdir=workdir,
+        writer=writer)
+  else:
+    dataset = train_utils.get_dataset(
+        config, data_rng, dataset_service_address=FLAGS.dataset_service_address)
+
+    get_trainer(config.trainer_name)(
+        rng=rng,
+        config=config,
+        model_cls=model_cls,
+        dataset=dataset,
+        workdir=workdir,
+        writer=writer)
 
 
 if __name__ == '__main__':
