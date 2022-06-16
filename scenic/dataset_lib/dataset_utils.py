@@ -44,7 +44,7 @@ Dataset = collections.namedtuple(
     #  - dataset_utils.shard_batches -> shard batch across devices by reshaping
     #   `[bs, ...]` to `[num_local_devices, bs/(num_local_devices), ...]`.
     #
-    # Beside these iterators, there is a dictionary that stores the meta data
+    # Beside these iterators, there is a dictionary that stores the metadata
     # information about the dataset, that can be used for different purposes.
     # For instance, these fields are used in most of the datasets:
     #
@@ -55,7 +55,7 @@ Dataset = collections.namedtuple(
     #   'num_test_examples': Same as num_train_examples, but for tes_iter.
     #   'target_is_onehot': Used in the loss and metric functions.
     #
-    # Note that each dataset can define it's own meta-data field that is used
+    # Note that each dataset can define its own meta-data field that is used
     # in the model and/or the trainer, depending on the task. As an example, for
     # classification tasks, `num_classes` is used for the configuring head of
     # the model.
@@ -124,7 +124,7 @@ def maybe_pad_batch(batch: Dict[str, PyTree],
     unpadded_mask_shape = sample_tensor.shape[:batch_dim + 1]
 
   if train and batch_pad != 0:
-    raise ValueError('In this codebase, we assumed that we alwayse drop the '
+    raise ValueError('In this codebase, we assumed that we always drop the '
                      'last partial batch of the train set. Please use '
                      '` drop_remainder=True` for the training set.')
 
@@ -135,7 +135,7 @@ def maybe_pad_batch(batch: Dict[str, PyTree],
     return batch
 
   def zero_pad(array):
-    pad_with = ([(0, 0)] * batch_dim  + [(0, batch_pad)] +
+    pad_with = ([(0, 0)] * batch_dim + [(0, batch_pad)] +
                 [(0, 0)] * (array.ndim - batch_dim - 1))
     return np.pad(array, pad_with, mode='constant')
 
@@ -151,7 +151,7 @@ def maybe_pad_batch(batch: Dict[str, PyTree],
 def shard(pytree, n_devices=None):
   """Reshapes all arrays in the pytree to add a leading n_devices dimension.
 
-  Note: We assume that all arrays in the pytree have leading dimension divisble
+  Note: We assume that all arrays in the pytree have leading dimension divisible
   by n_devices and reshape (host_batch_size, height, width, channel) to
   (local_devices, device_batch_size, height, width, channel).
 
@@ -189,10 +189,10 @@ def unshard(pytree):
 
 
 def tf_to_numpy(batch):
-  """Convert a input batch from tf Tensors to numpy arrays.
+  """Convert an input batch from tf Tensors to numpy arrays.
 
   Args:
-    batch: dict; A dictionary tha has items in a batch: image and labels.
+    batch: dict; A dictionary that has items in a batch: image and labels.
 
   Returns:
     Numpy arrays of the given tf Tensors.

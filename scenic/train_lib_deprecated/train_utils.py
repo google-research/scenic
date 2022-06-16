@@ -153,8 +153,8 @@ def initialize_model_with_pytree(
 ) -> Tuple[PyTree, PyTree, int, Optional[float]]:
   """Initializes parameters and model state with a pytree input_spec.
 
-  This is an extension of the above initialize_model fuction where we can put
-  pytree `input_spec`. We keep the original fuction for backward compatibility.
+  This is an extension of the above initialize_model function where we can put
+  pytree `input_spec`. We keep the original function for backward compatibility.
   If the root type of `input_spec` is `Sequence`, each element is fed to the
   model as position arguments whereas they are fed as keyword arguments if the
   root type is `dict`.
