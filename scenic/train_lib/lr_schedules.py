@@ -86,17 +86,14 @@ def piecewise_linear_scheduler(step, decay_events, decay_factors):
   Returns:
     Scaling factor applied to the learning rate on the given step.
   """
-  boundaries = jnp.array([0] + decay_events)
-  factors = [1.0] + decay_factors
+  boundaries = jnp.array([0] + decay_events + [decay_events[-1]])
+  factors = jnp.array([1.0] + decay_factors + [decay_factors[-1]])
   index = jnp.sum(boundaries[1:] < step)
-  if index + 1 == len(factors):
-    return jnp.take(factors, index)
-  else:
-    m = (jnp.take(factors, index + 1) - jnp.take(factors, index)) / (
-        jnp.take(boundaries, index + 1) - jnp.take(boundaries, index))
-    interpolated_factor = (
-        m * (step - jnp.take(boundaries, index)) + jnp.take(factors, index))
-    return interpolated_factor
+  m = (jnp.take(factors, index + 1) - jnp.take(factors, index)) / (
+      jnp.take(boundaries, index + 1) - jnp.take(boundaries, index) + 1e-6)
+  interpolated_factor = (
+      m * (step - jnp.take(boundaries, index)) + jnp.take(factors, index))
+  return interpolated_factor
 
 
 def linear_warmup_scheduler(step, warmup_steps, alpha=0.):
