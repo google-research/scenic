@@ -18,7 +18,7 @@ MAX_TEXT_LENGTH = 77
 
 
 def _tokenize(texts: Union[str, Sequence[str]], tokenizer: Any,
-              context_length: int) -> jnp.ndarray:
+              context_length: int, truncate: bool = False) -> jnp.ndarray:
   """Tokenizes texts using tokenizer."""
   if isinstance(texts, str):
     texts = [texts]
@@ -30,14 +30,19 @@ def _tokenize(texts: Union[str, Sequence[str]], tokenizer: Any,
   result = np.zeros((len(all_tokens), context_length), dtype=np.long)
   for i, tokens in enumerate(all_tokens):
     if len(tokens) > context_length:
-      raise RuntimeError(
-          f'Input {texts[i]} is too long for context length {context_length}')
+      if truncate:
+        tokens = tokens[:context_length - 1] + [eot_token]
+      else:
+        raise RuntimeError(
+            f'Input {texts[i]} is too long for context length {context_length}')
+
     result[i, :len(tokens)] = np.asarray(tokens)
   return jnp.asarray(result)
 
 
 def build_tokenizer(
     bpe_path: Optional[str] = DEFAULT_BPE_PATH,
+    truncate: Optional[bool] = False,
     bpe_url: str = DEFAULT_BPE_URL,
     download_dir: str = download.DEFAULT_DOWNLOAD_DIR
 ) -> Callable[[Union[str, Sequence[str]]], np.ndarray]:
@@ -48,5 +53,6 @@ def build_tokenizer(
 
   tokenizer = SimpleTokenizer(bpe_path)
   tokenizer_fn = functools.partial(_tokenize, tokenizer=tokenizer,
-                                   context_length=MAX_TEXT_LENGTH)
+                                   context_length=MAX_TEXT_LENGTH,
+                                   truncate=truncate)
   return tokenizer_fn
