@@ -15,7 +15,9 @@
 """Main file for Scenic."""
 
 from absl import flags
+from absl import logging
 from clu import metric_writers
+from flax.training import checkpoints
 import jax
 import jax.numpy as jnp
 import ml_collections
@@ -23,6 +25,7 @@ from scenic import app
 from scenic.model_lib import models
 from scenic.train_lib import train_utils
 from scenic.train_lib import trainers
+
 
 FLAGS = flags.FLAGS
 
@@ -33,6 +36,19 @@ def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,
 
   model_cls = models.get_model_cls(config.model_name)
   data_rng, rng = jax.random.split(rng)
+
+  if config.checkpoint:
+    # When restoring from a checkpoint, change the dataset seed to ensure that
+    # the example order is new. With deterministic data, this ensures enough
+    # randomization and in the future with deterministic data + random access,
+    # we can feed the global step to the dataset loader to always continue
+    # reading the rest of the data if we resume a job that was interrupted.
+    train_state = checkpoints.restore_checkpoint(workdir, target=None)
+    if train_state is not None:
+      global_step = train_state.get('global_step', 0)
+      logging.info('Folding global_step %s into dataset seed.', global_step)
+      data_rng = jax.random.fold_in(data_rng, global_step)
+
   dataset = train_utils.get_dataset(
       config, data_rng, dataset_service_address=FLAGS.dataset_service_address)
 
