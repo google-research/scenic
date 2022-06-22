@@ -37,8 +37,7 @@ The [Minimal Example Colab](https://colab.research.google.com/github/google-rese
 ### Inference Playground
 The [Playground Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_inference_playground.ipynb) allows interactive exploration of the model. It supports both text-conditioned (open-vocabulary) and image-conditioned (one-shot) prediction:
 
-<img src="data/text_cond_wiki_stillife_1.gif" alt="OWL-ViT text inference demo" height="200"/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<img src="data/text_cond_wiki_stillife_1.gif" alt="OWL-ViT text inference demo" height="200" style="margin:0px 30px"/>
 <img src="data/image_cond_wiki_circuits_1.gif" alt="OWL-ViT image inference demo" height="200"/>
 
 ### Conversion to TensorFlow
