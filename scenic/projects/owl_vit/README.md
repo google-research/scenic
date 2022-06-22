@@ -39,7 +39,7 @@ The [Playground Colab](https://colab.research.google.com/github/google-research/
 
 <img src="data/text_cond_wiki_stillife_1.gif" alt="OWL-ViT text inference demo" height="200"/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<img src="data/image_cond_wiki_circuits_1.png" alt="OWL-ViT image inference demo" height="200"/>
+<img src="data/image_cond_wiki_circuits_1.gif" alt="OWL-ViT image inference demo" height="200"/>
 
 ### Conversion to TensorFlow
 OWL-ViT models can be converted to TensorFlow using the [`tf.saved_model`](https://www.tensorflow.org/guide/saved_model) API. The [Export Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_Export_JAX_model_to_TensorFlow_SavedModel.ipynb) shows how to do this.
