@@ -17,6 +17,7 @@
 import collections.abc as collections
 import functools
 import os
+import re
 import time
 from typing import Any, Callable, Dict, Tuple, Sequence, Optional, Mapping, Union
 
@@ -503,6 +504,28 @@ def save_checkpoint(workdir: str,
         int(checkpoint_state.global_step),
         overwrite=overwrite,
         keep=max_to_keep)
+
+
+SIGNED_FLOAT_RE = re.compile(
+    r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
+
+
+def checkpoint_path_step(path: str) -> Optional[float]:
+  """Returns the step number of a checkpoint path.
+
+  Copied from flax/training/checkpoints.PyTree
+
+  Args:
+    path: The path to the checkpoint.
+
+  Returns:
+    The global step corresponding to that checkpoint, or None if it can't be
+    determined.
+  """
+  for s in SIGNED_FLOAT_RE.split(path)[::-1]:
+    if SIGNED_FLOAT_RE.match(s):
+      return float(s)
+  return None
 
 
 def restore_checkpoint(checkpoint_path: str,

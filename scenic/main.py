@@ -43,9 +43,10 @@ def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,
     # randomization and in the future with deterministic data + random access,
     # we can feed the global step to the dataset loader to always continue
     # reading the rest of the data if we resume a job that was interrupted.
-    train_state = checkpoints.restore_checkpoint(workdir, target=None)
-    if train_state is not None:
-      global_step = train_state.get('global_step', 0)
+    checkpoint_path = checkpoints.latest_checkpoint(workdir)
+    logging.info('CHECKPOINT PATH: %s', checkpoint_path)
+    if checkpoint_path is not None:
+      global_step = train_utils.checkpoint_path_step(checkpoint_path) or 0
       logging.info('Folding global_step %s into dataset seed.', global_step)
       data_rng = jax.random.fold_in(data_rng, global_step)
 
