@@ -188,20 +188,28 @@ def get_dataset(*,
       a test_iter, and a dict of meta_data.
   """
   del rng
-  del dataset_configs
 
   def build_pileup_window_dataset(split):
     """dataset_fn called by data.build_dataset(**kwargs)."""
 
     if split == 'train':
-      # Add path to your training data here:
-      path = ''
+      if dataset_configs.train_path:
+        path = dataset_configs.train_path
+      else:
+        # Add path to your training data here:
+        path = ''
     elif split == 'valid':
-      # Add path to your validation data here:
-      path = ''
+      if dataset_configs.eval_path:
+        path = dataset_configs.eval_path
+      else:
+        # Add path to your validation data here:
+        path = ''
     elif split == 'test':
-      # Add path to your test data here:
-      path = ''
+      if dataset_configs.test_path:
+        path = dataset_configs.test_path
+      else:
+        # Add path to your test data here:
+        path = ''
     else:
       raise ValueError('Invalid split value.')
 
