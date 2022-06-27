@@ -76,6 +76,7 @@ def initialize_model(
                                Tuple[int, ...], None]],
     config: ml_collections.ConfigDict,
     rngs: Union[jnp.ndarray, Mapping[str, jnp.ndarray]],
+    train: Optional[bool] = False
 ) -> Tuple[PyTree, PyTree, int, Optional[float]]:
   """Initializes parameters and model state.
 
@@ -85,6 +86,7 @@ def initialize_model(
       dtype of the inputs. If unspecified the dtype is float32.
     config: Configurations of the initialization.
     rngs: Jax rng keys.
+    train: If the scenic model should be initialized in the train mode.
 
   Returns:
     Initial params, Init model_state, and number of trainable_params.
@@ -107,7 +109,7 @@ def initialize_model(
   def _initialize_model(rngs):
     """Initialization function to be jitted."""
     init_model_state, init_params = model_def.init(
-        rngs, *dummy_input, train=False, debug=False).pop('params')
+        rngs, *dummy_input, train=train, debug=False).pop('params')
     # Set bias in the head to low value, such that loss is small initially.
     if config.get('init_head_bias', None) is not None:
       init_params = flax.core.unfreeze(init_params)
