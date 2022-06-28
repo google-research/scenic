@@ -58,6 +58,12 @@
     > example image. More details are in the
     > [paper](https://arxiv.org/abs/2205.06230).
 
+*   [NCR](ncr)
+
+    > NCR is a regularization method which encourages the network to make
+    > similar predictions for similar vectors in the feature space.
+    > Details can be found in the [paper](https://arxiv.org/abs/2202.02200),
+    > where we used this method to learn with noisy labels.
 
 
 <a name="projects"></a>

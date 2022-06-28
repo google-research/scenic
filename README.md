@@ -57,6 +57,7 @@ Projects that were developed in Scenic or used it for their experiments:
 * [Multiview Transformers for Video Recognition](https://arxiv.org/abs/2201.04288)
 * [PolyViT: Co-training Vision Transformers on Images, Videos and Audio](https://arxiv.org/abs/2111.12993)
 * [Simple Open-Vocabulary Object Detection with Vision Transformers](https://arxiv.org/abs/2205.06230)
+* [Learning with Neighbor Consistency for Noisy Labels](https://arxiv.org/abs/2202.02200)
 
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 
