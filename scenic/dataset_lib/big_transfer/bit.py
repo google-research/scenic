@@ -156,17 +156,17 @@ def get_dataset(*,
   def _get_num_eval_examples(dataset, split, data_dir):
     return dataset_utils.get_num_examples(dataset, split, data_dir)
 
-  if isinstance(dataset_configs.val_split, str):
+  if isinstance(dataset_configs.eval_split, str):
     valid_iter = _get_eval_iter(dataset_configs.dataset,
-                                dataset_configs.val_split,
+                                dataset_configs.eval_split,
                                 dataset_configs.pp_eval)
     n_eval_ex = _get_num_eval_examples(
         dataset_configs.dataset,
-        dataset_configs.val_split,
+        dataset_configs.eval_split,
         data_dir=dataset_configs.get('dataset_dir'))
   else:
     valid_iter, n_eval_ex = {}, {}
-    for eval_spec in dataset_configs.val_split:
+    for eval_spec in dataset_configs.eval_split:
       name, dataset, split, pp_eval = eval_spec
       valid_iter[name] = _get_eval_iter(dataset, split, pp_eval)
       n_eval_ex[name] = _get_num_eval_examples(
