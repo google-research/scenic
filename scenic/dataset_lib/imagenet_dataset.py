@@ -322,7 +322,6 @@ def get_dataset(*,
                        f'(yet) supported in the ImageNet dataset.')
   dtype = getattr(tf, dtype_str)
   onehot_labels = dataset_configs.get('onehot_labels', False)
-
   logging.info('Loading train split of the ImageNet dataset.')
   train_ds = imagenet_load_split(
       batch_size,
