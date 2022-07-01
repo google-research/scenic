@@ -53,7 +53,8 @@ class TrainState:
   instances of this class to be passed into jax transformations like tree_map
   and pmap.
   """
-  tx: Optional[optax.GradientTransformation] = struct.field(pytree_node=False)
+  tx: Optional[optax.GradientTransformation] = struct.field(
+      default=None, pytree_node=False)
   opt_state: Optional[optax.OptState] = None
   params: Optional[Any] = None
   global_step: Optional[int] = 0
