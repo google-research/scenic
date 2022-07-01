@@ -15,11 +15,11 @@
 """Registry for the available trainers."""
 
 from scenic.train_lib import classification_trainer
-from scenic.train_lib_deprecated import segmentation_trainer
+from scenic.train_lib.transfer import transfer_trainer
 
 ALL_TRAINERS = {
     'classification_trainer': classification_trainer.train,
-    'segmentation_trainer': segmentation_trainer.train,
+    'transfer_trainer': transfer_trainer.train,
 }
 
 

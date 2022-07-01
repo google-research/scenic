@@ -108,7 +108,7 @@ def get_optax_optimizer_config(
 
     if config.optimizer == 'nesterov':
       optimizer_config.optimizer = 'sgd'
-      optimizer_config.nestorov = True
+      optimizer_config.nesterov = True
 
   if 'skip_scale_and_bias_regularization' in config:
     optimizer_config.skip_scale_and_bias_regularization = (

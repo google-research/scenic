@@ -361,13 +361,18 @@ class ViTMultiLabelClassificationModel(MultiLabelClassificationModel):
     restored_params = flax.traverse_util.unflatten_dict(
         {tuple(k.split('/')): v for k, v in flattened.items()})
     restored_params['output_projection'] = restored_params.pop('head')
-    params = flax.core.unfreeze(train_state.optimizer.target)
 
-    _merge_params(params, restored_params, model_cfg, restored_model_cfg)
-
-    return train_state.replace(
-        optimizer=train_state.optimizer.replace(
-            target=flax.core.freeze(params)))
+    if 'optimizer' in train_state:
+      # TODO(dehghani): Remove support for flax optim.
+      params = flax.core.unfreeze(train_state.optimizer.target)
+      _merge_params(params, restored_params, model_cfg, restored_model_cfg)
+      return train_state.replace(
+          optimizer=train_state.optimizer.replace(
+              target=flax.core.freeze(params)))
+    else:
+      params = flax.core.unfreeze(train_state.params)
+      _merge_params(params, restored_params, model_cfg, restored_model_cfg)
+      return train_state.replace(params=flax.core.freeze(params))
 
 
 def _get_augreg_cfg(params_path):
@@ -492,10 +497,16 @@ def init_vit_from_train_state(
   Returns:
     Updated train_state.
   """
-  params = flax.core.unfreeze(train_state.optimizer.target)
-  restored_params = flax.core.unfreeze(restored_train_state.optimizer.target)
-
-  _merge_params(params, restored_params, model_cfg, restored_model_cfg)
-
-  return train_state.replace(
-      optimizer=train_state.optimizer.replace(target=flax.core.freeze(params)))
+  if 'optimizer' in train_state:
+    # TODO(dehghani): Remove support for flax optim.
+    params = flax.core.unfreeze(train_state.optimizer.target)
+    restored_params = flax.core.unfreeze(restored_train_state.optimizer.target)
+    _merge_params(params, restored_params, model_cfg, restored_model_cfg)
+    return train_state.replace(
+        optimizer=train_state.optimizer.replace(
+            target=flax.core.freeze(params)))
+  else:
+    params = flax.core.unfreeze(train_state.params)
+    restored_params = flax.core.unfreeze(restored_train_state.params)
+    _merge_params(params, restored_params, model_cfg, restored_model_cfg)
+    return train_state.replace(params=flax.core.freeze(params))

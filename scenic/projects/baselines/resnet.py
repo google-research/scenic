@@ -200,8 +200,14 @@ class ResNetClassificationModel(ClassificationModel):
       Updated train_state.
     """
     del restored_model_cfg
-    params = flax.core.unfreeze(train_state.optimizer.target)
-    restored_params = flax.core.unfreeze(restored_train_state.optimizer.target)
+    if 'optimizer' in train_state:
+      # TODO(dehghani): Remove support for flax optim.
+      params = flax.core.unfreeze(train_state.optimizer.target)
+      restored_params = flax.core.unfreeze(
+          restored_train_state.optimizer.target)
+    else:
+      params = flax.core.unfreeze(train_state.params)
+      restored_params = flax.core.unfreeze(restored_train_state.params)
     for pname, pvalue in restored_params.items():
       if pname == 'output_projection':
         # The `output_projection` is used as the name of the linear layer at the
@@ -213,10 +219,15 @@ class ResNetClassificationModel(ClassificationModel):
         params[pname] = pvalue
     logging.info('Parameter summary after initialising from train state:')
     debug_utils.log_param_shapes(params)
-    return train_state.replace(
-        optimizer=train_state.optimizer.replace(
-            target=flax.core.freeze(params)),
-        model_state=restored_train_state.model_state)
+
+    if 'optimizer' in train_state:
+      # TODO(dehghani): Remove support for flax optim.
+      return train_state.replace(
+          optimizer=train_state.optimizer.replace(
+              target=flax.core.freeze(params)),
+          model_state=restored_train_state.model_state)
+    else:
+      return train_state.replace(params=flax.core.freeze(params))
 
 
 class ResNetMultiLabelClassificationModel(MultiLabelClassificationModel):
