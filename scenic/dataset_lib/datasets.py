@@ -42,6 +42,8 @@ _IMPORT_TABLE = {
         'scenic.dataset_lib.fashion_mnist_dataset',
     'mnist':
         'scenic.dataset_lib.mnist_dataset',
+    'bair':
+        'scenic.dataset_lib.bair_dataset',
     'oxford_pets':
         'scenic.dataset_lib.oxford_pets_dataset',
     'svhn':
