@@ -45,7 +45,8 @@ def pileup_parser(
               pileup_height,
               pileup_width,
               PILEUP_NUM_CHANNELS,
-          ])
+          ]),
+      'key': example['event_name']
   }
 
   # Define the label.
@@ -67,13 +68,26 @@ def pileup_normalizer(
   return features, labels
 
 
+def get_padding(key_length, max_length=100):
+  pad = ''
+  for padding_size in range(1, max_length):
+    if tf.math.equal(padding_size, max_length - key_length):
+      pad = padding_size * '#'
+  return pad
+
+
 def preprocess(features, label):
   """Preprocessing code specific to ViT models."""
+  padded_key = tf.strings.join(
+      [get_padding(tf.strings.length(features['key'])), features['key']])
+
   return {
       'inputs': tf.image.resize(
           features['pileup'],
           [256, 256]),  # Resize pileups to make side length divisible by 4.
-      'label': label
+      'label': label,
+      'key': tf.strings.unicode_decode(padded_key, 'UTF-8').to_tensor(),
+      'key_length': tf.strings.length(features['key']),
   }
 
 

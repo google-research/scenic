@@ -1,11 +1,15 @@
 """SVViT Inference Script."""
 
+import datetime
 import functools
+import os
+import pickle
 from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 from absl import logging
 from clu import metric_writers
 from flax import jax_utils
+import flax.linen as nn
 import jax
 import jax.numpy as jnp
 import jax.profiler
@@ -19,6 +23,8 @@ from scenic.projects.svvit import metrics as sv_metric
 from scenic.train_lib_deprecated import optimizers
 from scenic.train_lib_deprecated import pretrain_utils
 from scenic.train_lib_deprecated import train_utils
+import tensorflow as tf
+
 
 # Aliases for custom types:
 Batch = Dict[str, jnp.ndarray]
@@ -67,12 +73,97 @@ def restore_train_state(
   return restored_train_state, current_step
 
 
+def inference_step(
+    train_state: train_utils.TrainState,
+    batch: Batch,
+    *,
+    flax_model: nn.Module,
+    debug: Optional[bool] = False
+):
+  """Runs a single step of inference."""
+  variables = {
+      'params': train_state.optimizer.target,
+      **train_state.model_state
+  }
+  logits = flax_model.apply(
+      variables,
+      batch['inputs'],
+      train=False,
+      mutable=False,
+      debug=debug,
+      capture_intermediates=None,
+  )
+  targets = {'label': batch['label'], 'batch_mask': batch['batch_mask']}
+  return nn.softmax(logits, axis=-1), targets
+
+
+def compute_similary_scores(train_state: train_utils.TrainState,
+                            iterator,
+                            eval_step_fn,
+                            eval_steps,
+                            workdir,
+                            lead_host):
+  """Compute similarity scores and dump them directly instead of metrics."""
+  # Sync model state across replicas.
+  train_state = train_utils.sync_model_state_across_replicas(train_state)
+  all_logits, all_keys = [], []
+  # Do this to ensure we definitely cover the full test set
+  eval_steps = int(np.ceil(1.3 * eval_steps))
+  logging.info('Number of eval steps is %s', eval_steps)
+  for step in range(eval_steps):
+    with jax.profiler.StepTraceAnnotation('eval', step_num=step):
+      eval_batch = next(iterator)
+      assert 'key' in eval_batch, 'Keys must be added to batch'
+      keys = eval_batch['key']
+      del eval_batch['key']
+
+      logits, _ = eval_step_fn(train_state, eval_batch)
+      gathered_logits, gathered_keys = all_gather_and_unreplicate(
+          (logits, keys))
+      all_logits.append(np.concatenate(gathered_logits, axis=0))
+      all_keys.append(
+          tf.strings.unicode_encode(
+              np.concatenate(gathered_keys, axis=0), 'UTF-8'))
+
+  logging.info('all_scores.shape: %s', str(len(all_keys)))
+
+  timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+  fname_logits = os.path.join(workdir, f'logits_offline_eval_{timestamp}')
+  fname_keys = os.path.join(workdir, f'keys_offline_eval_{timestamp}')
+  if lead_host:
+    logging.info('Logging results to %s', fname_logits)
+    log_to_cns(
+        predictions=np.concatenate(all_logits, axis=0),
+        filename_prefix=fname_logits)
+    log_to_cns(
+        predictions=np.concatenate(all_keys, axis=0),
+        filename_prefix=fname_keys)
+
+
+def log_to_cns(predictions, filename_prefix: str):
+  """Save predictions to CNS.
+
+  Args:
+    predictions: Serialised predictions.
+    filename_prefix: File prefix to save the results to.
+  """
+  with open(filename_prefix + '.pkl', 'wb') as f:
+    # Protocol needs to be set to save large files.
+    pickle.dump(predictions, f, protocol=4)
+
+
+def all_gather_and_unreplicate(inputs):
+  return jax_utils.unreplicate(
+      jax.pmap(lambda x: jax.lax.all_gather(x, 'batch'), 'batch')(inputs))
+
+
 def evaluate(
     *,
     rng: jnp.ndarray,
     config: ml_collections.ConfigDict,
     model_cls: Type[base_model.BaseModel],
     dataset: dataset_utils.Dataset,
+    workdir: str,
     writer: metric_writers.MetricWriter,
 ) -> Dict[str, Any]:
   """Evaluate the model.
@@ -89,6 +180,7 @@ def evaluate(
       metrics_fn associated with it.
     dataset: The dataset that has train_iter, eval_iter, meta_data, and
       optionally, test_iter.
+    workdir: Directory for checkpointing.
     writer: CLU metrics writer instance.
 
   Returns:
@@ -113,6 +205,14 @@ def evaluate(
       # We can donate the eval_batch's buffer.
       donate_argnums=(1,),
   )
+  inference_step_pmapped = jax.pmap(
+      functools.partial(
+          inference_step,
+          flax_model=model.flax_model,
+          debug=config.debug_eval),
+      axis_name='batch',
+      donate_argnums=(1,),
+  )
   # If `global_metrics` are set in the config and we are the lead host
   compute_global_metrics = False
   if config.get('global_metrics', False) and lead_host:
@@ -127,40 +227,50 @@ def evaluate(
   total_eval_steps = int(
       np.ceil(dataset.meta_data['num_eval_examples'] / config.batch_size))
   eval_metrics = []
-  for s in range(total_eval_steps):
-    eval_batch = next(dataset.valid_iter)
-    e_metrics, e_output, e_batch = eval_step_pmapped(train_state, eval_batch)
-    eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
-    logging.info('eval metircs at step %d', s)
-    logging.info(eval_metrics)
+  if not config.save_predictions_on_cns:
+    for s in range(total_eval_steps):
+      eval_batch = next(dataset.valid_iter)
+      e_metrics, e_output, e_batch = eval_step_pmapped(train_state, eval_batch)
+      eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
+      logging.info('eval metircs at step %d', s)
+      if compute_global_metrics:
+        # Unreplicate outputs of eval_step_pmapped that are coming from
+        # `lax.all_gather`, fetch to the host and add to the Evaluator:
+        e_batch_mask = train_utils.unreplicate_and_get(
+            e_batch['batch_mask']).astype(bool)
+        global_metrics_evaluator.add_batch_of_examples(
+            target=train_utils.unreplicate_and_get(
+                e_batch['label'])[e_batch_mask],
+            output=train_utils.unreplicate_and_get(e_output)[e_batch_mask])
+        del e_batch, e_output, e_batch_mask
+    eval_global_metrics_summary = None
     if compute_global_metrics:
-      # Unreplicate outputs of eval_step_pmapped that are coming from
-      # `lax.all_gather`, fetch to the host and add to the Evaluator:
-      e_batch_mask = train_utils.unreplicate_and_get(
-          e_batch['batch_mask']).astype(bool)
-      global_metrics_evaluator.add_batch_of_examples(
-          target=train_utils.unreplicate_and_get(
-              e_batch['label'])[e_batch_mask],
-          output=train_utils.unreplicate_and_get(e_output)[e_batch_mask])
-      del e_batch, e_output, e_batch_mask
-  eval_global_metrics_summary = None
-  if compute_global_metrics:
-    if dataset.meta_data['num_eval_examples'] != len(global_metrics_evaluator):
-      logging.warning(
-          'Number of eval (valid/test) examples in the dataset metadata is '
-          '%d, however the global evaluator captured only %d of them',
-          dataset.meta_data['num_eval_examples'], len(global_metrics_evaluator))
-    eval_global_metrics_summary = (
-        global_metrics_evaluator.compute_metrics(clear_annotations=True))
+      if dataset.meta_data['num_eval_examples'] != len(
+          global_metrics_evaluator):
+        logging.warning(
+            'Number of eval (valid/test) examples in the dataset metadata is '
+            '%d, however the global evaluator captured only %d of them',
+            dataset.meta_data['num_eval_examples'],
+            len(global_metrics_evaluator))
+      eval_global_metrics_summary = (
+          global_metrics_evaluator.compute_metrics(clear_annotations=True))
 
-  eval_summary.update(
-      train_utils.log_eval_summary(
-          step=current_step,
-          eval_metrics=eval_metrics,
-          extra_eval_summary=eval_global_metrics_summary,
-          writer=writer,
-          prefix='SV_test'))
-  del eval_metrics, eval_global_metrics_summary
+    eval_summary.update(
+        train_utils.log_eval_summary(
+            step=current_step,
+            eval_metrics=eval_metrics,
+            extra_eval_summary=eval_global_metrics_summary,
+            writer=writer,
+            prefix='SV_test'))
+    del eval_metrics, eval_global_metrics_summary
+  else:
+    compute_similary_scores(
+        train_state=train_state,
+        iterator=dataset.valid_iter,
+        eval_step_fn=inference_step_pmapped,
+        eval_steps=total_eval_steps,
+        workdir=workdir,
+        lead_host=lead_host)
   writer.flush()
   # Wait until computations are done before exiting.
   jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()

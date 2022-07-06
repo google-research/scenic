@@ -41,6 +41,8 @@ def get_trainer(trainer_name: str) -> Any:
     return classification_trainer.train
   elif trainer_name == 'transfer_trainer':
     return transfer_trainer.train
+  elif trainer_name == 'inference':
+    return inference.evaluate
   else:
     return trainers.get_trainer(trainer_name)
 
@@ -52,21 +54,13 @@ def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,
   data_rng, rng = jax.random.split(rng)
   dataset = train_utils.get_dataset(
       config, data_rng, dataset_service_address=FLAGS.dataset_service_address)
-  if config.trainer_name == 'inference':
-    inference.evaluate(
-        rng=rng,
-        config=config,
-        model_cls=model_cls,
-        dataset=dataset,
-        writer=writer)
-  else:
-    get_trainer(config.trainer_name)(
-        rng=rng,
-        config=config,
-        model_cls=model_cls,
-        dataset=dataset,
-        workdir=workdir,
-        writer=writer)
+  get_trainer(config.trainer_name)(
+      rng=rng,
+      config=config,
+      model_cls=model_cls,
+      dataset=dataset,
+      workdir=workdir,
+      writer=writer)
 
 if __name__ == '__main__':
   app.run(main)
