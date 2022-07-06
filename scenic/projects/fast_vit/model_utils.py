@@ -14,7 +14,6 @@ import jax.numpy as jnp
 import numpy as np
 from scenic.model_lib.layers import attention_layers
 
-
 Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
 
 
@@ -231,6 +230,8 @@ class PerformerEncoderAttention(nn.Module):
       for details.
     attention_fn_cls: Name of the attention function that is used by performer,
       which can be 'softmax' or 'generalized'.
+    num_kernel_features: Number of kernel features.
+    redraw: Whether to redraw (valid only if random featurees are used).
     attention_fn_configs: Configurations that is passed to the performer
       attention function.
   """
@@ -245,6 +246,8 @@ class PerformerEncoderAttention(nn.Module):
   dtype: jnp.dtype = jnp.float32
   precision: Optional[jax.lax.Precision] = None
   attention_fn_cls: str = 'generalized'
+  num_kernel_features: int = 256
+  redraw: bool = True
   attention_fn_configs: Optional[Dict[Any, Any]] = None
 
   @nn.compact
@@ -268,7 +271,10 @@ class PerformerEncoderAttention(nn.Module):
     assert qkv_features % self.num_heads == 0, (
         'Memory dimension must be divisible by number of heads.')
     if self.attention_fn_cls == 'softmax':
-      qk_attention_fn = make_fast_softmax_attention
+      qk_attention_fn = functools.partial(
+          make_fast_softmax_attention,
+          nb_features=self.num_kernel_features,
+          redraw_features=self.redraw)
     elif self.attention_fn_cls == 'generalized':
       qk_attention_fn = make_fast_generalized_attention
     else:
@@ -325,7 +331,8 @@ def _get_variant_args(name: str) -> Any:
   ]
 
   if name == 'performer':
-    return ['attention_fn_cls'] + standard_args
+    return ['attention_fn_cls'] + ['num_kernel_features'] + ['redraw'
+                                                            ] + standard_args
   elif name == 'linformer':
     return ['low_rank_features', 'downsample', 'proj_mode', 'proj_configs'
            ] + standard_args
@@ -367,9 +374,11 @@ class Encoder1DBlock(nn.Module):
   Attributes:
     mlp_dim: dimension of the MLP on top of attention block.
     attention_configs: Configs pass to the self-attention func.
-    attention_fn: Type of the seld-attention function.
+    attention_fn: Type of the self-attention function.
     dropout_rate: Dropout used in the MLP block.
     attention_dropout_rate: Dropout for attention heads.
+    num_kernel_features: Number of kernel features used.
+    redraw: Whether to redraw (valid only if random faturees are used).
     post_sa_fn: Function to be applied on the output of self-attention block.
     dtype: The dtype of the computation.
   """
@@ -378,6 +387,8 @@ class Encoder1DBlock(nn.Module):
   attention_fn: str
   dropout_rate: float = 0.1
   attention_dropout_rate: float = 0.1
+  num_kernel_features: int = 256
+  redraw: bool = True
   post_sa_fn: Optional[Callable[[jnp.ndarray], jnp.ndarray]] = None
   droplayer_p: float = 0.0
   dtype: jnp.ndarray = jnp.float32
@@ -433,7 +444,7 @@ class Encoder1DBlock(nn.Module):
           'inputs_q': x,
           'deterministic': deterministic,
       }
-      if  is_self_attention:
+      if is_self_attention:
         inputs_to_attention_module['inputs_kv'] = x
       else:
         inputs_to_attention_module['inputs_kv'] = inputs_kv
@@ -663,8 +674,7 @@ class TopKTokenSelector(nn.Module):
     if self.top_k > input_len:
       raise ValueError(f'The value of top_{self.top_k} should be less than'
                        f'input length:{input_len}.')
-    logging.info('Selecting %d tokens out of %d tokens.',
-                 self.top_k, input_len)
+    logging.info('Selecting %d tokens out of %d tokens.', self.top_k, input_len)
     # TODO(dehghani): Explore if adding a non-linearity to the score_net helps.
     score_logits = jnp.squeeze(
         nn.Dense(
@@ -681,14 +691,14 @@ class TopKTokenSelector(nn.Module):
       rng = self.make_rng('dropout')
       selected_index = sample_categorical(
           rng, score_logits, self.top_k, replacement=False)
-      selected_logits = jax.vmap(jnp.take, (0, 0, None))(
-          score_logits, selected_index, 0)
+      selected_logits = jax.vmap(jnp.take, (0, 0, None))(score_logits,
+                                                         selected_index, 0)
     else:
       selected_logits, selected_index = jax.lax.top_k(score_logits, self.top_k)
 
     # Take selected tokens:
-    selected_tokens = jax.vmap(jnp.take, (0, 0, None))(
-        inputs, selected_index, 0)
+    selected_tokens = jax.vmap(jnp.take, (0, 0, None))(inputs, selected_index,
+                                                       0)
     # Normalize "selected logits" and used as weights for selected tokens:
     selected_tokens = selected_tokens * jax.nn.softmax(selected_logits)[
         ..., jnp.newaxis]
@@ -884,9 +894,11 @@ def make_fast_softmax_attention(qkv_dim,
                                 nonnegative_features=True,
                                 lax_scan_unroll=1):
   """Construct a fast softmax attention method."""
+  '''
   logging.info(
       'Fast softmax attention: %s features and orthogonal=%s, renormalize=%s',
       nb_features, ortho_features, renormalize_attention)
+  '''
   if ortho_features:
     matrix_creator = functools.partial(
         GaussianOrthogonalRandomMatrix,
@@ -945,8 +957,10 @@ def make_fast_generalized_attention(qkv_dim,
                                     unidirectional=False,
                                     lax_scan_unroll=1):
   """Construct a fast generalized attention menthod."""
+  '''
   logging.info('Fast generalized attention.: %s features and renormalize=%s',
                nb_features, renormalize_attention)
+  '''
   if features_type == 'ortho':
     matrix_creator = functools.partial(
         GaussianOrthogonalRandomMatrix, nb_features, qkv_dim, scaling=False)

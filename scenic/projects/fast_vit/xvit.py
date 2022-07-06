@@ -27,6 +27,8 @@ class Encoder1D(nn.Module):
     attention_fn: Self-attention function used in the model.
     dropout_rate:  Dropout rate.
     attention_dropout_rate: Dropout for attention heads.
+    num_kernel_features: Number of kernel features used.
+    redraw: Whether to redraw (applicabl only if random features are used).
   """
   mlp_dim: int
   num_layers: int
@@ -34,6 +36,8 @@ class Encoder1D(nn.Module):
   attention_fn: str
   dropout_rate: float = 0.1
   attention_dropout_rate: float = 0.1
+  num_kernel_features: int = 256
+  redraw: bool = True
 
   @nn.compact
   def __call__(
@@ -64,6 +68,8 @@ class Encoder1D(nn.Module):
           attention_configs=self.attention_configs,
           dropout_rate=self.dropout_rate,
           attention_dropout_rate=self.attention_dropout_rate,
+          num_kernel_features=self.num_kernel_features,
+          redraw=self.redraw,
           name=f'encoder_block_{lyr}')(
               x, inputs_kv=None, deterministic=not train)
 
