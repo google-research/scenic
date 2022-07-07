@@ -157,8 +157,8 @@ def initialize_model_with_pytree(
 ) -> Tuple[PyTree, PyTree, int, Optional[float]]:
   """Initializes parameters and model state with a pytree input_spec.
 
-  This is an extension of the above initialize_model fuction where we can put
-  pytree `input_spec`. We keep the original fuction for backward compatibility.
+  This is an extension of the above initialize_model function where we can put
+  pytree `input_spec`. We keep the original function for backward compatibility.
   If the root type of `input_spec` is `Sequence`, each element is fed to the
   model as position arguments whereas they are fed as keyword arguments if the
   root type is `dict`.
@@ -639,7 +639,7 @@ def stack_forest(forest: PyTree) -> PyTree:
     a dict of lists.
   """
   stack_args = lambda *args: np.stack(args)
-  return jax.tree_multimap(stack_args, *forest)
+  return jax.tree_map(stack_args, *forest)
 
 
 def unreplicate_and_get(x: Sequence[PyTree]) -> PyTree:
@@ -662,15 +662,15 @@ def process_and_fetch_to_host(
     A list of length n_dev*bs of items, where each item is a dictionary with
     same keys as `pred_or_tgt` & values are normal np-arrays of shape [X,...,Y].
   """
-  def _split_mini_batchs(x):
+  def _split_mini_batches(x):
     # Fetch to host and filter out padded examples.
     x = jax.device_get(x)[np.array(batch_mask).astype(bool)]
     # Split minibatch of examples into a list of examples.
     x_list = jnp.split(x, x.shape[0], axis=0)
-    # Squeeze out the dummy dimention.
+    # Squeeze out the dummy dimension.
     return jax.tree_map(lambda x: jnp.squeeze(x, axis=0), x_list)
 
-  pred_or_tgt = jax.tree_map(_split_mini_batchs, pred_or_tgt)
+  pred_or_tgt = jax.tree_map(_split_mini_batches, pred_or_tgt)
 
   if isinstance(pred_or_tgt, list):
     # Pred_or_tgt was a single array, so just return the list:
@@ -695,7 +695,7 @@ def log_eval_summary(step: int,
                      *,
                      writer: metric_writers.MetricWriter,
                      eval_metrics: Sequence[Dict[str, Tuple[float, int]]],
-                     extra_eval_summary: Optional[Dict[str, float]] = None,
+                     extra_eval_summary: Optional[Mapping[str, float]] = None,
                      metrics_normalizer_fn: Optional[
                          Callable[[Dict[str, Tuple[float, int]], str],
                                   Dict[str, float]]] = None,
@@ -731,7 +731,7 @@ def log_eval_summary(step: int,
 
   # Compute the sum over all examples in all batches.
   eval_metrics_summary = jax.tree_map(lambda x: x.sum(), eval_metrics)
-  # Normalize metrics by the total number of exampels.
+  # Normalize metrics by the total number of examples.
   metrics_normalizer_fn = metrics_normalizer_fn or normalize_metrics_summary
   eval_metrics_summary = metrics_normalizer_fn(eval_metrics_summary, 'eval')
   # If None, set to an empty dictionary.
@@ -778,7 +778,7 @@ def log_train_summary(step: int,
     metrics_normalizer_fn: Used for normalizing metrics. The api for
       this function is: `new_metrics_dict = metrics_normalizer_fn( metrics_dict,
         split)`. If set to None, we use the normalize_metrics_summary which uses
-        the normzlizer paired with each metric to normalize it.
+        the normalizer paired with each metric to normalize it.
     prefix: str; Prefix added to the name of the summaries writen by this
       function.
     key_separator: Separator added between the prefix and key.
@@ -793,7 +793,7 @@ def log_train_summary(step: int,
   train_metrics = stack_forest(train_metrics)
   # Compute the sum over all examples in all batches:
   train_metrics_summary = jax.tree_map(lambda x: x.sum(), train_metrics)
-  # Normalize metrics by the total number of exampels:
+  # Normalize metrics by the total number of examples:
   metrics_normalizer_fn = metrics_normalizer_fn or normalize_metrics_summary
   train_metrics_summary = metrics_normalizer_fn(train_metrics_summary, 'train')
 

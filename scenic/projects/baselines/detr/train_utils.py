@@ -372,4 +372,4 @@ def clip_grads(grad_tree, max_norm):
   norm = experimental_optimizers.l2_norm(grad_tree)
   clip_coef = max_norm / (norm + 1e-6)
   normalize = lambda g: jnp.where(clip_coef < 1., g * clip_coef, g)
-  return jax.tree_util.tree_map(normalize, grad_tree)
+  return jax.tree_map(normalize, grad_tree)
