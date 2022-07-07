@@ -38,6 +38,8 @@ def _replace_dict(model: PyTree,
                   name_mapping: Optional[Mapping[str, str]] = None,
                   skip_regex: Optional[str] = None) -> PyTree:
   """Replaces values in model dictionary with restored ones from checkpoint."""
+  name_mapping = name_mapping or {}
+
   model = flax.core.unfreeze(model)  # pytype: disable=wrong-arg-types
   restored = flax.core.unfreeze(restored)  # pytype: disable=wrong-arg-types
 
