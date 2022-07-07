@@ -17,9 +17,9 @@
 from typing import Any, Callable, Dict, Mapping, Optional, Tuple
 
 from absl import logging
+import flax.linen as nn
 import jax.numpy as jnp
 import ml_collections
-
 
 # Aliases for custom types:
 Batch = Dict[str, jnp.ndarray]
@@ -30,7 +30,7 @@ MetricFn = Callable[[jnp.ndarray, Dict[str, jnp.ndarray]],
                     Dict[str, Tuple[float, int]]]
 
 
-class BaseModel(object):
+class BaseModel:
   """Defines commonalities between all models.
 
   A model is class with three members: get_metrics_fn, loss_fn, and a
@@ -108,14 +108,14 @@ class BaseModel(object):
     """
     raise NotImplementedError('Subclasses must implement loss_function.')
 
-  def build_flax_model(self):
+  def build_flax_model(self) -> nn.Module:
     raise NotImplementedError('Subclasses must implement build_flax_model().')
 
-  def default_flax_model_config(self):
+  def default_flax_model_config(self) -> ml_collections.ConfigDict:
     """Default config for the flax model that is built in `build_flax_model`.
 
     This function in particular serves the testing functions and supposed to
-    provide config tha are passed to the flax_model when it's build in
+    provide config that are passed to the flax_model when it's built in
     `build_flax_model` function, e.g., `model_dtype_str`.
     """
     raise NotImplementedError(
