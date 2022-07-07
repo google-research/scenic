@@ -89,7 +89,7 @@ def get_config():
 
   config.model.temporal_encoding_config = ml_collections.ConfigDict()
   config.model.temporal_encoding_config.method = '3d_conv'
-  config.model.patches.size = [16, 16, 2]
+  config.model.patches.size = (16, 16, 2)
   config.model.temporal_encoding_config.kernel_init_method = 'central_frame_initializer'
 
   # Training.
