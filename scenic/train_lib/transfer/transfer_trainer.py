@@ -20,6 +20,7 @@ from typing import Any, Callable, Dict, Iterator, Tuple, Optional, Type
 from absl import logging
 from clu import metric_writers
 from clu import periodic_actions
+from clu import platform
 from flax import jax_utils
 import flax.linen as nn
 import jax
@@ -55,7 +56,8 @@ def train_step(
     metrics_fn: MetricFn,
     config: ml_collections.ConfigDict,
     debug: Optional[bool] = False
-) -> Tuple[train_utils.TrainState, Dict[str, Tuple[float, int]]]:
+) -> Tuple[train_utils.TrainState, Dict[str, Tuple[float, int]], Dict[str,
+                                                                      Any]]:
   """Runs a single step of training.
 
   Given the state of the training and a batch of data, computes
@@ -83,6 +85,7 @@ def train_step(
   Returns:
     Updated state of training and computed metrics for logging.
   """
+  training_logs = {}
   new_rng, rng = jax.random.split(train_state.rng)
 
   if config.get('mixup') and config.mixup.alpha:
@@ -128,6 +131,13 @@ def train_step(
                                                  train_state.params)
   new_params = optax.apply_updates(train_state.params, updates)
 
+  training_logs['l2_grads'] = jnp.sqrt(
+      sum([jnp.vdot(g, g) for g in jax.tree_leaves(grad)]))
+  ps = jax.tree_leaves(new_params)
+  training_logs['l2_params'] = jnp.sqrt(sum([jnp.vdot(p, p) for p in ps]))
+  us = jax.tree_leaves(updates)
+  training_logs['l2_updates'] = jnp.sqrt(sum([jnp.vdot(u, u) for u in us]))
+
   metrics = metrics_fn(logits, batch)
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
       global_step=train_state.global_step + 1,
@@ -135,7 +145,8 @@ def train_step(
       params=new_params,
       model_state=new_model_state,
       rng=new_rng)
-  return new_train_state, metrics
+
+  return new_train_state, metrics, training_logs
 
 
 def eval_step(
@@ -373,6 +384,10 @@ def train(
   opt_state = jax.jit(tx.init, backend='cpu')(params)
 
   rng, train_rng = jax.random.split(rng)
+
+  # Create chrono class to track and store training statistics and metadata:
+  chrono = train_utils.Chrono()
+
   train_state = train_utils.TrainState(
       global_step=0,
       opt_state=opt_state,
@@ -380,12 +395,12 @@ def train(
       params=params,
       model_state=model_state,
       rng=train_rng,
-      accum_train_time=0)
+      metadata={'chrono': chrono.save()})
   start_step = train_state.global_step
   if config.checkpoint:
     train_state, start_step = train_utils.restore_checkpoint(
         workdir, train_state)
-
+  chrono.load(train_state.metadata['chrono'])
   if (start_step == 0  # Which means "no" checkpoint is restored!
       and config.get('init_from') is not None):
     restored_model_cfg = config.init_from.get('model_config')
@@ -470,7 +485,8 @@ def train(
     for val_name, val_iter in valid_iter.items():
       num_ex = num_valid_ex[val_name]
       # Ceil rounding such that we include the last incomplete batch.
-      total_eval_steps = int(np.ceil(num_ex / config.batch_size))
+      eval_batch_size = config.get('eval_batch_size', config.batch_size)
+      total_eval_steps = int(np.ceil(num_ex / eval_batch_size))
       steps_per_eval = config.get('steps_per_eval') or total_eval_steps
       eval_metrics = []
       for _ in range(steps_per_eval):
@@ -493,16 +509,15 @@ def train(
   train_metrics, extra_training_logs = [], []
   train_summary, eval_summary = None, None
 
-  chrono = train_utils.Chrono(
-      first_step=start_step,
-      total_steps=total_steps,
-      steps_per_epoch=steps_per_epoch,
-      global_bs=config.batch_size,
-      accum_train_time=int(jax_utils.unreplicate(train_state.accum_train_time)))
-
+  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
   logging.info('Starting training loop at step %d.', start_step + 1)
   report_progress = periodic_actions.ReportProgress(
       num_train_steps=total_steps, writer=writer)
+
+  def write_note(note):
+    if lead_host:
+      platform.work_unit().set_notes(note)
+
   hooks = [report_progress]
   if config.get('xprof', True) and lead_host:
     hooks.append(periodic_actions.Profile(num_profile_steps=5, logdir=workdir))
@@ -513,10 +528,12 @@ def train(
       step0_log['gflops'] = gflops
     writer.write_scalars(1, step0_log)
 
+  write_note(f'First step compilations...\n{chrono.note}')
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceContext('train', step_num=step):
       train_batch = next(dataset.train_iter)
-      train_state, t_metrics = train_step_pmapped(train_state, train_batch)
+      train_state, t_metrics, t_logs = train_step_pmapped(
+          train_state, train_batch)
       # This will accumulate metrics in TPU memory up to the point that we log
       # them. This is no problem for small metrics but may be a problem for
       # large (e.g. segmentation) metrics. An alternative is to set
@@ -526,19 +543,20 @@ def train(
       # tpu and host, which might slow down the training.
       train_metrics.append(t_metrics)
       # Additional training logs: learning rate:
-      # TODO(scenic-dev): Figure out how to get the lr from the optimizer.
-      extra_training_logs.append({'learning_rate': lr_fn(step)})
+      t_logs = jax.tree_map(jax_utils.unreplicate, t_logs)
+      t_logs.update({'learning_rate': lr_fn(step)})
+      extra_training_logs.append(t_logs)
 
     # Quick indication that training is happening.
     logging.log_first_n(logging.INFO, 'Finished training step %d.', 5, step)
     for h in hooks:
       h(step)
 
-    chrono.pause()  # Below are once-in-a-while ops -> pause.
     ############### LOG TRAIN SUMMARY ###############
     if (step % log_summary_steps == 1) or (step == total_steps):
+      chrono.pause()
       if lead_host:
-        chrono.tick(step, writer=writer)
+        chrono.tick(step, writer, write_note)
       train_summary = train_utils.log_train_summary(
           step=step,
           train_metrics=jax.tree_map(train_utils.unreplicate_and_get,
@@ -547,30 +565,38 @@ def train(
           writer=writer)
       # Reset metric accumulation for next evaluation cycle.
       train_metrics, extra_training_logs = [], []
-
+      chrono.resume()
     ################### EVALUATION #######################
     if (step % log_eval_steps == 1) or (step == total_steps):
+      chrono.pause(wait_for=(train_state.params))
       with report_progress.timed('eval'):
         # Sync model state across replicas.
         train_state = train_utils.sync_model_state_across_replicas(train_state)
         eval_summary = evaluate(train_state, step, dataset.valid_iter,
                                 dataset.meta_data['num_eval_examples'])
-
+      chrono.resume()
     ##################### CHECKPOINTING ############################
     if ((step % checkpoint_steps == 1 and step > 1) or
         (step == total_steps)) and config.checkpoint:
+      chrono.pause(wait_for=(train_state.params, train_state.opt_state))
       with report_progress.timed('checkpoint'):
         # Sync model state across replicas.
         train_state = train_utils.sync_model_state_across_replicas(train_state)
         if lead_host:
-          train_state.replace(  # pytype: disable=attribute-error
-              accum_train_time=chrono.accum_train_time)
-          train_utils.save_checkpoint(workdir, train_state)
+          # Take the first replica.
+          unrep_train_state = jax_utils.unreplicate(train_state)
+          metadata = unrep_train_state.metadata
+          metadata['chrono'] = chrono.save()
+          unrep_train_state.replace(metadata=metadata)  # pytype: disable=attribute-error
+          train_utils.save_checkpoint(workdir, unrep_train_state)
+          del unrep_train_state
+      chrono.resume()  # Un-pause now.
 
     ##################### FEWSHOT EVALUATION ############################
     if 'fewshot' in config:
       # Compute few-shot on-the-fly evaluation.
       if (step % config.fewshot.log_eval_steps == 1) or (step == total_steps):
+        chrono.pause(wait_for=(train_state.params))
         with report_progress.timed('fewshot'):
           results = fewshotter.run_all(train_state, config.fewshot.datasets)
           fewshotter.log_fewshot_summary(
@@ -578,6 +604,7 @@ def train(
           del results
           writer.write_scalars(step, {'zz/epoch': step / steps_per_epoch})
         writer.flush()
+        chrono.resume()  # Un-pause now.
 
     ########### FEWSHOT EVALUATION USING VIDEO DATASETS ###############
 
@@ -585,6 +612,7 @@ def train(
       # Compute few-shot on-the-fly evaluation using video dataset.
       if ((step % config.video_fewshot.log_eval_steps == 1) or
           step == total_steps):
+        chrono.pause(wait_for=(train_state.params))
         with report_progress.timed('video_fewshot'):
           results = video_fewshotter.run_all(train_state,
                                              config.video_fewshot.datasets)
@@ -593,12 +621,14 @@ def train(
           del results
           writer.write_scalars(step, {'zz/epoch': step / steps_per_epoch})
         writer.flush()
+        chrono.resume()  # Un-pause now.
 
     ##################### LINEAR-PROBE EVALUATION ##########################
     if 'linear_probe' in config:
       if (config.linear_probe.log_eval_steps > 0 and
           step % config.linear_probe.log_eval_steps == 1) or (step
                                                               == total_steps):
+        chrono.pause(wait_for=(train_state.params))
         with report_progress.timed('linear_probe'):
           linear_probe.run_all(
               train_state,
@@ -606,8 +636,7 @@ def train(
               writer=writer,
               repr_step=step)
         writer.flush()
-
-    chrono.resume()  # Un-pause now.
+      chrono.resume()  # Un-pause now.
 
   # Wait until computations are done before exiting.
   jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()

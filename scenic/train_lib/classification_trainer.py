@@ -20,6 +20,7 @@ from typing import Any, Callable, Dict, Tuple, Optional, Type
 from absl import logging
 from clu import metric_writers
 from clu import periodic_actions
+from clu import platform
 from flax import jax_utils
 import flax.linen as nn
 import jax
@@ -34,7 +35,6 @@ from scenic.model_lib.base_models import base_model
 from scenic.train_lib import lr_schedules
 from scenic.train_lib import optimizers
 from scenic.train_lib import train_utils
-
 
 # Aliases for custom types:
 Batch = Dict[str, jnp.ndarray]
@@ -52,7 +52,8 @@ def train_step(
     metrics_fn: MetricFn,
     config: ml_collections.ConfigDict,
     debug: Optional[bool] = False
-) -> Tuple[train_utils.TrainState, Dict[str, Tuple[float, int]]]:
+) -> Tuple[train_utils.TrainState, Dict[str, Tuple[float, int]], Dict[str,
+                                                                      Any]]:
   """Runs a single step of training.
 
   Given the state of the training and a batch of data, computes
@@ -78,8 +79,9 @@ def train_step(
       jax.host_callback.
 
   Returns:
-    Updated state of training and computed metrics for logging.
+    Updated state of training and computed metrics and some training logs.
   """
+  training_logs = {}
   new_rng, rng = jax.random.split(train_state.rng)
 
   if config.get('mixup') and config.mixup.alpha:
@@ -111,9 +113,8 @@ def train_step(
     return loss, (new_model_state, logits)
 
   compute_gradient_fn = jax.value_and_grad(training_loss_fn, has_aux=True)
-  (train_cost,
-   (new_model_state,
-    logits)), grad = compute_gradient_fn(train_state.params)
+  (train_cost, (new_model_state,
+                logits)), grad = compute_gradient_fn(train_state.params)
 
   del train_cost
   # Re-use same axis_name as in the call to `pmap(...train_step...)` below.
@@ -126,14 +127,23 @@ def train_step(
                                                  train_state.params)
   new_params = optax.apply_updates(train_state.params, updates)
 
+  training_logs['l2_grads'] = jnp.sqrt(
+      sum([jnp.vdot(g, g) for g in jax.tree_leaves(grad)]))
+  ps = jax.tree_leaves(new_params)
+  training_logs['l2_params'] = jnp.sqrt(sum([jnp.vdot(p, p) for p in ps]))
+  us = jax.tree_leaves(updates)
+  training_logs['l2_updates'] = jnp.sqrt(sum([jnp.vdot(u, u) for u in us]))
+
   metrics = metrics_fn(logits, batch)
+
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
       global_step=train_state.global_step + 1,
       opt_state=new_opt_state,
       params=new_params,
       model_state=new_model_state,
       rng=new_rng)
-  return new_train_state, metrics
+
+  return new_train_state, metrics, training_logs
 
 
 def eval_step(
@@ -167,8 +177,8 @@ def eval_step(
     flax_model: A Flax model.
     metrics_fn: A metrics function, that given logits and batch of data,
       calculates the metrics as well as the loss.
-    debug: Whether the debug mode is enabled during evaluation.
-      `debug=True` enables model specific logging/storing some values using
+    debug: Whether the debug mode is enabled during evaluation. `debug=True`
+      enables model specific logging/storing some values using
       jax.host_callback.
 
   Returns:
@@ -236,6 +246,10 @@ def train(
   opt_state = jax.jit(tx.init, backend='cpu')(params)
 
   rng, train_rng = jax.random.split(rng)
+
+  # Create chrono class to track and store training statistics and metadata:
+  chrono = train_utils.Chrono()
+
   train_state = train_utils.TrainState(
       global_step=0,
       opt_state=opt_state,
@@ -243,11 +257,12 @@ def train(
       params=params,
       model_state=model_state,
       rng=train_rng,
-      accum_train_time=0)
+      metadata={'chrono': chrono.save()})
   start_step = train_state.global_step
   if config.checkpoint:
     train_state, start_step = train_utils.restore_checkpoint(
         workdir, train_state)
+  chrono.load(train_state.metadata['chrono'])
   # Replicate the optimzier, state, and rng.
   train_state = jax_utils.replicate(train_state)
   del params  # Do not keep a copy of the initial params.
@@ -293,16 +308,15 @@ def train(
   train_metrics, extra_training_logs = [], []
   train_summary, eval_summary = None, None
 
-  chrono = train_utils.Chrono(
-      first_step=start_step,
-      total_steps=total_steps,
-      steps_per_epoch=steps_per_epoch,
-      global_bs=config.batch_size,
-      accum_train_time=int(jax_utils.unreplicate(train_state.accum_train_time)))
-
+  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
   logging.info('Starting training loop at step %d.', start_step + 1)
   report_progress = periodic_actions.ReportProgress(
       num_train_steps=total_steps, writer=writer)
+
+  def write_note(note):
+    if lead_host:
+      platform.work_unit().set_notes(note)
+
   hooks = [report_progress]
   if config.get('xprof', True) and lead_host:
     hooks.append(periodic_actions.Profile(num_profile_steps=5, logdir=workdir))
@@ -313,10 +327,12 @@ def train(
       step0_log['gflops'] = gflops
     writer.write_scalars(1, step0_log)
 
+  write_note(f'First step compilations...\n{chrono.note}')
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceContext('train', step_num=step):
       train_batch = next(dataset.train_iter)
-      train_state, t_metrics = train_step_pmapped(train_state, train_batch)
+      train_state, t_metrics, t_logs = train_step_pmapped(
+          train_state, train_batch)
       # This will accumulate metrics in TPU memory up to the point that we log
       # them. This is no problem for small metrics but may be a problem for
       # large (e.g. segmentation) metrics. An alternative is to set
@@ -326,15 +342,18 @@ def train(
       # tpu and host, which might slow down the training.
       train_metrics.append(t_metrics)
       # Additional training logs: learning rate:
-      # TODO(scenic-dev): Figure out how to get the lr from the optimizer.
-      extra_training_logs.append({'learning_rate': lr_fn(step)})
+      t_logs = jax.tree_map(jax_utils.unreplicate, t_logs)
+      t_logs.update({'learning_rate': lr_fn(step)})
+      extra_training_logs.append(t_logs)
     for h in hooks:
       h(step)
-    chrono.pause()  # Below are once-in-a-while ops -> pause.
+    # Below are once-in-a-while ops -> pause.
     ###################### LOG TRAIN SUMMARY ########################
-    if (step % log_summary_steps == 1) or (step == total_steps):
+    if (step % log_summary_steps == 1) or (step
+                                           == total_steps) or chrono.warmup:
+      chrono.pause()
       if lead_host:
-        chrono.tick(step, writer=writer)
+        chrono.tick(step, writer, write_note)
       # train_metrics is list of a dictionaries of metrics, where the shape of
       # the metrics[key] is [n_local_devices]. However, because metric functions
       # have a psum, we have already summed across the whole sharded batch, and
@@ -348,8 +367,10 @@ def train(
           writer=writer)
       # Reset metric accumulation for next evaluation cycle.
       train_metrics, extra_training_logs = [], []
+      chrono.resume()
       ################### EVALUATION #######################
       if (step % log_eval_steps == 1) or (step == total_steps):
+        chrono.pause(wait_for=(train_state.params))
         with report_progress.timed('eval'):
           eval_metrics = []
           # Sync model state across replicas.
@@ -363,17 +384,23 @@ def train(
               step=step, eval_metrics=eval_metrics, writer=writer)
         writer.flush()
         del eval_metrics
+        chrono.resume()
     ##################### CHECKPOINTING ###################
     if ((step % checkpoint_steps == 0 and step > 0) or
         (step == total_steps)) and config.checkpoint:
+      chrono.pause(wait_for=(train_state.params, train_state.opt_state))
       with report_progress.timed('checkpoint'):
         # Sync model state across replicas.
         train_state = train_utils.sync_model_state_across_replicas(train_state)
         if lead_host:
-          train_state.replace(  # pytype: disable=attribute-error
-              accum_train_time=chrono.accum_train_time)
-          train_utils.save_checkpoint(workdir, train_state)
-    chrono.resume()  # Un-pause now.
+          # Take the first replica.
+          unrep_train_state = jax_utils.unreplicate(train_state)
+          metadata = unrep_train_state.metadata
+          metadata['chrono'] = chrono.save()
+          unrep_train_state.replace(metadata=metadata)  # pytype: disable=attribute-error
+          train_utils.save_checkpoint(workdir, unrep_train_state)
+          del unrep_train_state
+      chrono.resume()  # Un-pause now.
   # Wait until computations are done before exiting.
   jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()
   # Return the train and eval summary after last step for regression testing.

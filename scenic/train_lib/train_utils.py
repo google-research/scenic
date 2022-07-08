@@ -60,7 +60,7 @@ class TrainState:
   global_step: Optional[int] = 0
   model_state: Optional[Any] = None
   rng: Optional[jnp.ndarray] = None
-  accum_train_time: Optional[int] = 0
+  metadata: Optional[Dict[str, Any]] = None
 
   def __getitem__(self, item):
     """Make TrainState a subscriptable object."""
@@ -196,6 +196,7 @@ def initialize_model_with_pytree(
       return None
     else:
       raise NotImplementedError('Unsupported spec type.', type(spec))
+
   dummy_input = create_dummy_input(input_spec)
 
   # We want all parameters to be created in host RAM, not on any device, they'll
@@ -266,8 +267,8 @@ def get_dataset(
     data_rng: Random number generator key to use for the dataset.
     dataset_service_address: Used when using the tf.data.experimental.service
     dataset_name: Name of dataset to load, if not reading from the config.
-    dataset_configs: Configuration of the dataset, if not reading directly
-      from the config.
+    dataset_configs: Configuration of the dataset, if not reading directly from
+      the config.
 
   Returns:
     A dataset_utils.Dataset object.
@@ -357,8 +358,7 @@ def initialize_multitask_model(
       dummy_input = []
       for in_st in input_shapetype:
         dummy_input.append(jnp.zeros(in_st.shape, in_st.dtype))
-      model_def(
-          *dummy_input, train=False, debug=False, **dict(kwargs))
+      model_def(*dummy_input, train=False, debug=False, **dict(kwargs))
 
   # We want all parameters to be created in host RAM, not on any device, they'll
   # be sent there later as needed, otherwise we already encountered two
@@ -486,19 +486,16 @@ def save_checkpoint(workdir: str,
                     overwrite: bool = False):
   """Saves a checkpoint.
 
-  First syncs the model state across replicas, then it unreplicates it by taking
-  the train state of the first replica and saves it as a checkpoint.
-
   Args:
     workdir: Experiment directory for saving the checkpoint.
     train_state: An instance of TrainState that holds the state of training.
     max_to_keep: The number of checkpoints to keep.
-    overwrite: Overwrite existing checkpoint  if a checkpoint
-      at the current or a later step already exits (default: False).
+    overwrite: Overwrite existing checkpoint  if a checkpoint at the current or
+      a later step already exits (default: False).
   """
   if jax.process_index() == 0:
     # Get train state from the first replica.
-    checkpoint_state = jax.device_get(jax_utils.unreplicate(train_state))
+    checkpoint_state = jax.device_get(train_state)
     checkpoints.save_checkpoint(
         workdir,
         checkpoint_state,
@@ -507,8 +504,7 @@ def save_checkpoint(workdir: str,
         keep=max_to_keep)
 
 
-SIGNED_FLOAT_RE = re.compile(
-    r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
+SIGNED_FLOAT_RE = re.compile(r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
 
 
 def checkpoint_path_step(path: str) -> Optional[float]:
@@ -540,10 +536,9 @@ def restore_checkpoint(checkpoint_path: str,
 
   Args:
     checkpoint_path: Directory to restore the checkpoint.
-    train_state: An instance of TrainState that holds the state of
-      training.
-    assert_exist: Assert that there is at least one checkpoint exists in
-      the given path.
+    train_state: An instance of TrainState that holds the state of training.
+    assert_exist: Assert that there is at least one checkpoint in the given
+      path.
     step: Step number to load or None to load latest. If specified,
       checkpoint_path must be a directory.
 
@@ -713,11 +708,11 @@ def log_eval_summary(step: int,
       the array index is usually the batch index.
     extra_eval_summary: A dict containing summaries that are already ready to be
       logged, e.g. global metrics from eval set, like precision/recall.
-    metrics_normalizer_fn: Used for normalizing metrics. The api for
-      this function is: `new_metrics_dict = metrics_normalizer_fn( metrics_dict,
-        split)`. If set to None, we use the `normalize_metrics_summary` which
-        uses the normalizer paired with each metric to normalize it (after
-        summing both metric and normalizer values).
+    metrics_normalizer_fn: Used for normalizing metrics. The API for this
+      function is: `new_metrics_dict = metrics_normalizer_fn(metrics_dict,
+      split)`. If set to None, we use the `normalize_metrics_summary` which uses
+      the normalizer paired with each metric to normalize it (after summing both
+      metric and normalizer values).
     prefix: str; Prefix added to the name of the summaries writen by this
       function.
     key_separator: Separator added between the prefix and key.
@@ -775,8 +770,8 @@ def log_train_summary(step: int,
     extra_training_logs: List of dictionaries, containing additional training
       logs, from every train step, e.g. learning rate, Time, num parameters,
       etc. Their mean will be logged.
-    metrics_normalizer_fn: Used for normalizing metrics. The api for
-      this function is: `new_metrics_dict = metrics_normalizer_fn( metrics_dict,
+    metrics_normalizer_fn: Used for normalizing metrics. The API for
+      this function is: `new_metrics_dict = metrics_normalizer_fn(metrics_dict,
         split)`. If set to None, we use the normalize_metrics_summary which uses
         the normalizer paired with each metric to normalize it.
     prefix: str; Prefix added to the name of the summaries writen by this
@@ -820,43 +815,52 @@ def log_train_summary(step: int,
 class Chrono:
   """Measures time and reports progress.
 
-  This class is originally implemented by: Lucas Beyer, Alex Kolesnikov,
-  Xiaohua Zhai and other collaborators from Brain ZRH.
+  This is a modified fork of Chrono class from big_vision codebase:
+  https://github.com/google-research/big_vision/blob/main/big_vision/utils.py
+
+  Some concepts:
+  1. This differentiates between three "types" of time:
+    - training time: the time spent on actual training (fprop/bprop/update)
+    - program time: overall time the program runs, including all overheads
+    - pause time: the chronometer can be paused (eg during evals).
+  2. This handles a "warmup": the first step is skipped for training time
+      purposes, as it includes significant compilation overheads, which distort
+      estimates.
+  3. `accumulates` (i.e. integrates) timings, and saves/loads them across
+      restarts.
   """
 
-  def __init__(self,
-               first_step: int,
-               total_steps: int,
-               steps_per_epoch: int,
-               global_bs: int,
-               accum_train_time: int = 0,
-               example_type='img'):
+  def __init__(self, example_type: str = 'img', warmup: int = 2):
+    self.program_start_time = time.time()
+    self.train_start_time = None
+    self.train_start_step = None  # When we started timing (after warmup)
+
+    self.prev_time = None
+    self.prev_step = None
+
+    self.pause_start = None
+    self.paused_time = 0
+
+    self.warmup = warmup  # How many calls to `tick` to skip.
+    self.load()  # Inits accum integrators.
+    self.note = 'Chrono n/a'
+    self.example_type = example_type
+
+  def inform(self, first_step: int, total_steps: int, global_bs: int,
+             steps_per_epoch: int):
+    """Provide some extra info that's only known later in the program."""
+    self.prev_step = first_step
     self.first_step = first_step
     self.total_steps = total_steps
     self.steps_per_epoch = steps_per_epoch
     self.global_bs = global_bs
-    self.accum_train_time = accum_train_time
-    self.start_time = None
-    self.prev_time = None
-    self.prev_step = first_step
-    self.pause_start = None
-    self.paused_time = 0
-    self.warmup = 1  # How many calls to `tick` to skip.
-    self.example_type = example_type
+    if total_steps:
+      self.note = f'Steps:{first_step}/{total_steps} [{first_step/total_steps:.1%}]'
 
-  def tick(self, step: int, writer: metric_writers.MetricWriter):
+  def tick(self, step: int, writer: metric_writers.MetricWriter,
+           write_note: Callable[[str], None]):
     """A chronometer tick."""
-    now = self.pause_start or time.time()
-
-    # Take the start as the first time `tick` is called to avoid measuring the
-    # overhead of compilation and don't include it in time estimates.
-    if self.warmup:
-      self.warmup -= 1
-      return
-    if None in (self.start_time, self.prev_time):
-      self.start_time = self.prev_time = now
-      self.prev_step = step
-      return
+    summary = {}
 
     def hms(s):
       """Format time in hours/minutes/seconds."""
@@ -868,40 +872,89 @@ class Chrono:
       h, m = divmod(m, 60)
       return f'{h:.0f}h{m:.0f}m'  # Seconds intentionally omitted.
 
-    # Progress note with 'global' full-program average timings.
-    dt = now - self.start_time  # Time since process start.
-    steps_done = step - self.first_step
-    steps_todo = self.total_steps - step
-    note = f'Steps:{step}/{self.total_steps} [{step/self.total_steps:.1%}]'
-    note += f'\nETA:{hms(dt / steps_done * steps_todo)}'
-    note += f'\nTotal time:{hms(dt / steps_done * self.total_steps)}'
+    now = time.time()
+    # We always count examples, regardless of the timing-related warmup that
+    # happens a few lines below.
+    ds = step - self.prev_step  # Steps between ticks
+    self.prev_step = step
+    self.accum_examples_seen += ds * self.global_bs
+    summary.update({
+        'examples_seen': self.accum_examples_seen,
+        'epoch': step / self.steps_per_epoch,
+    })
+
+    # We take the start as the second time `tick` is called, so we avoid
+    # measuring the overhead of compilation and don't include it in time
+    # estimates.
+    if self.warmup > 1:
+      self.warmup -= 1
+      write_note(self.note)  # This can help debugging.
+      return
+    if self.warmup == 1:
+      self.train_start_time = self.prev_time = now
+      self.train_start_step = step
+      self.accum_program_time += now - self.program_start_time
+      self.paused_time = 0  # Drop pauses that happened before timing starts.
+      self.warmup = 0
+      write_note(self.note)  # This can help debugging.
+      return
 
     # Measurement with micro-timings of current training steps speed.
-    dt = now - self.prev_time - self.paused_time  # Time between ticks.
-    ds = step - self.prev_step  # Steps between ticks.
-    ncores = jax.device_count()  # Global device count.
+    # Time between ticks (ignoring pause)
+    dt = now - self.prev_time - self.paused_time
+    ncores = jax.device_count()  # Global device count
+    summary.update({
+        f'{self.example_type}/sec/core': self.global_bs * ds / dt / ncores,
+        f'{self.example_type}/sec': self.global_bs * ds / dt,
+    })
 
-    # Accumulate (integrate) training time.
+    # Accumulate (integrate) times, good for plots.
     self.accum_train_time += dt
+    self.accum_pause_time += self.paused_time
+    self.accum_program_time += dt + self.paused_time
+
+    # Convert to, and log as, core hours.
     core_hours = self.accum_train_time * ncores / 60 / 60
     devtype = jax.devices()[0].device_kind
-    writer.write_scalars(
-        step, {
-            f'{self.example_type}/sec/core': self.global_bs * ds / dt / ncores,
-            f'{self.example_type}/sec': self.global_bs * ds / dt,
-            f'core_hours_{devtype}': core_hours,
-        })
+    summary.update({
+        f'core_hours_{devtype}': core_hours,
+        'core_hours': core_hours,  # For convenience as x-axis in sweeps.
+    })
 
+    # Progress note with "global" full-program average timings
+    # (eg in program-time minus warmup)
+    dt = now - self.train_start_time  # Time elapsed since end of warmup.
+    steps_timed = step - self.train_start_step
+    steps_todo = self.total_steps - step
+    self.note = f'Steps:{step}/{self.total_steps} [{step/self.total_steps:.1%}]'
+    self.note += f'\nWalltime:{hms(self.accum_program_time)}'
+    self.note += f' ({hms(self.accum_pause_time)} eval)'
+    self.note += f'\nETA:{hms(dt / steps_timed * steps_todo)}'
+    self.note += f'\nTotal train time:{hms(dt / steps_timed * self.total_steps)}'
+    write_note(self.note)
+    writer.write_scalars(step, summary)
     self.prev_time = now
-    self.prev_step = step
     self.paused_time = 0
 
-  def pause(self):
-    assert self.pause_start is None, 'Do not pause twice.'
-    if self.start_time:  # Only pause if started.
-      self.pause_start = time.time()
+  def pause(self, wait_for=()):
+    assert self.pause_start is None, "Don't pause twice."
+    jax.block_until_ready(wait_for)
+    self.pause_start = time.time()
 
   def resume(self):
-    if self.pause_start:
-      self.paused_time += time.time() - self.pause_start
-      self.pause_start = None
+    self.paused_time += time.time() - self.pause_start
+    self.pause_start = None
+
+  def save(self):
+    return dict(
+        accum_program_time=self.accum_program_time,
+        accum_train_time=self.accum_train_time,
+        accum_pause_time=self.accum_pause_time,
+        accum_examples_seen=self.accum_examples_seen,
+    )
+
+  def load(self, ckpt={}):  # pylint: disable=dangerous-default-value
+    self.accum_program_time = ckpt.get('accum_program_time', 0.0)
+    self.accum_train_time = ckpt.get('accum_train_time', 0.0)
+    self.accum_pause_time = ckpt.get('accum_pause_time', 0.0)
+    self.accum_examples_seen = ckpt.get('accum_examples_seen', 0)
