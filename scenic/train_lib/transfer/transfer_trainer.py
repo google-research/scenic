@@ -637,7 +637,7 @@ def train(
               writer=writer,
               repr_step=step)
         writer.flush()
-      chrono.resume()  # Un-pause now.
+        chrono.resume()  # Un-pause now.
 
   # Wait until computations are done before exiting.
   jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()
