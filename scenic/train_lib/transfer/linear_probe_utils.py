@@ -23,7 +23,7 @@ from clu import metric_writers
 from flax import jax_utils
 import flax.linen as nn
 import jax
-from jax.experimental.optimizers import clip_grads
+from jax.example_libraries.optimizers import clip_grads
 import jax.numpy as jnp
 import ml_collections
 import numpy as np

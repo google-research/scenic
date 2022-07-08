@@ -24,7 +24,7 @@ from clu import platform
 from flax import jax_utils
 import flax.linen as nn
 import jax
-from jax.experimental.optimizers import clip_grads
+from jax.example_libraries.optimizers import clip_grads
 import jax.numpy as jnp
 import jax.profiler
 import ml_collections
@@ -241,8 +241,8 @@ def train(
   # If the config is already an optax-compatible config, better call directly:
   #   optimizers.get_optimizer(config.optimizer_configs, lr_fn)
   tx = optimizers.get_optimizer(optimizer_config, lr_fn)
-  # We jit this, such that the arrays that are created are created on the same
-  # device as the input is, in this case the CPU. Else they'd be on device[0].
+  # We jit this, such that the arrays that are created on the same device as the
+  # input is, in this case the CPU. Else they'd be on device[0].
   opt_state = jax.jit(tx.init, backend='cpu')(params)
 
   rng, train_rng = jax.random.split(rng)
@@ -263,7 +263,7 @@ def train(
     train_state, start_step = train_utils.restore_checkpoint(
         workdir, train_state)
   chrono.load(train_state.metadata['chrono'])
-  # Replicate the optimzier, state, and rng.
+  # Replicate the optimizer, state, and rng.
   train_state = jax_utils.replicate(train_state)
   del params  # Do not keep a copy of the initial params.
 
