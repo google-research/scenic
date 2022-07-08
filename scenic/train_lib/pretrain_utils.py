@@ -183,7 +183,7 @@ def restore_pretrained_checkpoint(
       model_state=restored_model_state,
       global_step=int(restored_train_state['global_step']),
       rng=restored_train_state['rng'],
-      accum_train_time=restored_train_state.get('accum_train_time', 0))
+      metadata=restored_train_state.get('metadata', None))
   return train_state
 
 
