@@ -553,7 +553,8 @@ def train(
       h(step)
 
     ############### LOG TRAIN SUMMARY ###############
-    if (step % log_summary_steps == 1) or (step == total_steps):
+    if (step % log_summary_steps == 1) or (step
+                                           == total_steps) or chrono.warmup:
       chrono.pause()
       if lead_host:
         chrono.tick(step, writer, write_note)
