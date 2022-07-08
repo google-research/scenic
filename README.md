@@ -179,7 +179,7 @@ projects.
 If you use Scenic, you can cite our [white paper](https://arxiv.org/abs/2110.11403).
 Here is an example BibTeX entry:
 
-```
+```bibtex
 @article{dehghani2021scenic,
   author={Mostafa Dehghani and Alexey Gritsenko and Anurag Arnab and Matthias Minderer and Yi Tay},
   title={{Scenic}: A {JAX} Library for Computer Vision Research and Beyond},

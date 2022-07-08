@@ -634,7 +634,7 @@ def stack_forest(forest: PyTree) -> PyTree:
     a dict of lists.
   """
   stack_args = lambda *args: np.stack(args)
-  return jax.tree_map(stack_args, *forest)
+  return jax.tree_util.tree_map(stack_args, *forest)
 
 
 def unreplicate_and_get(x: Sequence[PyTree]) -> PyTree:
@@ -663,9 +663,9 @@ def process_and_fetch_to_host(
     # Split minibatch of examples into a list of examples.
     x_list = jnp.split(x, x.shape[0], axis=0)
     # Squeeze out the dummy dimension.
-    return jax.tree_map(lambda x: jnp.squeeze(x, axis=0), x_list)
+    return jax.tree_util.tree_map(lambda x: jnp.squeeze(x, axis=0), x_list)
 
-  pred_or_tgt = jax.tree_map(_split_mini_batches, pred_or_tgt)
+  pred_or_tgt = jax.tree_util.tree_map(_split_mini_batches, pred_or_tgt)
 
   if isinstance(pred_or_tgt, list):
     # Pred_or_tgt was a single array, so just return the list:
@@ -725,7 +725,7 @@ def log_eval_summary(step: int,
   eval_metrics = stack_forest(eval_metrics)
 
   # Compute the sum over all examples in all batches.
-  eval_metrics_summary = jax.tree_map(lambda x: x.sum(), eval_metrics)
+  eval_metrics_summary = jax.tree_util.tree_map(lambda x: x.sum(), eval_metrics)
   # Normalize metrics by the total number of examples.
   metrics_normalizer_fn = metrics_normalizer_fn or normalize_metrics_summary
   eval_metrics_summary = metrics_normalizer_fn(eval_metrics_summary, 'eval')
@@ -787,7 +787,8 @@ def log_train_summary(step: int,
   # Get metrics from devices:
   train_metrics = stack_forest(train_metrics)
   # Compute the sum over all examples in all batches:
-  train_metrics_summary = jax.tree_map(lambda x: x.sum(), train_metrics)
+  train_metrics_summary = jax.tree_util.tree_map(lambda x: x.sum(),
+                                                 train_metrics)
   # Normalize metrics by the total number of examples:
   metrics_normalizer_fn = metrics_normalizer_fn or normalize_metrics_summary
   train_metrics_summary = metrics_normalizer_fn(train_metrics_summary, 'train')

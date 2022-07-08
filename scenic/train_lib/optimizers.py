@@ -59,7 +59,7 @@ def get_optimizer(
         config.get('weight_decay', 0)):
       if params is None:
         raise ValueError('params must be given to obtain weight_decay_mask.')
-      weight_decay_mask = jax.tree_map(lambda x: x.ndim != 1, params)
+      weight_decay_mask = jax.tree_util.tree_map(lambda x: x.ndim != 1, params)
     del config.skip_scale_and_bias_regularization
 
   optim_ops = []
@@ -186,7 +186,7 @@ def tree_map_with_names(
     f: Callable[[jnp.ndarray], jnp.ndarray],
     param_tree: PyTree,
     match_name_fn: Callable[[str], bool] = lambda name: True) -> PyTree:
-  """Like jax.tree_map but with a filter on the leaf path name.
+  """Like jax.tree_util.tree_map but with a filter on the leaf path name.
 
   Args:
     f: The function to be applied to each parameter in `param_tree`. Takes value

@@ -31,8 +31,8 @@ FLAGS = flags.FLAGS
 
 
 def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,
-         writer: metric_writers.MetricWriter):
-  """Main function for the Scenic."""
+         writer: metric_writers.MetricWriter) -> None:
+  """Main function for Scenic."""
 
   model_cls = models.get_model_cls(config.model_name)
   data_rng, rng = jax.random.split(rng)

@@ -105,7 +105,7 @@ def maybe_pad_batch(batch: Dict[str, PyTree],
       if a sharded batch is given.
 
   Returns:
-    A dictionary mapping the same keys to the padded batches. Additionally we
+    A dictionary mapping the same keys to the padded batches. Additionally, we
     add a key representing weights, to indicate how the batch was padded.
   """
   assert batch_dim >= 0, f'batch_dim=={batch_dim} is expected to be >= 0'
@@ -128,7 +128,7 @@ def maybe_pad_batch(batch: Dict[str, PyTree],
                      'last partial batch of the train set. Please use '
                      '` drop_remainder=True` for the training set.')
 
-  # Most batches will not need padding so we quickly return to avoid slowdown.
+  # Most batches will not need padding, so we quickly return to avoid slowdown.
   if train or batch_pad == 0:
     if 'batch_mask' not in batch:
       batch['batch_mask'] = np.ones(unpadded_mask_shape, dtype=np.float32)
@@ -139,7 +139,7 @@ def maybe_pad_batch(batch: Dict[str, PyTree],
                 [(0, 0)] * (array.ndim - batch_dim - 1))
     return np.pad(array, pad_with, mode='constant')
 
-  padded_batch = jax.tree_map(zero_pad, batch)
+  padded_batch = jax.tree_util.tree_map(zero_pad, batch)
   padded_batch_mask = zero_pad(np.ones(unpadded_mask_shape, dtype=np.float32))
   if 'batch_mask' in padded_batch:
     padded_batch['batch_mask'] *= padded_batch_mask
@@ -168,7 +168,7 @@ def shard(pytree, n_devices=None):
   def _shard_array(array):
     return array.reshape((n_devices, -1) + array.shape[1:])
 
-  return jax.tree_map(_shard_array, pytree)
+  return jax.tree_util.tree_map(_shard_array, pytree)
 
 
 def unshard(pytree):
@@ -185,7 +185,7 @@ def unshard(pytree):
     ndev, bs = array.shape[:2]
     return array.reshape((ndev * bs,) + array.shape[2:])
 
-  return jax.tree_map(_unshard_array, pytree)
+  return jax.tree_util.tree_map(_unshard_array, pytree)
 
 
 def tf_to_numpy(batch):
@@ -199,7 +199,7 @@ def tf_to_numpy(batch):
   """
   # Use _numpy() for zero-copy conversion between TF and NumPy.
   convert_data = lambda x: x._numpy()  # pylint: disable=protected-access
-  return jax.tree_map(convert_data, batch)
+  return jax.tree_util.tree_map(convert_data, batch)
 
 
 def augment_random_crop_flip(image,

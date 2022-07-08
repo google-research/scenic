@@ -48,7 +48,7 @@ def distorted_bounding_box_crop(image_bytes,
 
   Args:
     image_bytes: TF tensor; Binary image data.
-    bbox: `ensor; Bounding boxes arranged `[1, num_boxes, coords]` where each
+    bbox: `Tensor; Bounding boxes arranged `[1, num_boxes, coords]` where each
       coordinate is [0, 1) and the coordinates are arranged as `[ymin, xmin,
       ymax, xmax]`. If num_boxes is 0 then use the whole image.
     min_object_covered: float; Defaults to `0.1`. The cropped area of the image

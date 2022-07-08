@@ -109,7 +109,7 @@ class ClassificationTrainerTest(absltest.TestCase):
       metrics = train_utils.unreplicate_and_get(metrics)
       eval_metrics.append(metrics)
     eval_metrics = train_utils.stack_forest(eval_metrics)
-    eval_summary = jax.tree_map(lambda x: x.sum(), eval_metrics)
+    eval_summary = jax.tree_util.tree_map(lambda x: x.sum(), eval_metrics)
     for key, val in eval_summary.items():
       eval_summary[key] = val[0] / val[1]
     return eval_summary

@@ -40,7 +40,7 @@ def tf_to_numpy(batch):
   # Transforms x into read-only numpy array without copy if possible, see:
   # https://github.com/tensorflow/tensorflow/issues/33254#issuecomment-542379165
   convert_data = lambda x: np.asarray(memoryview(x))
-  return jax.tree_map(convert_data, batch)
+  return jax.tree_util.tree_map(convert_data, batch)
 
 
 @datasets.add_dataset('bit')

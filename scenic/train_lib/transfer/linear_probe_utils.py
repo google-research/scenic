@@ -277,9 +277,10 @@ class LinearEvaluator:
           step % self.config.log_train_summary_steps == 0):
         train_utils.log_train_summary(
             step=step,
-            train_metrics=jax.tree_map(train_utils.unreplicate_and_get,
-                                       train_metrics),
-            extra_training_logs=jax.tree_map(jax.device_get, extra_train_logs),
+            train_metrics=jax.tree_util.tree_map(
+                train_utils.unreplicate_and_get, train_metrics),
+            extra_training_logs=jax.tree_util.tree_map(jax.device_get,
+                                                       extra_train_logs),
             writer=writer,
             prefix=prefix,
             key_separator='/')

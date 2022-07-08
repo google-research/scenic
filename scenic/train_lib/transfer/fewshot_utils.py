@@ -65,7 +65,7 @@ def prepare_data(xs, pad=None, devices=None):
 
     return x.reshape((local_device_count, -1) + x.shape[1:])
 
-  xs = jax.tree_map(_prepare, xs)
+  xs = jax.tree_util.tree_map(_prepare, xs)
   return {'inputs': xs['image'], 'label': xs['label'], 'batch_mask': xs['mask']}
 
 

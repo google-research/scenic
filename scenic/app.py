@@ -17,7 +17,7 @@
 This provides run() which performs some initialization and then calls the
 provided main with a JAX PRNGKey, the ConfigDict, the working directory
 and a CLU MetricWriter.
-We expect each scenic project to have it's own main.py. It's very short but
+We expect each scenic project to have its own main.py. It's very short but
 makes it easier to maintain scenic as the number of projects grows.
 
 Usage in your main.py:
@@ -68,7 +68,7 @@ def run(main):
 def _run_main(argv, *, main):
   """Runs the `main` method after some initial setup."""
   del argv
-  # Hide any GPUs form TensorFlow. Otherwise TF might reserve memory and make
+  # Hide any GPUs form TensorFlow. Otherwise, TF might reserve memory and make
   # it unavailable to JAX.
   tf.config.experimental.set_visible_devices([], 'GPU')
 
@@ -85,7 +85,7 @@ def _run_main(argv, *, main):
   logging.info('JAX devices: %r', jax.devices())
 
   # Add a note so that we can tell which task is which JAX host.
-  # (task 0 is not guaranteed to be host 0)
+  # (task 0 is not guaranteed to be the host 0)
   platform.work_unit().set_task_status(
       f'host_id: {jax.process_index()}, host_count: {jax.process_count()}')
   platform.work_unit().create_artifact(platform.ArtifactType.DIRECTORY,
