@@ -429,14 +429,14 @@ def mixup(batch: Dict['str', jnp.ndarray],
 
   batch_size = labels.shape[0]
 
-  # Setup the the numpy backend and prepare mixup weights.
+  # Set up the numpy backend and prepare mixup weights.
   if rng is None:
     np_backend = np  # Ordinary numpy
     weight = np_backend.random.beta(alpha, alpha)
   else:
     np_backend = jnp  # JAX numpy
     weight = jax.random.beta(rng, alpha, alpha)
-  label_weight_shape = np.ones((labels.ndim))
+  label_weight_shape = np.ones(labels.ndim)
   label_weight_shape[image_format.index('N')] = batch_size
   weight *= np_backend.ones(label_weight_shape.astype(np_backend.int32))
 
@@ -464,10 +464,10 @@ def _shard_read_instruction(host_id, host_count, abs_ri, builder):
   full_end = abs_ri.to or builder.info.splits[abs_ri.splitname].num_examples
 
   # Compute each host's subset.
-  # All hosts should perfrom exactly the same number iterations. To make sure
+  # All hosts should perform exactly the same number iterations. To make sure
   # this is the case we ensure that all hosts get the same number of images.
-  # Currently we might be dropping a little here in some setups (the maximum
-  # num examples we may drop is num_host-1. Alternatively, one can do padding
+  # Currently, we might be dropping a little here in some setups (the maximum
+  # num examples we may drop is num_host-1). Alternatively, one can do padding
   # instead, at least for the validation set.
   examples_per_host = (full_end - full_start) // host_count
   host_start = full_start + examples_per_host * host_id
@@ -481,9 +481,9 @@ def _get_data_range(builder, split, host_id, host_count):
   """Return a (sub)split adapted to a given host.
 
   Args:
-    builder: TFDS Builder for the datset.
-    split: str; Split for which we want to create the data ranage.
-    host_id: int; Id of the host.
+    builder: TFDS Builder for the dataset.
+    split: str; Split for which we want to create the data range.
+    host_id: int; ID of the host.
     host_count: int; Total Number of hosts.
 
   Returns:
@@ -516,9 +516,9 @@ def get_data_range(builder, split, host_id, host_count):
   support using contiguous subsets such as `train[10%:20%]`.
 
   Args:
-    builder: TFDS Builder for the datset.
-    split: str; Split for which we want to create the data ranage.
-    host_id: int; Id of the host.
+    builder: TFDS Builder for the dataset.
+    split: str; Split for which we want to create the data range.
+    host_id: int; ID of the host.
     host_count: int; Total Number of hosts.
 
   Returns:
