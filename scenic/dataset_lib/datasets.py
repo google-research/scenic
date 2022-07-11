@@ -67,7 +67,9 @@ class DatasetRegistry(object):
 
   @classmethod
   def add(cls, name: str, builder_fn: Callable[..., dataset_utils.Dataset]):
-    """Add a dataset to the registry, i.e. register a dataset.
+    """Add a dataset to the registry, i.e.
+
+    register a dataset.
 
     Args:
       name: Dataset name (must be unique).
@@ -99,8 +101,8 @@ class DatasetRegistry(object):
       if name in _IMPORT_TABLE:
         module = _IMPORT_TABLE[name]
         importlib.import_module(module)
-        logging.info(
-            'On-demand import of dataset (%s) from module (%s).', name, module)
+        logging.info('On-demand import of dataset (%s) from module (%s).', name,
+                     module)
         if name not in cls._REGISTRY:
           raise KeyError(f'Imported module ({module}) did not register dataset'
                          f'({name}). Please check that dataset names match.')
@@ -117,10 +119,13 @@ class DatasetRegistry(object):
 
 def add_dataset(name: str, *args, **kwargs):
   """Decorator for shorthand dataset registdation."""
-  def inner(builder_fn: Callable[..., dataset_utils.Dataset]
-           ) -> Callable[..., dataset_utils.Dataset]:
+
+  def inner(
+      builder_fn: Callable[..., dataset_utils.Dataset]
+  ) -> Callable[..., dataset_utils.Dataset]:
     DatasetRegistry.add(name, functools.partial(builder_fn, *args, **kwargs))
     return builder_fn
+
   return inner
 
 
