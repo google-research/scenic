@@ -10,7 +10,7 @@ from flax import core as flax_core
 from flax import optim as optimizers
 from flax import traverse_util
 import jax
-from jax.experimental import optimizers as experimental_optimizers
+from jax.example_libraries import optimizers as experimental_optimizers
 import jax.numpy as jnp
 import numpy as np
 import PIL
@@ -364,7 +364,7 @@ def _get_params_dict(inputs):
 
 def clip_grads(grad_tree, max_norm):
   """Clip gradients stored as a pytree of arrays to maximum norm `max_norm`."""
-  # jax.experimental.optimizers.clip_grads implements this slightly differently.
+  # jax.example_libraries.optimizers.clip_grads implements this differently.
   # First, it uses clip_coef of max_norm / norm without the 1e-6.
   # Second, the jnp.where condition and argument order are reversed. This should
   # normally be a no-change but we do not know what changes in XLA are triggered

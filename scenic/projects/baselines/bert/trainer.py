@@ -9,7 +9,7 @@ from clu import periodic_actions
 from flax import jax_utils
 import flax.linen as nn
 import jax
-from jax.experimental import optimizers as jax_optimizers
+from jax.example_libraries import optimizers as jax_optimizers
 import jax.numpy as jnp
 import jax.profiler
 import ml_collections
