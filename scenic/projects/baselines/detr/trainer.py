@@ -442,7 +442,7 @@ def train_and_evaluate(
 
   (last_eval_step, last_eval_metrics), last_eval_future = (None, None), None
   for step in range(start_step + 1, total_steps + 1):
-    with jax.profiler.StepTraceContext('train', step_num=step):
+    with jax.profiler.StepTraceAnnotation('train', step_num=step):
       train_batch = next(dataset.train_iter)
       (train_state, t_metrics, lr, backbone_lr,
        train_predictions) = train_step_pmapped(train_state, train_batch)

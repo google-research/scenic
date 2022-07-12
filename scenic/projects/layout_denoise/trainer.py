@@ -627,7 +627,7 @@ def train(
       writer.write_scalars(1, step0_log)
 
   for step in range(start_step + 1, total_steps + 1):
-    with jax.profiler.StepTraceContext('train', step_num=step):
+    with jax.profiler.StepTraceAnnotation('train', step_num=step):
       train_batch, train_task, train_ds = get_next_train_batch(step)
       (train_state, t_metrics, lr, backbone_lr,
        train_predictions) = train_step_pmapped(train_state, train_batch,
