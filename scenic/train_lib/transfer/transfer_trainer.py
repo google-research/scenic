@@ -530,7 +530,7 @@ def train(
 
   write_note(f'First step compilations...\n{chrono.note}')
   for step in range(start_step + 1, total_steps + 1):
-    with jax.profiler.StepTraceContext('train', step_num=step):
+    with jax.profiler.StepTraceAnnotation('train', step_num=step):
       train_batch = next(dataset.train_iter)
       train_state, t_metrics, t_logs = train_step_pmapped(
           train_state, train_batch)

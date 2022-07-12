@@ -374,7 +374,7 @@ def train(
         math.floor(step/steps_per_epoch) >= config.ncr.starting_epoch):
       use_ncr = True
 
-    with jax.profiler.StepTraceContext('train', step_num=step):
+    with jax.profiler.StepTraceAnnotation('train', step_num=step):
       train_batch = next(dataset.train_iter)
       train_state, t_metrics = train_step_pmapped(
           train_state, train_batch, use_ncr)
