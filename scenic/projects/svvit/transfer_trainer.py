@@ -574,7 +574,7 @@ def train(
     writer.write_scalars(1, step0_log)
 
   for step in range(start_step + 1, total_steps + 1):
-    with jax.profiler.StepTraceContext('train', step_num=step):
+    with jax.profiler.StepTraceAnnotation('train', step_num=step):
       train_batch = next(dataset.train_iter)
       train_state, t_metrics, lr = train_step_pmapped(train_state, train_batch)
       # This will accumulate metrics in TPU memory up to the point that we log
