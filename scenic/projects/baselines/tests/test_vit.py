@@ -18,6 +18,7 @@ class ViTTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
       ('pos_embed_learned_1d', 'learned_1d', False),
+      ('pos_embed_sinusoidal_1d', 'sinusoidal_1d', False),
       ('pos_embed_sinusoidal_2d', 'sinusoidal_2d', False),
       ('pos_embed_none', 'none', False),
       ('default_config', 'ignored', True)

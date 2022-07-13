@@ -147,6 +147,8 @@ class Encoder(nn.Module):
           posemb_init=nn.initializers.normal(stddev=0.02),  # from BERT.
           name='posembed_input')(
               inputs)
+    elif self.positional_embedding == 'sinusoidal_1d':
+      x = attention_layers.Add1DPositionEmbedding(posemb_init=None)(inputs)
     elif self.positional_embedding == 'sinusoidal_2d':
       batch, num_tokens, hidden_dim = inputs.shape
       height = width = int(np.sqrt(num_tokens))
