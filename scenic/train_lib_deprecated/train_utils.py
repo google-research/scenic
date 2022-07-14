@@ -548,8 +548,8 @@ def accumulate_grads_microbatched(
       del train_cost
       metrics = metrics_fn(mlogits, mbatch)
       # Accumulate gradients and metrics.
-      grad = jax.tree_multimap(jnp.add, grad_accum, grad)
-      metrics = jax.tree_multimap(jnp.add, metrics, metrics_acc)
+      grad = jax.tree_map(jnp.add, grad_accum, grad)
+      metrics = jax.tree_map(jnp.add, metrics, metrics_acc)
       return dropout_rng, grad, metrics
 
     # Initialize gradient accumulation loop state.
@@ -718,7 +718,7 @@ def stack_forest(forest: PyTree) -> PyTree:
     a dict of lists.
   """
   stack_args = lambda *args: np.stack(args)
-  return jax.tree_multimap(stack_args, *forest)
+  return jax.tree_map(stack_args, *forest)
 
 
 def unreplicate_and_get(x: Sequence[PyTree]) -> PyTree:

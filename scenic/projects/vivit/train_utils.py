@@ -132,8 +132,8 @@ def train_step(
     g_sam, _ = jax.grad(training_loss_fn, has_aux=True)(
         train_state.optimizer.target)
     g_sam = dual_vector(g_sam)
-    target_sam = jax.tree_multimap(lambda a, b: a + config.get('sam_rho') * b,
-                                   train_state.optimizer.target, g_sam)
+    target_sam = jax.tree_map(lambda a, b: a + config.get('sam_rho') * b,
+                              train_state.optimizer.target, g_sam)
     (train_cost,
      (new_model_state,
       logits)), grad = compute_gradient_fn(target_sam)
