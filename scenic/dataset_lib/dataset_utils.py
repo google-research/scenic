@@ -557,7 +557,11 @@ def get_num_examples(dataset, split, data_dir=None):
   return n
 
 
-def get_dataset_tfds(dataset, split, shuffle_files=True, data_dir=None):
+def get_dataset_tfds(dataset,
+                     split,
+                     shuffle_files=True,
+                     data_dir=None,
+                     feature_key='image'):
   """Data provider."""
   builder = tfds.builder(dataset, data_dir=data_dir)
 
@@ -579,7 +583,7 @@ def get_dataset_tfds(dataset, split, shuffle_files=True, data_dir=None):
           skip_prefetch=True,  # We prefetch after pipeline.
           try_autocache=False,  # We control this, esp. for few-shot.
       ),
-      decoders={'image': tfds.decode.SkipDecoding()})
+      decoders={feature_key: tfds.decode.SkipDecoding()})
 
 
 def make_pipeline(data,
