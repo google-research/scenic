@@ -93,20 +93,19 @@ def inference_step(
       debug=debug,
       capture_intermediates=None,
   )
-  targets = {'label': batch['label'], 'batch_mask': batch['batch_mask']}
-  return nn.softmax(logits, axis=-1), targets
+  return nn.softmax(logits, axis=-1)
 
 
-def compute_similary_scores(train_state: train_utils.TrainState,
-                            iterator,
-                            eval_step_fn,
-                            eval_steps,
-                            workdir,
-                            lead_host):
+def compute_similarity_scores(train_state: train_utils.TrainState,
+                              iterator,
+                              eval_step_fn,
+                              eval_steps,
+                              workdir,
+                              lead_host):
   """Compute similarity scores and dump them directly instead of metrics."""
   # Sync model state across replicas.
   train_state = train_utils.sync_model_state_across_replicas(train_state)
-  all_logits, all_keys = [], []
+  all_logits, all_keys, all_labels = [], [], []
   # Do this to ensure we definitely cover the full test set
   eval_steps = int(np.ceil(1.3 * eval_steps))
   logging.info('Number of eval steps is %s', eval_steps)
@@ -115,12 +114,15 @@ def compute_similary_scores(train_state: train_utils.TrainState,
       eval_batch = next(iterator)
       assert 'key' in eval_batch, 'Keys must be added to batch'
       keys = eval_batch['key']
+      labels = eval_batch['label']
       del eval_batch['key']
+      del eval_batch['label']
 
-      logits, _ = eval_step_fn(train_state, eval_batch)
-      gathered_logits, gathered_keys = all_gather_and_unreplicate(
-          (logits, keys))
+      logits = eval_step_fn(train_state, eval_batch)
+      gathered_logits, gathered_keys, gathered_labels = all_gather_and_unreplicate(
+          (logits, keys, labels))
       all_logits.append(np.concatenate(gathered_logits, axis=0))
+      all_labels.append(np.concatenate(gathered_labels, axis=0))
       all_keys.append(
           tf.strings.unicode_encode(
               np.concatenate(gathered_keys, axis=0), 'UTF-8'))
@@ -129,6 +131,7 @@ def compute_similary_scores(train_state: train_utils.TrainState,
 
   timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
   fname_logits = os.path.join(workdir, f'logits_offline_eval_{timestamp}')
+  fname_labels = os.path.join(workdir, f'labels_offline_eval_{timestamp}')
   fname_keys = os.path.join(workdir, f'keys_offline_eval_{timestamp}')
   if lead_host:
     logging.info('Logging results to %s', fname_logits)
@@ -138,6 +141,9 @@ def compute_similary_scores(train_state: train_utils.TrainState,
     log_to_cns(
         predictions=np.concatenate(all_keys, axis=0),
         filename_prefix=fname_keys)
+    log_to_cns(
+        predictions=np.concatenate(all_labels, axis=0),
+        filename_prefix=fname_labels)
 
 
 def log_to_cns(predictions, filename_prefix: str):
@@ -264,7 +270,7 @@ def evaluate(
             prefix='SV_test'))
     del eval_metrics, eval_global_metrics_summary
   else:
-    compute_similary_scores(
+    compute_similarity_scores(
         train_state=train_state,
         iterator=dataset.valid_iter,
         eval_step_fn=inference_step_pmapped,
