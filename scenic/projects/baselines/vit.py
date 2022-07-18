@@ -488,6 +488,9 @@ def init_vit_from_train_state(
   do some surgery to support larger resolutions (longer sequence length) in
   the transformer block, with respect to the learned pos-embeddings.
 
+  The function supports train_states using either Optax or flax.optim (which
+  has been deprecated, and will be removed from Scenic.)
+
   Args:
     train_state: A raw TrainState for the model.
     restored_train_state: A TrainState that is loaded with parameters/state of a
@@ -499,7 +502,7 @@ def init_vit_from_train_state(
   Returns:
     Updated train_state.
   """
-  if 'optimizer' in train_state:
+  if hasattr(train_state, 'optimizer'):
     # TODO(dehghani): Remove support for flax optim.
     params = flax.core.unfreeze(train_state.optimizer.target)
     restored_params = flax.core.unfreeze(restored_train_state.optimizer.target)
