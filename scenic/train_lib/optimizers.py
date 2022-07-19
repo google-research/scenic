@@ -25,7 +25,6 @@ import ml_collections
 import numpy as np
 import optax
 
-
 # JAX team is working type checking for pytrees:
 # https://github.com/google/jax/issues/3340
 PyTree = Any
@@ -36,14 +35,14 @@ def get_optimizer(
     optimizer_config: ml_collections.ConfigDict,
     learning_rate_fn: ScalarOrSchedule,
     params: Optional[PyTree] = None,
-    ) -> optax.GradientTransformation:
+) -> optax.GradientTransformation:
   """Constructs the optimizer from the given configuration.
 
   Args:
     optimizer_config: Configuration specific to the optimizer.
     learning_rate_fn: Learning rate schedule.
     params: Parameters pytree, used when we want to skip weight decay on bias
-    and scale parameters.
+      and scale parameters.
 
   Returns:
     An optax GradientTransformation, this consists of a pair of pure functions
@@ -70,11 +69,28 @@ def get_optimizer(
           optax.add_decayed_weights(config.weight_decay, weight_decay_mask))
     del config.weight_decay
 
+  # Add gradient clipping before optimizer operations.
+  if 'grad_clip' in config:
+    grad_clip_config = config.grad_clip
+    clip_method = grad_clip_config.get('clip_method', None)
+    clip_value = grad_clip_config.get('clip_value', None)
+    if clip_method is not None and clip_value is not None:
+      if clip_method == 'clip_by_global_norm':
+        optim_ops.append(optax.clip_by_global_norm(clip_value))
+      elif clip_method == 'adaptive_grad_clip':
+        optim_ops.append(optax.adaptive_grad_clip(clip_value))
+      elif clip_method == 'clip':
+        optim_ops.append(optax.clip(clip_value))
+      elif clip_method == 'clip_by_block_rms':
+        optim_ops.append(optax.clip_by_block_rms(clip_value))
+      else:
+        logging.info('%s is not supported', clip_method)
+    del config.grad_clip_config
+
   # Call the optax optimizer with exact arguments as in the config.
   optimizer_fn = getattr(optax, config.optimizer)
   del config.optimizer
   optim_ops.append(optimizer_fn(learning_rate=learning_rate_fn, **config))
-
   return optax.chain(*optim_ops)
 
 
@@ -115,11 +131,13 @@ def get_optax_optimizer_config(
         config.skip_scale_and_bias_regularization)
 
   optimizer_config = _scenic_optimizer_args_to_optax_args(optimizer_config)
-  optimizer_config.lock()
 
+  if 'grad_clip_configs' in config:
+    optimizer_config.grad_clip_config = config.grad_clip_configs
+
+  optimizer_config.lock()
   logging.info('Optimizer config after backwards compatibility operations:\n%s',
                optimizer_config)
-
   return optimizer_config
 
 
@@ -226,6 +244,7 @@ def tree_map_with_names_values(
     True for that leaf's path name.
   """
   names_and_vals, tree_def = tree_flatten_with_names(param_tree)
-  vals = [f(v, name) if match_name_fn(name) else v
-          for name, v in names_and_vals]
+  vals = [
+      f(v, name) if match_name_fn(name) else v for name, v in names_and_vals
+  ]
   return tree_def.unflatten(vals)
