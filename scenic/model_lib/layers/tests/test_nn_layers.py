@@ -84,11 +84,12 @@ class NNLayersTest(parameterized.TestCase):
     drop_half = nn_layers.StochasticDepth(rate=0.5)
     ones = jnp.ones_like(inputs)
     out_half = drop_half.apply({}, ones, deterministic=False, rngs=rngs)
-    self.assertAlmostEqual(jnp.mean(out_half), 0.5, places=1)
+    self.assertAlmostEqual(jnp.mean(out_half), 1.0, places=1)
 
     # Make sure that we always drop full samples.
+    # Note that the samples kept are scaled by 1 / (1 - rate).
     for row in out_half:
-      assert jnp.all(row == 0.0) or jnp.all(row == 1.0)
+      assert jnp.all(row == 0.0) or jnp.all(row == 2.0)
 
     out_half_det = drop_half.apply({}, inputs, deterministic=True, rngs=rngs)
     np.testing.assert_equal(np.asarray(out_half_det), inputs_np)

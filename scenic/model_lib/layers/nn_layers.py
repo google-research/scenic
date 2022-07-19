@@ -17,7 +17,6 @@
 from typing import Callable, Iterable, Optional
 
 import flax.linen as nn
-import flax.linen.module as flax_module
 import jax
 from jax.nn import initializers
 import jax.numpy as jnp
@@ -237,35 +236,30 @@ class StochasticDepth(nn.Module):
 
   Attributes:
     rate: the layer dropout probability (_not_ the keep rate!).
-    deterministic: If false (e.g. in inference) the layer dropout is applied,
-      whereas if true, no stochastic depth is applied and the inputs are
-      returned as is.
+    deterministic: If false (e.g. in training) the inputs are scaled by `1 / (1
+      - rate)` and the layer dropout is applied, whereas if true (e.g. in
+      evaluation), no stochastic depth is applied and the inputs are returned as
+      is.
   """
-
   rate: float = 0.0
   deterministic: Optional[bool] = None
 
   @nn.compact
-  def __call__(self, x: jnp.ndarray, deterministic: bool) -> jnp.ndarray:
-    """Generate the stochastic depth mask in order to apply layer-drop.
+  def __call__(self,
+               x: jnp.ndarray,
+               deterministic: Optional[bool] = None) -> jnp.ndarray:
+    """Applies a stochastic depth mask to the inputs.
 
     Args:
       x: Input tensor.
-      deterministic: If false (e.g. in enference) the layer dropout is applied,
-        whereas if true, no stochastic depth is applied and the inputs are
-        returned as is.
+      deterministic: If false (e.g. in training) the inputs are scaled by `1 /
+        (1 - rate)` and the layer dropout is applied, whereas if true (e.g. in
+        evaluation), no stochastic depth is applied and the inputs are returned
+        as is.
 
     Returns:
-      Stochastic depth mask.
+      The masked inputs reweighted to preserve mean.
     """
-
-    deterministic = flax_module.merge_param(
-        'deterministic', self.deterministic, deterministic)
-
-    if not deterministic and self.rate > 0.0:
-      shape = (x.shape[0],) + (1,) * (x.ndim - 1)
-      rng = self.make_rng('dropout')
-      mask = jax.random.bernoulli(rng, self.rate, shape)
-      return x * (1.0 - mask)
-    else:
-      return x
+    broadcast_dims = range(1, x.ndim)
+    return nn.Dropout(
+        rate=self.rate, broadcast_dims=broadcast_dims)(x, deterministic)
