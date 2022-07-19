@@ -20,6 +20,7 @@ for 3D images (height x width x channels). The functors output dictionary with
 field "image" being modified. Potentially, other fields can also be modified
 or added.
 """
+from typing import Optional
 import numpy as np
 
 from scenic.dataset_lib.big_transfer.preprocessing import autoaugment
@@ -708,7 +709,7 @@ def get_randaug(num_layers: int = 2, magnitude: int = 10):
       30].
 
   Returns:
-    a function that applies RandAugment.
+    A function that applies RandAugment.
   """
 
   def _randaug(image):
@@ -719,3 +720,6 @@ def get_randaug(num_layers: int = 2, magnitude: int = 10):
     )
 
   return _randaug
+
+
+
