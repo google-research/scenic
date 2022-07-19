@@ -349,8 +349,8 @@ def train(
       h(step)
     # Below are once-in-a-while ops -> pause.
     ###################### LOG TRAIN SUMMARY ########################
-    if (step % log_summary_steps == 1) or (step
-                                           == total_steps) or chrono.warmup:
+    if ((step % log_summary_steps == 1) or (step == total_steps) or
+        (lead_host and chrono.warmup)):
       chrono.pause()
       if lead_host:
         chrono.tick(step, writer, write_note)
