@@ -15,7 +15,7 @@
 """Base class for all multi-label classification models."""
 
 import functools
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Union
 
 from flax.training import common_utils
 from immutabledict import immutabledict
@@ -39,6 +39,7 @@ def multilabel_classification_metrics_function(
     target_is_multihot: bool = False,
     metrics: base_model
     .MetricNormalizerFnDict = _MULTI_LABEL_CLASSIFICATION_METRICS,
+    axis_name: Union[str, Tuple[str, ...]] = 'batch',
 ) -> Dict[str, Tuple[float, int]]:
   """Calculates metrics for the multi-label classification task.
 
@@ -56,6 +57,7 @@ def multilabel_classification_metrics_function(
    target_is_multihot: If the target is a multi-hot vector.
    metrics: The multi-label classification metrics to evaluate. The key is the
      name of the  metric, and the value is the metrics function.
+   axis_name: List of axes on which we run the pmsum.
 
   Returns:
     A dict of metrics, in which keys are metrics name and values are tuples of
@@ -78,8 +80,9 @@ def multilabel_classification_metrics_function(
   evaluated_metrics = {}
   for key, val in metrics.items():
     evaluated_metrics[key] = model_utils.psum_metric_normalizer(
-        (val[0](logits, multihot_target, weights),
-         val[1](logits, multihot_target, weights)))
+        (val[0](logits, multihot_target, weights), val[1](
+            logits, multihot_target, weights)),
+        axis_name=axis_name)
   return evaluated_metrics
 
 

@@ -15,7 +15,7 @@
 """Base class for all semantic segmentation models."""
 
 import functools
-from typing import Any, Callable, List, Dict, Optional, Tuple
+from typing import Any, Callable, List, Dict, Optional, Tuple, Union
 
 from flax.training import common_utils
 from immutabledict import immutabledict
@@ -66,6 +66,7 @@ def semantic_segmentation_metrics_function(
     batch: base_model.Batch,
     target_is_onehot: bool = False,
     metrics: base_model.MetricNormalizerFnDict = _SEMANTIC_SEGMENTATION_METRICS,
+    axis_name: Union[str, Tuple[str, ...]] = 'batch',
 ) -> Dict[str, Tuple[jnp.ndarray, jnp.ndarray]]:
   """Calculates metrics for the semantic segmentation task.
 
@@ -83,6 +84,7 @@ def semantic_segmentation_metrics_function(
    target_is_onehot: If the target is a one-hot vector.
    metrics: The semantic segmentation metrics to evaluate. The key is the name
     of the metric, and the value is the metrics function.
+   axis_name: List of axes on which we run the pmsum.
 
   Returns:
     A dict of metrics, in which keys are metrics name and values are tuples of
@@ -103,8 +105,9 @@ def semantic_segmentation_metrics_function(
   evaluated_metrics = {}
   for key, val in metrics.items():
     evaluated_metrics[key] = model_utils.psum_metric_normalizer(
-        (val[0](logits, one_hot_targets, weights),
-         val[1](logits, one_hot_targets, weights)))
+        (val[0](logits, one_hot_targets, weights), val[1](
+            logits, one_hot_targets, weights)),
+        axis_name=axis_name)
   return evaluated_metrics
 
 

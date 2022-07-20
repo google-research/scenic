@@ -252,6 +252,7 @@ def get_dataset(
     config: ml_collections.ConfigDict,
     data_rng: PRNGKey,
     *,
+    num_local_shards=None,
     dataset_service_address: Optional[str] = None,
     dataset_name: Optional[str] = None,
     dataset_configs: Optional[ml_collections.ConfigDict] = None
@@ -265,6 +266,9 @@ def get_dataset(
   Args:
     config: The configuration of the experiment.
     data_rng: Random number generator key to use for the dataset.
+    num_local_shards: Number of shards for each batch. So (bs, ...) becomes
+      (num_local_shards, bs//num_local_shards, ...). If not specified, it will
+      be number of local devices.
     dataset_service_address: Used when using the tf.data.experimental.service
     dataset_name: Name of dataset to load, if not reading from the config.
     dataset_configs: Configuration of the dataset, if not reading directly from
@@ -305,10 +309,11 @@ def get_dataset(
                      'to run with dataset service.')
 
   dataset_configs = dataset_configs or config.get('dataset_configs')
+  num_local_shards = num_local_shards or jax.local_device_count()
   dataset = dataset_builder(
       batch_size=local_batch_size,
       eval_batch_size=eval_local_batch_size,
-      num_shards=jax.local_device_count(),
+      num_shards=num_local_shards,
       dtype_str=config.data_dtype_str,
       rng=data_rng,
       shuffle_seed=shuffle_seed,
@@ -559,7 +564,7 @@ def restore_checkpoint(checkpoint_path: str,
 
 
 def bind_rng_to_host_device(rng: jnp.ndarray,
-                            axis_name: str,
+                            axis_name: Union[str, Tuple[str, ...]],
                             bind_to: Optional[str] = None) -> jnp.ndarray:
   """Binds a rng to the host/device we are on.
 
