@@ -378,7 +378,7 @@ def train(
   optimizer_config = optimizers.get_optax_optimizer_config(config)
   # If the config is already an optax-compatible config, better call directly:
   #   optimizers.get_optimizer(config.optimizer_configs, lr_fn)
-  tx = optimizers.get_optimizer(optimizer_config, lr_fn)
+  tx = optimizers.get_optimizer(optimizer_config, lr_fn, params=params)
   # We jit this, such that the arrays that are created are created on the same
   # device as the input is, in this case the CPU. Else they'd be on device[0].
   opt_state = jax.jit(tx.init, backend='cpu')(params)
