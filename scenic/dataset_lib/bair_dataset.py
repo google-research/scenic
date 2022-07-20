@@ -26,40 +26,83 @@ from scenic.dataset_lib import datasets
 import tensorflow as tf
 
 
-def preprocess_example(example,
-                       dtype=tf.float32,
-                       num_frames=30,
-                       stride=1,
-                       zero_centering=True,
-                       eval_beginning_frames=False,
-                       train=True):
-  """Preprocesses the given image.
+def preprocess_train_example(example, dtype=tf.float32, zero_centering=True):
+  """Preprocesses the given video.
 
   Args:
-    example: dict; Example that has an 'image' and a 'label'.
+    example: dict; Example that has an 'image_main'.
+    dtype: Tensorflow data type; Data type of the image.
+    zero_centering: If True, frames are normalized to values in [-1, 1].
+      If False, values in [0, 1].
+
+  Returns:
+    dict; Example that has an 'inputs'.
+  """
+  frames = example['image_main']
+  frames = processors.normalize_image(frames, zero_centering, dtype)
+  return {'inputs': frames}
+
+
+def augment_train_example(example, num_frames=30, stride=1):
+  """Augment the given video for training.
+
+  Args:
+    example: dict; Example that has an 'inputs'.
+    num_frames: Number of frames per subclip.
+    stride: Temporal stride to sample frames.
+
+  Returns:
+    dict; Example that has an 'inputs'.
+  """
+  frames = example['inputs']
+  frames = processors.sample_sequence(frames, num_frames, True, stride)
+  frames = processors.random_flip_left_right(frames)
+  return {'inputs': frames}
+
+
+def preprocess_eval_example(example,
+                            dtype=tf.float32,
+                            num_frames=30,
+                            stride=1,
+                            num_clips=1,
+                            zero_centering=True):
+  """Preprocesses the given video for evaluation.
+
+  Args:
+    example: dict; Example that has an 'inputs'.
     dtype: Tensorflow data type; Data type of the image.
     num_frames: Number of frames per subclip.
     stride: Temporal stride to sample frames.
+    num_clips: Linearly spaced clips to sample from each example.
     zero_centering: If True, frames are normalized to values in [-1, 1].
       If False, values in [0, 1].
-    eval_beginning_frames: If True, returns the first clip instead of the center
-       clip for evaluation.
-    train: Whether in training mode.
 
   Returns:
-    A preprocessed image `Tensor`.
+    dict; Example that has an 'inputs'.
   """
   frames = example['image_main']
-  if train:
-    frames = processors.sample_sequence(frames, num_frames, True, stride)
-    frames = processors.random_flip_left_right(frames)
-  else:
-    if eval_beginning_frames:
-      frames = frames[:num_frames * stride:stride]
-    else:
-      frames = processors.sample_sequence(frames, num_frames, False, stride)
   frames = processors.normalize_image(frames, zero_centering, dtype)
-  return {'inputs': frames}
+  clips = processors.sample_linspace_sequence(frames, num_clips, num_frames,
+                                              stride)
+  return {'inputs': clips}
+
+
+def postprocess_eval_batch(batch, num_frames=30):
+  """Postprocesses the given batch for evaluation.
+
+  Reshapes the batch from [bs, num_clips * num_frames, ...] into
+    [bs * num_clips, num_frames, ...].
+
+  Args:
+    batch: dict; Batch that has an 'inputs'.
+    num_frames: Number of frames per subclip.
+  Returns:
+    dict; Example that has an 'inputs'.
+  """
+  batch_clips = batch['inputs']
+  batch_clips = tf.reshape(batch_clips,
+                           (-1, num_frames, *batch_clips.shape[2:]))
+  return {'inputs': batch_clips}
 
 
 @datasets.add_dataset('bair')
@@ -95,29 +138,33 @@ def get_dataset(*,
   num_frames = dataset_configs.get('num_frames', 30)
   stride = dataset_configs.get('stride', 1)
   zero_centering = dataset_configs.get('zero_centering', True)
-  eval_beginning_frames = dataset_configs.get('eval_beginning_frames', False)
-  preprocess_ex_train = functools.partial(
-      preprocess_example,
+  num_eval_clips = dataset_configs.get('num_eval_clips', 1)
+  shuffle_buffer_size = dataset_configs.get('shuffle_buffer_size', None)
+  preprocess_train = functools.partial(
+      preprocess_train_example, dtype=dtype, zero_centering=zero_centering)
+  augment_train = functools.partial(
+      augment_train_example, num_frames=num_frames, stride=stride)
+  preprocess_eval = functools.partial(
+      preprocess_eval_example,
       dtype=dtype,
       num_frames=num_frames,
       stride=stride,
-      zero_centering=zero_centering,
-      train=True)
-  preprocess_ex_eval = functools.partial(
-      preprocess_example,
-      dtype=dtype,
-      num_frames=num_frames,
-      stride=stride,
-      zero_centering=zero_centering,
-      eval_beginning_frames=eval_beginning_frames,
-      train=False)
+      num_clips=num_eval_clips,
+      zero_centering=zero_centering)
+  if num_eval_clips > 1:
+    postprocess_eval = functools.partial(
+        postprocess_eval_batch, num_frames=num_frames)
+  else:
+    postprocess_eval = None
 
   logging.info('Loading train split of the BAIR dataset.')
   train_ds, _ = dataset_utils.load_split_from_tfds(
       'bair_robot_pushing_small',
       batch_size,
       split='train',
-      preprocess_example=preprocess_ex_train,
+      preprocess_example=preprocess_train,
+      augment_train_example=augment_train,
+      shuffle_buffer_size=shuffle_buffer_size,
       shuffle_seed=shuffle_seed)
 
   if dataset_service_address:
@@ -129,17 +176,20 @@ def get_dataset(*,
     logging.info('Using the tf.data service at %s', dataset_service_address)
     train_ds = dataset_utils.distribute(train_ds, dataset_service_address)
 
-  logging.info('Loading test split of the MNIST dataset.')
+  logging.info('Loading test split of the BAIR dataset.')
   eval_ds, _ = dataset_utils.load_split_from_tfds(
       'bair_robot_pushing_small',
       eval_batch_size,
       split='test',
-      preprocess_example=preprocess_ex_eval)
+      preprocess_example=preprocess_eval,
+      postprocess_batch=postprocess_eval)
 
   maybe_pad_batches_train = functools.partial(
       dataset_utils.maybe_pad_batch, train=True, batch_size=batch_size)
   maybe_pad_batches_eval = functools.partial(
-      dataset_utils.maybe_pad_batch, train=False, batch_size=eval_batch_size)
+      dataset_utils.maybe_pad_batch,
+      train=False,
+      batch_size=eval_batch_size * num_eval_clips)
   shard_batches = functools.partial(dataset_utils.shard, n_devices=num_shards)
 
   train_iter = iter(train_ds)
@@ -157,18 +207,16 @@ def get_dataset(*,
   eval_iter = map(shard_batches, eval_iter)
 
   input_shape = (-1, num_frames, 64, 64, 3)
+  num_train_examples = dataset_utils.get_num_examples(
+      'bair_robot_pushing_small', 'train')
+  num_eval_examples = dataset_utils.get_num_examples('bair_robot_pushing_small',
+                                                     'test') * num_eval_clips
   meta_data = {
-      'num_classes':
-          None,
-      'input_shape':
-          input_shape,
-      'num_train_examples':
-          dataset_utils.get_num_examples('bair_robot_pushing_small', 'train'),
-      'num_eval_examples':
-          dataset_utils.get_num_examples('bair_robot_pushing_small', 'test'),
-      'input_dtype':
-          getattr(jnp, dtype_str),
-      'target_is_onehot':
-          False,
+      'num_classes': None,
+      'input_shape': input_shape,
+      'num_train_examples': num_train_examples,
+      'num_eval_examples': num_eval_examples,
+      'input_dtype': getattr(jnp, dtype_str),
+      'target_is_onehot': False,
   }
   return dataset_utils.Dataset(train_iter, eval_iter, None, meta_data)

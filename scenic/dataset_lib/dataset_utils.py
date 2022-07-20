@@ -266,6 +266,7 @@ def load_split_from_tfds(dataset_name,
                          data_dir=None,
                          preprocess_example=None,
                          augment_train_example=None,
+                         postprocess_batch=None,
                          shuffle_buffer_size=None,
                          shuffle_seed=0,
                          cache=True,
@@ -283,6 +284,8 @@ def load_split_from_tfds(dataset_name,
     augment_train_example: A function that given a train example returns the
       augmented example. Note that this function is applied AFTER caching and
       repeat to get true randomness.
+    postprocess_batch: function; A function that given a batch, returns the
+      postprocessed batch.
     shuffle_buffer_size: int; Size of the tf.data.dataset shuffle buffer.
     shuffle_seed: int; Seed for shuffling the training data.
     cache: bool; Whether to cache the dataset in memory.
@@ -297,6 +300,7 @@ def load_split_from_tfds(dataset_name,
       split=split,
       preprocess_example=preprocess_example,
       augment_train_example=augment_train_example,
+      postprocess_batch=postprocess_batch,
       shuffle_buffer_size=shuffle_buffer_size,
       shuffle_seed=shuffle_seed,
       cache=cache)
@@ -307,6 +311,7 @@ def load_split_from_tfds_builder(builder,
                                  split,
                                  preprocess_example=None,
                                  augment_train_example=None,
+                                 postprocess_batch=None,
                                  shuffle_buffer_size=None,
                                  shuffle_seed=0,
                                  cache=True):
@@ -322,6 +327,8 @@ def load_split_from_tfds_builder(builder,
     augment_train_example: A function that given a train example returns the
       augmented example. Note that this function is applied AFTER caching and
       repeat to get true randomness.
+    postprocess_batch: function; A function that given a batch, returns the
+      postprocessed batch.
     shuffle_buffer_size: int; Size of the tf.data.dataset shuffle buffer.
     shuffle_seed: int; Seed for shuffling the training data.
     cache: bool; Whether to cache dataset in memory.
@@ -332,6 +339,7 @@ def load_split_from_tfds_builder(builder,
   # Prepare map functions.
   preprocess_example = preprocess_example or (lambda ex: ex)
   augment_train_example = augment_train_example or (lambda ex: ex)
+  postprocess_batch = postprocess_batch or (lambda ex: ex)
   shuffle_buffer_size = shuffle_buffer_size  or (8 * batch_size)
 
   # Download dataset:
@@ -368,6 +376,8 @@ def load_split_from_tfds_builder(builder,
     ds = ds.batch(batch_size, drop_remainder=False)
     ds = ds.repeat()
 
+  ds = ds.map(
+      postprocess_batch, num_parallel_calls=tf.data.experimental.AUTOTUNE)
   ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
   return ds, builder.info
 
