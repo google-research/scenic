@@ -33,8 +33,8 @@ def psum_metric_normalizer(
     axis_name: Union[str,
                      Tuple[str]] = 'batch') -> Tuple[jnp.ndarray, jnp.ndarray]:
   """Applies psum over the given tuple of (metric, normalizer)."""
-  psumed_metric = jnp.sum(jax.lax.psum(metrics[0], axis_name=axis_name))
-  psumed_normalizer = jnp.sum(jax.lax.psum(metrics[1], axis_name=axis_name))
+  psumed_metric = jax.lax.psum(jnp.sum(metrics[0]), axis_name=axis_name)
+  psumed_normalizer = jax.lax.psum(jnp.sum(metrics[1]), axis_name=axis_name)
   return (psumed_metric, psumed_normalizer)
 
 
