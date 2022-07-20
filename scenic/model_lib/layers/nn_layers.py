@@ -260,6 +260,12 @@ class StochasticDepth(nn.Module):
     Returns:
       The masked inputs reweighted to preserve mean.
     """
-    broadcast_dims = range(1, x.ndim)
-    return nn.Dropout(
-        rate=self.rate, broadcast_dims=broadcast_dims)(x, deterministic)
+    if self.rate <= 0.0:
+      return x
+    if deterministic:
+      return x
+    else:
+      shape = (x.shape[0],) + (1,) * (x.ndim - 1)
+      rng = self.make_rng('dropout')
+      mask = jax.random.bernoulli(rng, self.rate, shape)
+      return x * (1.0 - mask)
