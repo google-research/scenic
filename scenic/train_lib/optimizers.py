@@ -85,7 +85,7 @@ def get_optimizer(
         optim_ops.append(optax.clip_by_block_rms(clip_value))
       else:
         logging.info('%s is not supported', clip_method)
-    del config.grad_clip_config
+    del config.grad_clip
 
   # Call the optax optimizer with exact arguments as in the config.
   optimizer_fn = getattr(optax, config.optimizer)
@@ -133,7 +133,7 @@ def get_optax_optimizer_config(
   optimizer_config = _scenic_optimizer_args_to_optax_args(optimizer_config)
 
   if 'grad_clip_configs' in config:
-    optimizer_config.grad_clip_config = config.grad_clip_configs
+    optimizer_config.grad_clip = config.grad_clip_configs
 
   optimizer_config.lock()
   logging.info('Optimizer config after backwards compatibility operations:\n%s',
