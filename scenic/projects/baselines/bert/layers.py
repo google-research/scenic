@@ -374,6 +374,7 @@ class MaskedLanguageModelHead(nn.Module):
     kernel_init = bert_truncated_normal_initializer()
 
     x = nn.Dense(embedding_width, kernel_init=kernel_init, dtype=self.dtype)(x)
+    x = nn.gelu(x)
     x = nn.LayerNorm(dtype=self.dtype)(x)
     x = jnp.einsum('ijk,lk->ijl', x, word_embeddings)
     x = x + self.param('embedding_bias', nn.initializers.zeros,
