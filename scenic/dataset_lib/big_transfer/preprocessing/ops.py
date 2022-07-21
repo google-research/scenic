@@ -722,4 +722,38 @@ def get_randaug(num_layers: int = 2, magnitude: int = 10):
   return _randaug
 
 
+@Registry.register("preprocess_ops.patchify", "function")
+@utils.InKeyOutKey()
+def patchify(patch_size: int, stride: int):
+  """Patchifies image.
+
+  If image is of size (h, w, c), patchify it into (h//p*w//p, p*p*c)
+
+  Args:
+    patch_size: Integer.
+    stride: Integer.
+
+  Returns:
+    A function that applies RandAugment.
+  """
+
+  def _extract_patches(image):
+    """Extracts image patches."""
+    h, w, _ = image.get_shape().as_list()
+
+    count_h = h // stride
+    count_w = w // stride
+
+    # pyformat: disable
+    image = tf.extract_image_patches(image[None],
+                                     [1, patch_size, patch_size, 1],
+                                     [1, stride, stride, 1],
+                                     [1, 1, 1, 1],
+                                     padding="VALID")
+    # pyformat: enable
+    image = tf.reshape(image, [count_h * count_w, -1])
+
+  return _extract_patches
+
+
 
