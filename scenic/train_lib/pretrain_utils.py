@@ -164,7 +164,14 @@ def restore_pretrained_checkpoint(
   if restored_train_state is None:
     raise ValueError('No checkpoint for the pretrained model is found in: '
                      f'{checkpoint_path}')
-  restored_params = flax.core.freeze(restored_train_state['params'])
+  if hasattr(restored_train_state, 'params'):
+    # restored_train_state was trained using optax
+    restored_params = flax.core.freeze(restored_train_state['params'])
+  else:
+    # restored_train_state was trained using flax.optim. Note that this does
+    # not convert the naming of pre-Linen checkpoints.
+    restored_params = flax.core.freeze(
+        restored_train_state['optimizer']['target'])
   restored_model_state = flax.core.freeze(restored_train_state['model_state'])
   if not train_state:
     train_state = train_utils.TrainState()
