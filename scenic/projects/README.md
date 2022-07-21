@@ -65,6 +65,12 @@
     > Details can be found in the [paper](https://arxiv.org/abs/2202.02200),
     > where we used this method to learn with noisy labels.
 
+*   [PCT](pointcloud)
+
+    > Point Cloud Transformer (PCT) is a Transformer-based model for
+    > performing inference (classification/segmentation) for point cloud data.
+    > Details can be found in the [paper](https://arxiv.org/abs/2012.09688).
+
 
 <a name="projects"></a>
 ## Scenic projects
