@@ -262,8 +262,14 @@ def compound_lr_scheduler(config):
         ratio *= jnp.maximum(1.0 - progress, 0.0)
         ratio += config.get('end_learning_rate', 0.)
 
+      elif name == 'linear_cooldown':
+        adjusted_step = jnp.maximum(step, config.get('warmup_steps', 0.))
+        ratio *= jnp.minimum(1., (config.total_steps - adjusted_step) /
+                             config.cooldown_steps)
+
       else:
         raise ValueError('Unknown factor %s.' % name)
+
     return jnp.asarray(ratio, dtype=jnp.float32)
 
   return lr_fn

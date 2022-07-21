@@ -45,6 +45,7 @@ Batch = Dict[str, jnp.ndarray]
 MetricFn = Callable[[jnp.ndarray, Dict[str, jnp.ndarray]],
                     Dict[str, Tuple[float, int]]]
 LossFn = Callable[[jnp.ndarray, Batch, Optional[jnp.ndarray]], float]
+LrFn = Callable[[jnp.ndarray], jnp.ndarray]
 
 
 def train_step(
@@ -53,6 +54,7 @@ def train_step(
     *,
     flax_model: nn.Module,
     loss_fn: LossFn,
+    lr_fn: LrFn,
     metrics_fn: MetricFn,
     config: ml_collections.ConfigDict,
     debug: Optional[bool] = False
@@ -75,6 +77,7 @@ def train_step(
     flax_model: A Flax model.
     loss_fn: A loss function that given logits, a batch, and parameters of the
       model calculates the loss.
+    lr_fn: The learning rate fn used for the logging the learning rate.
     metrics_fn: A metrics function that given logits and batch of data,
       calculates the metrics as well as the loss.
     config: Configurations of the experiment.
@@ -137,6 +140,8 @@ def train_step(
   training_logs['l2_params'] = jnp.sqrt(sum([jnp.vdot(p, p) for p in ps]))
   us = jax.tree_leaves(updates)
   training_logs['l2_updates'] = jnp.sqrt(sum([jnp.vdot(u, u) for u in us]))
+  # TODO(dehghani): Can we get this from the optimizer instead?
+  training_logs['learning_rate'] = lr_fn(train_state.global_step)
 
   metrics = metrics_fn(logits, batch)
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
@@ -426,6 +431,7 @@ def train(
           train_step,
           flax_model=model.flax_model,
           loss_fn=model.loss_function,
+          lr_fn=lr_fn,
           metrics_fn=model.get_metrics_fn('train'),
           config=config,
           debug=config.debug_train),
@@ -544,7 +550,6 @@ def train(
       train_metrics.append(t_metrics)
       # Additional training logs: learning rate:
       t_logs = jax.tree_util.tree_map(jax_utils.unreplicate, t_logs)
-      t_logs.update({'learning_rate': lr_fn(step)})
       extra_training_logs.append(t_logs)
 
     # Quick indication that training is happening.
