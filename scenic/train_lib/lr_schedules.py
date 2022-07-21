@@ -113,18 +113,6 @@ def linear_warmup_scheduler(step, warmup_steps, alpha=0.):
     return 1.0
 
 
-def rsqrt_decay_scheduler(step):
-  """Gives a scaling factor based on scheduling with a rsqrt decay.
-
-  Args:
-    step: int; Current step.
-
-  Returns:
-    Scaling factor applied to the learning rate on the given step.
-  """
-  return 1. / jnp.sqrt(step)
-
-
 def decay_every_scheduler(step, steps_per_decay, decay_factor):
   """Gives a scaling factor based on scheduling with a decay every n-steps.
 
@@ -218,13 +206,11 @@ def compound_lr_scheduler(config):
         ratio *= linear_warmup_scheduler(step, warmup_steps, warmup_alpha)
 
       elif name == 'rsqrt_decay':
-        adjusted_step = jnp.maximum(step, config.get('warmup_steps', 0.))
-        ratio *= rsqrt_decay_scheduler(adjusted_step)
-
-      elif name == 'rsqrt_normalized_decay':
         warmup_steps = config.get('warmup_steps', 0.)
-        adjusted_step = jnp.maximum(step, warmup_steps)
-        ratio *= jnp.sqrt(warmup_steps) * rsqrt_decay_scheduler(adjusted_step)
+        timescale = config.get('timescale', 10_000)
+        shift = timescale - warmup_steps
+        ratio *= jnp.where(warmup_steps < step,
+                           jnp.sqrt(timescale) / jnp.sqrt(step + shift), 1.)
 
       elif name == 'decay_every':
         steps_per_decay = config['steps_per_decay']
