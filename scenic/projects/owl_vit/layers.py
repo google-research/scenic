@@ -139,8 +139,9 @@ class ImageTextEmbedder(nn.Module):
       # Input images should have range (0.0, 1.0). Shift them to CLIP range:
       if images is not None:
         images = clip_model.normalize_image(images)
-      # Don't normalize image and text embeddings, similar to argus.
-      img_emb, txt_emb = model(images, texts, normalize=False)
+      # Don't normalize image and text embeddings:
+      img_emb, txt_emb = model(
+          images, texts, normalize=False, deterministic=not train)
       # Drop or merge class embedding token.
       # TODO(mnn): Remove after the preferred class token merging scheme is
       # determined.
