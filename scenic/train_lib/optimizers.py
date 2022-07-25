@@ -69,6 +69,11 @@ def get_optimizer(
           optax.add_decayed_weights(config.weight_decay, weight_decay_mask))
     del config.weight_decay
 
+  if weight_decay_mask and config.optimizer in {'adamw', 'lamb', 'adamaxw'}:
+    config.mask = weight_decay_mask
+  elif weight_decay_mask and config.optimizer in {'adafactor', 'lars'}:
+    config.weight_decay_mask = weight_decay_mask
+
   # Add gradient clipping before optimizer operations.
   if 'grad_clip' in config:
     grad_clip_config = config.grad_clip
