@@ -273,7 +273,11 @@ class ViTMultiLabelClassificationModel(MultiLabelClassificationModel):
   """Vision Transformer model for multi-label classification task."""
 
   def build_flax_model(self)-> nn.Module:
-    model_dtype = getattr(jnp, self.config.get('model_dtype_str', 'float32'))
+    dtype_str = self.config.get('model_dtype_str', 'float32')
+    if dtype_str != 'float32':
+      raise ValueError('`dtype` argument is not propagated properly '
+                       'in the current implmentation, so only '
+                       '`float32` is supported for now.')
     return ViT(
         num_classes=self.dataset_meta_data['num_classes'],
         mlp_dim=self.config.model.mlp_dim,
@@ -288,7 +292,7 @@ class ViTMultiLabelClassificationModel(MultiLabelClassificationModel):
         dropout_rate=self.config.model.get('dropout_rate'),
         attention_dropout_rate=self.config.model.get('attention_dropout_rate'),
         stochastic_depth=self.config.model.get('stochastic_depth', 0.0),
-        dtype=model_dtype,
+        dtype=getattr(jnp, dtype_str),
     )
 
   def default_flax_model_config(self) -> ml_collections.ConfigDict:
