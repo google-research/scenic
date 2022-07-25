@@ -20,7 +20,7 @@ for 3D images (height x width x channels). The functors output dictionary with
 field "image" being modified. Potentially, other fields can also be modified
 or added.
 """
-from typing import Optional
+from typing import Optional, Tuple
 import numpy as np
 
 from scenic.dataset_lib.big_transfer.preprocessing import autoaugment
@@ -724,7 +724,7 @@ def get_randaug(num_layers: int = 2, magnitude: int = 10):
 
 @Registry.register("preprocess_ops.patchify", "function")
 @utils.InKeyOutKey()
-def patchify(patch_size: int, stride: int):
+def patchify(patch_size: Tuple[int, int], stride: Tuple[int, int]):
   """Patchifies image.
 
   If image is of size (h, w, c), patchify it into (h//p*w//p, p*p*c)
@@ -741,19 +741,18 @@ def patchify(patch_size: int, stride: int):
     """Extracts image patches."""
     h, w, _ = image.get_shape().as_list()
 
-    count_h = h // stride
-    count_w = w // stride
+    count_h = h // stride[0]
+    count_w = w // stride[1]
 
     # pyformat: disable
     image = tf.extract_image_patches(image[None],
-                                     [1, patch_size, patch_size, 1],
-                                     [1, stride, stride, 1],
+                                     [1, patch_size[0], patch_size[1], 1],
+                                     [1, stride[0], stride[1], 1],
                                      [1, 1, 1, 1],
                                      padding="VALID")
     # pyformat: enable
-    image = tf.reshape(image, [count_h * count_w, -1])
+    return tf.reshape(image, [count_h * count_w, -1])
 
   return _extract_patches
-
 
 
