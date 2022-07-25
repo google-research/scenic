@@ -285,9 +285,8 @@ class ViTMultiLabelClassificationModel(MultiLabelClassificationModel):
         patches=self.config.model.patches,
         hidden_size=self.config.model.hidden_size,
         classifier=self.config.model.classifier,
-        dropout_rate=self.config.model.get('dropout_rate', 0.1),
-        attention_dropout_rate=self.config.model.get('attention_dropout_rate',
-                                                     0.1),
+        dropout_rate=self.config.model.get('dropout_rate'),
+        attention_dropout_rate=self.config.model.get('attention_dropout_rate'),
         stochastic_depth=self.config.model.get('stochastic_depth', 0.0),
         dtype=model_dtype,
     )
