@@ -19,6 +19,7 @@ Xiaohua Zhai and other collaborators from Brain ZRH.
 """
 
 import collections
+import functools
 from typing import Any, Dict, Optional
 
 from absl import logging
@@ -344,11 +345,9 @@ def load_split_from_tfds_builder(builder,
 
   # Download dataset:
   builder.download_and_prepare()
+
   # Each host is responsible for a fixed subset of data.
-  base_split_name, host_start, host_end = get_data_range(
-      builder, split, jax.process_index(), jax.process_count())
-  data_range = tfds.core.ReadInstruction(
-      base_split_name, unit='abs', from_=host_start, to=host_end)
+  data_range = tfds.even_splits(split, jax.process_count())[jax.process_index()]
   ds = builder.as_dataset(split=data_range, shuffle_files=False)
   options = tf.data.Options()
   options.threading.private_threadpool_size = 48
@@ -467,96 +466,18 @@ def mixup(batch: Dict['str', jnp.ndarray],
   return batch
 
 
-def _shard_read_instruction(host_id, host_count, abs_ri, builder):
-  """Returns this host's shard of the read instruction `abs_ri`."""
-  # Get its start/end indices.
-  full_start = abs_ri.from_ or 0
-  full_end = abs_ri.to or builder.info.splits[abs_ri.splitname].num_examples
-
-  # Compute each host's subset.
-  # All hosts should perform exactly the same number iterations. To make sure
-  # this is the case we ensure that all hosts get the same number of images.
-  # Currently, we might be dropping a little here in some setups (the maximum
-  # num examples we may drop is num_host-1). Alternatively, one can do padding
-  # instead, at least for the validation set.
-  examples_per_host = (full_end - full_start) // host_count
-  host_start = full_start + examples_per_host * host_id
-  host_end = full_start + examples_per_host * (host_id + 1)
-
-  # Return raw info instead of ReadInstruction object due to API funkiness.
-  return abs_ri.splitname, host_start, host_end
-
-
-def _get_data_range(builder, split, host_id, host_count):
-  """Return a (sub)split adapted to a given host.
-
-  Args:
-    builder: TFDS Builder for the dataset.
-    split: str; Split for which we want to create the data range.
-    host_id: int; ID of the host.
-    host_count: int; Total Number of hosts.
-
-  Returns:
-    Data range for the current host and the given split.
-  """
-  # Each host reads a (same-size) subset of the given `split` such that they
-  # all go through different parts of it. For doing so, we need to do some
-  # indexing computation on a given `builder` and `split`, because we want to
-  # support using contiguous subsets such as `train[10%:20%]`, mainly because
-  # imagenet21k only contains a single `full` split and JFT only has huge val
-  # sets that would take forever.
-
-  # Canonicalize read instruction `ri` to absolute one.
-  abs_ri = tfds.core.ReadInstruction.from_spec(split).to_absolute(
-      builder.info.splits)
-
-  # Shard each read instruction individually. Usually there's only one, but
-  # when doing things like `train[:800]+validation[:200]`, there are more.
-  return [
-      _shard_read_instruction(host_id, host_count, ri, builder) for ri in abs_ri
-  ]
-
-
-def get_data_range(builder, split, host_id, host_count):
-  """Return a (sub)split adapted to a given host.
-
-  Each host reads a (same-size) subset of the given `split` such that they
-  all go through different parts of it. For doing so, we need to do some
-  indexing computation on a given `builder` and `split`, because we want to
-  support using contiguous subsets such as `train[10%:20%]`.
-
-  Args:
-    builder: TFDS Builder for the dataset.
-    split: str; Split for which we want to create the data range.
-    host_id: int; ID of the host.
-    host_count: int; Total Number of hosts.
-
-  Returns:
-    Data range for the current host and the given split.
-  """
-  data_range = _get_data_range(builder, split, host_id, host_count)
-  assert len(data_range) == 1, ('Multiple TFDS splits not supported. '
-                                'Please use `_get_data_range` instead.')
-  splitname, host_start, host_end = data_range[0]
-  logging.info('Host %d data range: from %s to %s (from split %s)',
-               jax.process_index(), host_start, host_end, splitname)
-
-  return splitname, host_start, host_end
+@functools.lru_cache(maxsize=None)
+def get_builder(dataset, data_dir):
+  return tfds.builder(dataset, data_dir=data_dir, try_gcs=True)
 
 
 def get_num_examples(dataset, split, data_dir=None):
   """Returns the total number of examples in a dataset split."""
-  builder = tfds.builder(dataset, data_dir=data_dir)
+  builder = get_builder(dataset, data_dir)
   # Download dataset:
   builder.download_and_prepare()
-
-  n = 0
-  nhosts = jax.process_count()
-  for ihost in range(nhosts):
-    for _, start, end in _get_data_range(builder, split, ihost, nhosts):
-      n += end - start
-
-  remainder = builder.info.splits[split].num_examples - n
+  num_examples = builder.info.splits[split].num_examples
+  remainder = num_examples % jax.process_count()
   if remainder:
     warning = (f'Dropping {remainder} examples for the '
                f'{builder.info.name} dataset, {split} split. '
@@ -564,7 +485,7 @@ def get_num_examples(dataset, split, data_dir=None):
                f'of examples in order to guarantee that they stay in sync.')
     logging.warning(warning)
 
-  return n
+  return num_examples
 
 
 def get_dataset_tfds(dataset,
@@ -573,25 +494,17 @@ def get_dataset_tfds(dataset,
                      data_dir=None,
                      feature_key='image'):
   """Data provider."""
-  builder = tfds.builder(dataset, data_dir=data_dir)
-
-  # Compute the read instructions for the current host in order to shard the
-  # data spec across hosts. It looks complex, but is mostly tfds boilerplate!
-  host_ris = []
-  for split, start, end in _get_data_range(builder, split, jax.process_index(),
-                                           jax.process_count()):
-    logging.info('Host %d data range: from %s to %s (from split %s)',
-                 jax.process_index(), start, end, split)
-    host_ris.append(
-        tfds.core.ReadInstruction(split, unit='abs', from_=start, to=end))
-
+  builder = get_builder(dataset, data_dir)
+  split = tfds.even_splits(
+      split, jax.process_count(), drop_remainder=True)[jax.process_index()]
   # Each host is responsible for a fixed subset of data
   return builder.as_dataset(
-      split=sum(host_ris[1:], host_ris[0]),  # API wants a sum, not a list O.o
+      split=split,
       shuffle_files=shuffle_files,
       read_config=tfds.ReadConfig(
           skip_prefetch=True,  # We prefetch after pipeline.
           try_autocache=False,  # We control this, esp. for few-shot.
+          add_tfds_id=True,
       ),
       decoders={feature_key: tfds.decode.SkipDecoding()})
 
@@ -610,10 +523,7 @@ def make_pipeline(data,
   """Makes an input pipeline for `data`."""
   assert cache in ('loaded', 'batched', False, None)
 
-  options = tf.data.Options()
-  options.threading.private_threadpool_size = 48
-  options.threading.max_intra_op_parallelism = 1
-  data = data.with_options(options)
+  data = _add_tpu_host_options(data)
 
   if cache == 'loaded':
     data = data.cache()
@@ -744,3 +654,10 @@ def distribute(
       dataset_id=dataset_id,
       job_name='scenic_data_pipeline',
       element_spec=dataset.element_spec)
+
+
+def _add_tpu_host_options(data):
+  options = tf.data.Options()
+  options.threading.private_threadpool_size = 48
+  options.threading.max_intra_op_parallelism = 1
+  return data.with_options(options)

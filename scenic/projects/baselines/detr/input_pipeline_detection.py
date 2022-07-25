@@ -165,10 +165,7 @@ def coco_load_split_from_tfds(batch_size,
   builder = tfds.builder('coco/2017')
 
   # Each host is responsible for a fixed subset of data.
-  base_split_name, host_start, host_end = dataset_utils.get_data_range(
-      builder, split, jax.process_index(), jax.process_count())
-  data_range = tfds.core.ReadInstruction(
-      base_split_name, unit='abs', from_=host_start, to=host_end)
+  data_range = tfds.even_splits(split, jax.process_count())[jax.process_index()]
   ds = builder.as_dataset(split=data_range, shuffle_files=False)
   options = tf.data.Options()
   options.threading.private_threadpool_size = 48
