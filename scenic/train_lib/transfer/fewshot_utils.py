@@ -33,7 +33,7 @@ import tensorflow_datasets as tfds
 _BIAS_CONSTANT = 100.0
 
 
-def prepare_data(xs, pad=None, devices=None):
+def prepare_data(xs, pad=None, num_devices=None):
   """Makes sure data fits local devices.
 
   Args:
@@ -41,7 +41,7 @@ def prepare_data(xs, pad=None, devices=None):
     pad: if not None, zero-pad arrays such that their first dimension has this
       size. Also introduces a "mask" key in `xs` that contains ones where the
       un-padded data resides and zeros where the padding is.
-    devices: the devices to distribute the data across. If None,
+    num_devices: Number of devices to distribute the data across. If None,
       ``local_device_count`` will be used instead.
 
   Returns:
@@ -50,9 +50,7 @@ def prepare_data(xs, pad=None, devices=None):
   # Create a mask which will be 1 for real entries and 0 for padded ones.
   if pad is not None:
     xs['mask'] = np.full(len(xs['image']), 1.0)
-
-  local_device_count = (
-      jax.local_device_count() if devices is None else len(devices))
+  local_device_count = num_devices or jax.local_device_count()
 
   def _prepare(x):
     # Transforms x into read-only numpy array without copy if possible, see:
@@ -69,12 +67,10 @@ def prepare_data(xs, pad=None, devices=None):
   return {'inputs': xs['image'], 'label': xs['label'], 'batch_mask': xs['mask']}
 
 
-def start_input_pipeline(data, n_prefetch, pad=None, devices=None):
+def start_input_pipeline(data, pad=None, num_devices=None):
   train_iter = iter(data)
-  train_iter = map(lambda x: prepare_data(x, pad, devices=devices), train_iter)
-  if n_prefetch:
-    train_iter = jax_utils.prefetch_to_device(
-        train_iter, n_prefetch, devices=devices)
+  train_iter = map(lambda x: prepare_data(x, pad, num_devices=num_devices),
+                   train_iter)
   return train_iter
 
 
@@ -192,12 +188,11 @@ class FewShotEvaluator:
       num_classes = tfds.builder(dataset).info.features['label'].num_classes
       return self._datasets.setdefault(key, (train_ds, test_ds, num_classes))
 
-  def _get_repr(self, train_state, data, devices=None):
+  def _get_repr(self, train_state, data):
     """Compute representation for the whole dataset."""
     pre_logits_list = []
     labels_list = []
-    for batch in start_input_pipeline(
-        data, 0, pad=self.local_batch_size, devices=devices):
+    for batch in start_input_pipeline(data, pad=self.local_batch_size):
       pre_logits, labels, mask = self.repr_fn(train_state, batch)
       # We need to unreplicate the output of `lax.all_gather`.
       # Shapes at this point are:
@@ -221,21 +216,15 @@ class FewShotEvaluator:
     labels = np.concatenate(labels_list, axis=0)
     return pre_logits, labels
 
-  def compute_fewshot_metrics(self,
-                              train_state,
-                              dataset,
-                              train_split,
-                              test_split,
-                              devices=None):
+  def compute_fewshot_metrics(self, train_state, dataset, train_split,
+                              test_split):
     """Compute few-shot metrics on one dataset."""
     train_ds, test_ds, num_classes = self._get_dataset(dataset, train_split,
                                                        test_split)
     logging.info('[fewshot][%s]: Precomputing train (%s)', dataset, train_split)
-    repr_train, labels_train = self._get_repr(
-        train_state, train_ds, devices=devices)
+    repr_train, labels_train = self._get_repr(train_state, train_ds)
     logging.info('[fewshot][%s]: Precomputing test (%s)', dataset, test_split)
-    repr_test, labels_test = self._get_repr(
-        train_state, test_ds, devices=devices)
+    repr_test, labels_test = self._get_repr(train_state, test_ds)
 
     logging.info('[fewshot][%s]: solving systems', dataset)
 
@@ -256,12 +245,11 @@ class FewShotEvaluator:
         results[shots, l2_reg] = np.array(acc)
     return results
 
-  def run_all(self, train_state, datasets, devices=None):
+  def run_all(self, train_state, datasets):
     """Compute summary over all `datasets` that comes from config."""
     results = {}
     for name, dataset_args in datasets.items():
-      results[name] = self.compute_fewshot_metrics(
-          train_state, *dataset_args, devices=devices)
+      results[name] = self.compute_fewshot_metrics(train_state, *dataset_args)
 
     # Now also figure out the regularization parameter that works best across
     # all datasets, per-shot. Similar to ATARI benchmark requiring one single
