@@ -164,7 +164,7 @@ def restore_pretrained_checkpoint(
   if restored_train_state is None:
     raise ValueError('No checkpoint for the pretrained model is found in: '
                      f'{checkpoint_path}')
-  if hasattr(restored_train_state, 'params'):
+  if 'params' in restored_train_state:
     # restored_train_state was trained using optax
     restored_params = flax.core.freeze(restored_train_state['params'])
   else:
