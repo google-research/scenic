@@ -85,27 +85,32 @@ def inference_step(
       'params': train_state.optimizer.target,
       **train_state.model_state
   }
-  logits = flax_model.apply(
+  capture_intermediates = lambda mdl, _: mdl.name == 'pre_logits'
+  logits, intermediate = flax_model.apply(
       variables,
       batch['inputs'],
       train=False,
       mutable=False,
       debug=debug,
-      capture_intermediates=None,
+      capture_intermediates=capture_intermediates,
   )
-  return nn.softmax(logits, axis=-1)
+  return nn.softmax(
+      logits,
+      axis=-1), intermediate['intermediates']['pre_logits']['__call__'][0]
 
 
-def compute_similarity_scores(train_state: train_utils.TrainState,
-                              iterator,
-                              eval_step_fn,
-                              eval_steps,
-                              workdir,
-                              lead_host,):
+def compute_similarity_scores(
+    train_state: train_utils.TrainState,
+    iterator,
+    eval_step_fn,
+    eval_steps,
+    workdir,
+    lead_host,
+):
   """Computes similarity scores and dump them directly instead of metrics."""
   # Sync model state across replicas.
   train_state = train_utils.sync_model_state_across_replicas(train_state)
-  all_logits, all_keys, all_labels, all_batch_masks = [], [], [], []
+  all_logits, all_keys, all_labels, all_batch_masks, all_intermediate = [], [], [], [], []
   # Do this to ensure we definitely cover the full test set
   eval_steps = int(np.ceil(1.3 * eval_steps))
   logging.info('Number of eval steps is %s', eval_steps)
@@ -119,10 +124,11 @@ def compute_similarity_scores(train_state: train_utils.TrainState,
       del eval_batch['key']
       del eval_batch['label']
 
-      logits = eval_step_fn(train_state, eval_batch)
-      gathered_logits, gathered_keys, gathered_labels, gathered_batch_masks = all_gather_and_unreplicate(
-          (logits, keys, labels, batch_masks))
+      logits, intermediate = eval_step_fn(train_state, eval_batch)
+      gathered_logits, gathered_keys, gathered_labels, gathered_batch_masks, gathered_intermediate = all_gather_and_unreplicate(
+          (logits, keys, labels, batch_masks, intermediate))
       all_logits.append(np.concatenate(gathered_logits, axis=0))
+      all_intermediate.append(np.concatenate(gathered_intermediate, axis=0))
       all_labels.append(np.concatenate(gathered_labels, axis=0))
       all_keys.append(
           tf.strings.unicode_encode(
@@ -133,6 +139,8 @@ def compute_similarity_scores(train_state: train_utils.TrainState,
 
   timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
   fname_logits = os.path.join(workdir, f'logits_offline_eval_{timestamp}')
+  fname_intermediate = os.path.join(workdir,
+                                    f'intermediate_offline_eval_{timestamp}')
   fname_labels = os.path.join(workdir, f'labels_offline_eval_{timestamp}')
   fname_keys = os.path.join(workdir, f'keys_offline_eval_{timestamp}')
   fname_masks = os.path.join(workdir, f'masks_offline_eval_{timestamp}')
@@ -141,6 +149,9 @@ def compute_similarity_scores(train_state: train_utils.TrainState,
     log_to_cns(
         predictions=np.concatenate(all_logits, axis=0),
         filename_prefix=fname_logits)
+    log_to_cns(
+        predictions=np.concatenate(all_intermediate, axis=0),
+        filename_prefix=fname_intermediate)
     log_to_cns(
         predictions=np.concatenate(all_keys, axis=0),
         filename_prefix=fname_keys)
