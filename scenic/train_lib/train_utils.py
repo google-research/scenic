@@ -313,7 +313,7 @@ def get_dataset(
   dataset_configs = dataset_configs or config.get('dataset_configs', {})
   num_local_shards = num_local_shards or jax.local_device_count()
 
-  if dataset_configs.get('expects_start_step'):
+  if dataset_configs and dataset_configs.get('expects_start_step'):
     kwargs = {'start_step': start_step}
   else:
     kwargs = {}
@@ -671,6 +671,7 @@ def process_and_fetch_to_host(
     A list of length n_dev*bs of items, where each item is a dictionary with
     same keys as `pred_or_tgt` & values are normal np-arrays of shape [X,...,Y].
   """
+
   def _split_mini_batches(x):
     # Fetch to host and filter out padded examples.
     x = jax.device_get(x)[np.array(batch_mask).astype(bool)]
@@ -784,10 +785,10 @@ def log_train_summary(step: int,
     extra_training_logs: List of dictionaries, containing additional training
       logs, from every train step, e.g. learning rate, Time, num parameters,
       etc. Their mean will be logged.
-    metrics_normalizer_fn: Used for normalizing metrics. The API for
-      this function is: `new_metrics_dict = metrics_normalizer_fn(metrics_dict,
-        split)`. If set to None, we use the normalize_metrics_summary which uses
-        the normalizer paired with each metric to normalize it.
+    metrics_normalizer_fn: Used for normalizing metrics. The API for this
+      function is: `new_metrics_dict = metrics_normalizer_fn(metrics_dict,
+      split)`. If set to None, we use the normalize_metrics_summary which uses
+      the normalizer paired with each metric to normalize it.
     prefix: str; Prefix added to the name of the summaries writen by this
       function.
     key_separator: Separator added between the prefix and key.
