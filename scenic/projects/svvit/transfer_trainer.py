@@ -616,10 +616,11 @@ def train(
         eval_summary = evaluate(train_state, step, dataset.valid_iter,
                                 dataset.meta_data['num_eval_examples'],
                                 'SV_test')
-      with report_progress.timed('test'):
-        eval_summary = evaluate(train_state, step, dataset.test_iter,
-                                dataset.meta_data['num_test_examples'],
-                                'Indel_test')
+      if dataset.test_iter:
+        with report_progress.timed('test'):
+          eval_summary = evaluate(train_state, step, dataset.test_iter,
+                                  dataset.meta_data['num_test_examples'],
+                                  'Indel_test')
     ##################### CHECKPOINTING ############################
     if ((step % checkpoint_steps == 1 and step > 1) or
         (step == total_steps)) and config.checkpoint:
