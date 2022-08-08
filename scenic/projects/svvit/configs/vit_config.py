@@ -4,9 +4,15 @@ r"""Default configs for ViT on structural variant classification using pileups.
 """
 
 import ml_collections
+from scenic.projects.svvit.google import dataset_meta_data
 
-_TRAIN_SIZE = 30_000 * 19
+_TRAIN_SIZE = 30_000 * 18
 VARIANT = 'Ti/4'
+
+HIDDEN_SIZE = {'Ti': 192, 'S': 384, 'B': 768, 'L': 1024, 'H': 1280}
+NUM_HEADS = {'Ti': 3, 'S': 6, 'B': 12, 'L': 16, 'H': 16}
+MLP_DIM = {'Ti': 768, 'S': 1536, 'B': 3072, 'L': 4096, 'H': 5120}
+NUM_LAYERS = {'Ti': 12, 'S': 12, 'B': 12, 'L': 24, 'H': 24}
 
 
 def get_config(runlocal=''):
@@ -21,35 +27,20 @@ def get_config(runlocal=''):
   config.dataset_name = 'pileup_window'
   config.data_dtype_str = 'float32'
   config.dataset_configs = ml_collections.ConfigDict()
+  config.dataset_configs.train_path = ''
+  config.dataset_configs.eval_path = ''
+  config.dataset_configs.test_path = ''
 
   # Model.
   version, patch = VARIANT.split('/')
   config.model_name = 'vit_classification'
   config.model = ml_collections.ConfigDict()
-  config.model.hidden_size = {
-      'Ti': 192,
-      'S': 384,
-      'B': 768,
-      'L': 1024,
-      'H': 1280
-  }[version]
+  config.model.hidden_size = HIDDEN_SIZE[version]
   config.model.patches = ml_collections.ConfigDict()
   config.model.patches.size = [int(patch), int(patch)]
-  config.model.num_heads = {'Ti': 3, 'S': 6, 'B': 12, 'L': 16, 'H': 16}[version]
-  config.model.mlp_dim = {
-      'Ti': 768,
-      'S': 1536,
-      'B': 3072,
-      'L': 4096,
-      'H': 5120
-  }[version]
-  config.model.num_layers = {
-      'Ti': 12,
-      'S': 12,
-      'B': 12,
-      'L': 24,
-      'H': 32
-  }[version]
+  config.model.num_heads = NUM_HEADS[version]
+  config.model.mlp_dim = MLP_DIM[version]
+  config.model.num_layers = NUM_LAYERS[version]
   config.model.representation_size = None
   config.model.classifier = 'token'
   config.model.attention_dropout_rate = 0.
@@ -67,8 +58,8 @@ def get_config(runlocal=''):
   config.l2_decay_factor = None
   config.max_grad_norm = 1.0
   config.label_smoothing = None
-  config.num_training_epochs = 200
-  config.log_eval_steps = 1000
+  config.num_training_epochs = 20
+  config.log_eval_steps = 100
   config.batch_size = 8 if runlocal else 512
   config.rng_seed = 42
   config.init_head_bias = -10.0
@@ -110,4 +101,43 @@ def get_config(runlocal=''):
 
 def get_hyper(hyper):
   """Defines the hyper-parameters sweeps for doing grid search."""
-  return hyper.product([])
+  # Dataset related hyper parameters.
+  dataset_names = hyper.sweep('config.dataset_name', [
+      'pileup_window',
+  ])
+  train_paths = hyper.sweep('config.dataset_configs.train_path', [
+      dataset_meta_data.DATASET_PATHS['ref_right']['del']['single']
+      ['hgsvc2_train'],
+  ])
+  eval_paths = hyper.sweep('config.dataset_configs.eval_path', [
+      dataset_meta_data.DATASET_PATHS['ref_right']['del']['single']
+      ['hgsvc2_test'],
+  ])
+  dataset_domains = hyper.zipit([dataset_names, train_paths, eval_paths])
+
+  # Model related hyper parameters.
+  hidden_size = hyper.sweep('config.model.hidden_size', [
+      HIDDEN_SIZE['Ti'],
+      HIDDEN_SIZE['S'],
+      HIDDEN_SIZE['B'],
+  ])
+  num_heads = hyper.sweep('config.model.num_heads', [
+      NUM_HEADS['Ti'],
+      NUM_HEADS['S'],
+      NUM_HEADS['B'],
+  ])
+  mlp_dim = hyper.sweep('config.model.mlp_dim', [
+      MLP_DIM['Ti'],
+      MLP_DIM['S'],
+      MLP_DIM['B'],
+  ])
+  num_layers = hyper.sweep('config.model.num_layers', [
+      NUM_LAYERS['Ti'],
+      NUM_LAYERS['S'],
+      NUM_LAYERS['B'],
+  ])
+
+  batch_size = hyper.sweep('config.batch_size', [512, 512, 256])
+  model_domains = hyper.zipit([hidden_size, num_heads, mlp_dim, num_layers, batch_size])
+
+  return hyper.product([model_domains, dataset_domains])
