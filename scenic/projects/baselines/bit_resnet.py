@@ -270,8 +270,14 @@ class BitResNetClassificationModel(ClassificationModel):
       Updated train_state.
     """
     del restored_model_cfg
-    params = flax.core.unfreeze(train_state.optimizer.target)
-    restored_params = flax.core.unfreeze(restored_train_state.optimizer.target)
+    if hasattr(train_state, 'optimizer'):
+      # TODO(dehghani): Remove support for flax optim.
+      params = flax.core.unfreeze(train_state.optimizer.target)
+      restored_params = flax.core.unfreeze(
+          restored_train_state.optimizer.target)
+    else:
+      params = flax.core.unfreeze(train_state.params)
+      restored_params = flax.core.unfreeze(restored_train_state.params)
     # Check all parameters are loaded.
     params_to_load = set(params.keys())
     params_to_load.remove('output_projection')
@@ -292,10 +298,15 @@ class BitResNetClassificationModel(ClassificationModel):
           f'Paramater groups that are not loaded: {params_to_load}')
     logging.info('Parameter summary after initialising from train state:')
     debug_utils.log_param_shapes(params)
-    return train_state.replace(
-        optimizer=train_state.optimizer.replace(
-            target=flax.core.freeze(params)),
-        model_state=restored_train_state.model_state)
+    if hasattr(train_state, 'optimizer'):
+      # TODO(dehghani): Remove support for flax optim.
+      return train_state.replace(
+          optimizer=train_state.optimizer.replace(
+              target=flax.core.freeze(params)),
+          model_state=restored_train_state.model_state)
+    else:
+      return train_state.replace(params=flax.core.freeze(params),
+                                 model_state=restored_train_state.model_state)
 
 
 class BitResNetMultiLabelClassificationModel(MultiLabelClassificationModel):

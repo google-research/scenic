@@ -200,7 +200,7 @@ class ResNetClassificationModel(ClassificationModel):
       Updated train_state.
     """
     del restored_model_cfg
-    if 'optimizer' in train_state:
+    if hasattr(train_state, 'optimizer'):
       # TODO(dehghani): Remove support for flax optim.
       params = flax.core.unfreeze(train_state.optimizer.target)
       restored_params = flax.core.unfreeze(
@@ -219,15 +219,16 @@ class ResNetClassificationModel(ClassificationModel):
         params[pname] = pvalue
     logging.info('Parameter summary after initialising from train state:')
     debug_utils.log_param_shapes(params)
-
-    if 'optimizer' in train_state:
+    if hasattr(train_state, 'optimizer'):
       # TODO(dehghani): Remove support for flax optim.
       return train_state.replace(
           optimizer=train_state.optimizer.replace(
               target=flax.core.freeze(params)),
           model_state=restored_train_state.model_state)
     else:
-      return train_state.replace(params=flax.core.freeze(params))
+      return train_state.replace(
+          params=flax.core.freeze(params),
+          model_state=restored_train_state.model_state)
 
 
 class ResNetMultiLabelClassificationModel(MultiLabelClassificationModel):
