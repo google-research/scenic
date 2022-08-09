@@ -311,13 +311,21 @@ def initialise_from_train_state(
   Returns:
     Updated train_state.
   """
-  # Inspect and compare the parameters of the model with the init-model.
-  params = flax.core.unfreeze(train_state.optimizer.target)
-  if config.init_from.get('checkpoint_format', 'scenic') == 'big_vision':
-    restored_params = restored_train_state.optimizer['target']
+  if 'optimizer' in train_state:
+    # Inspect and compare the parameters of the model with the init-model.
+    params = flax.core.unfreeze(train_state.optimizer.target)
+    train_state_keys = train_state.optimizer.target.keys()
   else:
-    restored_params = restored_train_state.optimizer.target
-  restored_params = flax.core.unfreeze(restored_params)
+    params = flax.core.unfreeze(train_state.params)
+    train_state_keys = train_state.params.keys()
+  if 'optimizer' in restored_train_state:
+    if config.init_from.get('checkpoint_format', 'scenic') == 'big_vision':
+      restored_params = restored_train_state.optimizer['target']
+    else:
+      restored_params = restored_train_state.optimizer.target
+    restored_params = flax.core.unfreeze(restored_params)
+  else:
+    restored_params = flax.core.unfreeze(restored_train_state.params)
 
   # Start moving parameters, one-by-one and apply changes if needed.
   for m_key, m_params in restored_params.items():
@@ -357,7 +365,7 @@ def initialise_from_train_state(
     elif m_key == 'embedding':
       init_embedding(params, m_params, config)
     else:
-      if m_key in train_state.optimizer.target:
+      if m_key in train_state_keys:
         params[m_key] = m_params
       else:
         logging.info('Skipping %s. In restored model but not in target', m_key)
@@ -365,8 +373,12 @@ def initialise_from_train_state(
   if log_initialised_param_shapes:
     logging.info('Parameter summary after initialising from train state')
     debug_utils.log_param_shapes(params)
-  return train_state.replace(
-      optimizer=train_state.optimizer.replace(target=flax.core.freeze(params)))
+  if 'optimizer' in train_state:
+    return train_state.replace(
+        optimizer=train_state.optimizer.replace(
+            target=flax.core.freeze(params)))
+  else:
+    return train_state.replace(params=flax.core.freeze(params))
 
 
 def init_posemb(to_params,
