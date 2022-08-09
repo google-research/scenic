@@ -26,11 +26,15 @@ from scenic.dataset_lib import datasets
 import tensorflow as tf
 
 
-def preprocess_train_example(example, dtype=tf.float32, zero_centering=True):
+def preprocess_train_example(example,
+                             camera_name='image_main',
+                             dtype=tf.float32,
+                             zero_centering=True):
   """Preprocesses the given video.
 
   Args:
     example: dict; Example that has an 'image_main'.
+    camera_name: Name of the image sequence to use.
     dtype: Tensorflow data type; Data type of the image.
     zero_centering: If True, frames are normalized to values in [-1, 1].
       If False, values in [0, 1].
@@ -38,7 +42,7 @@ def preprocess_train_example(example, dtype=tf.float32, zero_centering=True):
   Returns:
     dict; Example that has an 'inputs'.
   """
-  frames = example['image_main']
+  frames = example[camera_name]
   frames = processors.normalize_image(frames, zero_centering, dtype)
   return {'inputs': frames}
 
@@ -61,6 +65,7 @@ def augment_train_example(example, num_frames=30, stride=1):
 
 
 def preprocess_eval_example(example,
+                            camera_name='image_main',
                             dtype=tf.float32,
                             num_frames=30,
                             stride=1,
@@ -70,6 +75,7 @@ def preprocess_eval_example(example,
 
   Args:
     example: dict; Example that has an 'inputs'.
+    camera_name: Name of the image sequence to use.
     dtype: Tensorflow data type; Data type of the image.
     num_frames: Number of frames per subclip.
     stride: Temporal stride to sample frames.
@@ -80,7 +86,7 @@ def preprocess_eval_example(example,
   Returns:
     dict; Example that has an 'inputs'.
   """
-  frames = example['image_main']
+  frames = example[camera_name]
   frames = processors.normalize_image(frames, zero_centering, dtype)
   clips = processors.sample_linspace_sequence(frames, num_clips, num_frames,
                                               stride)
@@ -135,17 +141,22 @@ def get_dataset(*,
   del rng
   dtype = getattr(tf, dtype_str)
   dataset_configs = dataset_configs or {}
+  camera_name = dataset_configs.get('camera_name', 'image_main')
   num_frames = dataset_configs.get('num_frames', 30)
   stride = dataset_configs.get('stride', 1)
   zero_centering = dataset_configs.get('zero_centering', True)
   num_eval_clips = dataset_configs.get('num_eval_clips', 1)
   shuffle_buffer_size = dataset_configs.get('shuffle_buffer_size', None)
   preprocess_train = functools.partial(
-      preprocess_train_example, dtype=dtype, zero_centering=zero_centering)
+      preprocess_train_example,
+      camera_name=camera_name,
+      dtype=dtype,
+      zero_centering=zero_centering)
   augment_train = functools.partial(
       augment_train_example, num_frames=num_frames, stride=stride)
   preprocess_eval = functools.partial(
       preprocess_eval_example,
+      camera_name=camera_name,
       dtype=dtype,
       num_frames=num_frames,
       stride=stride,
