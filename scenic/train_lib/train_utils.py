@@ -252,7 +252,8 @@ def get_dataset(
     config: ml_collections.ConfigDict,
     data_rng: PRNGKey,
     *,
-    num_local_shards=None,
+    start_step: Optional[int] = None,
+    num_local_shards: Optional[int] = None,
     dataset_service_address: Optional[str] = None,
     dataset_name: Optional[str] = None,
     dataset_configs: Optional[ml_collections.ConfigDict] = None
@@ -266,6 +267,7 @@ def get_dataset(
   Args:
     config: The configuration of the experiment.
     data_rng: Random number generator key to use for the dataset.
+    start_step: Start step for GRAIN-backed inpute pipelines.
     num_local_shards: Number of shards for each batch. So (bs, ...) becomes
       (num_local_shards, bs//num_local_shards, ...). If not specified, it will
       be number of local devices.
@@ -310,6 +312,12 @@ def get_dataset(
 
   dataset_configs = dataset_configs or config.get('dataset_configs')
   num_local_shards = num_local_shards or jax.local_device_count()
+
+  if dataset_configs.get('expects_start_step'):
+    kwargs = {'start_step': start_step}
+  else:
+    kwargs = {}
+
   dataset = dataset_builder(
       batch_size=local_batch_size,
       eval_batch_size=eval_local_batch_size,
@@ -318,7 +326,8 @@ def get_dataset(
       rng=data_rng,
       shuffle_seed=shuffle_seed,
       dataset_configs=dataset_configs,
-      dataset_service_address=dataset_service_address)
+      dataset_service_address=dataset_service_address,
+      **kwargs)
 
   return dataset
 
