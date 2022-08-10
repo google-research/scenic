@@ -606,7 +606,8 @@ class AddFixedSinCosPositionEmbedding(nn.Module):
     num_parts = 4 if inputs.ndim == 4 else 6
     channels = inputs.shape[-1]
     assert channels % num_parts == 0, f'Channels must be multiple of {num_parts}'
-    omega = jnp.arange(channels // num_parts) / (channels // num_parts - 1)
+    omega = jnp.arange(
+        channels // num_parts, dtype=jnp.float32) / (channels / num_parts)
     omega = 1. / (self.temperature**omega)
 
     if inputs.ndim == 4:  # 2D input.
