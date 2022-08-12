@@ -311,14 +311,14 @@ def initialise_from_train_state(
   Returns:
     Updated train_state.
   """
-  if 'optimizer' in train_state:
+  if hasattr(train_state, 'optimizer'):
     # Inspect and compare the parameters of the model with the init-model.
     params = flax.core.unfreeze(train_state.optimizer.target)
     train_state_keys = train_state.optimizer.target.keys()
   else:
     params = flax.core.unfreeze(train_state.params)
     train_state_keys = train_state.params.keys()
-  if 'optimizer' in restored_train_state:
+  if hasattr(restored_train_state, 'optimizer'):
     if config.init_from.get('checkpoint_format', 'scenic') == 'big_vision':
       restored_params = restored_train_state.optimizer['target']
     else:
@@ -373,7 +373,7 @@ def initialise_from_train_state(
   if log_initialised_param_shapes:
     logging.info('Parameter summary after initialising from train state')
     debug_utils.log_param_shapes(params)
-  if 'optimizer' in train_state:
+  if hasattr(train_state, 'optimizer'):
     return train_state.replace(
         optimizer=train_state.optimizer.replace(
             target=flax.core.freeze(params)))
