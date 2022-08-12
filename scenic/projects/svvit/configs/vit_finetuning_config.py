@@ -6,7 +6,7 @@ r"""Default configs for ViT on structural variant classification using pileups.
 import ml_collections
 
 _TRAIN_SIZE = 30_000 * 19
-VARIANT = 'Ti/4'
+VERSION = 'S'  # Version has to match with the pretraining job.
 
 
 
@@ -24,7 +24,6 @@ def get_config(runlocal=''):
   config.dataset_configs = ml_collections.ConfigDict()
 
   # Model.
-  version, patch = VARIANT.split('/')
   config.model_name = 'vit_classification'
   config.model = ml_collections.ConfigDict()
   config.model.hidden_size = {
@@ -33,30 +32,30 @@ def get_config(runlocal=''):
       'B': 768,
       'L': 1024,
       'H': 1280
-  }[version]
+  }[VERSION]
   config.model.patches = ml_collections.ConfigDict()
-  config.model.patches.size = [int(patch), int(patch)]
+  config.model.patches.size = [1, 256]
   config.model.num_heads = {
       'Ti': 3,
       'S': 6,
       'B': 12,
       'L': 16,
       'H': 16,
-  }[version]
+  }[VERSION]
   config.model.mlp_dim = {
       'Ti': 768,
       'S': 1536,
       'B': 3072,
       'L': 4096,
       'H': 5120
-  }[version]
+  }[VERSION]
   config.model.num_layers = {
       'Ti': 12,
       'S': 12,
       'B': 12,
       'L': 24,
       'H': 32,
-  }[version]
+  }[VERSION]
   config.model.representation_size = None
   config.model.classifier = 'token'
   config.model.attention_dropout_rate = 0.

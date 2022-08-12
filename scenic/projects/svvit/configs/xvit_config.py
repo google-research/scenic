@@ -7,7 +7,7 @@ import ml_collections
 from scenic.projects.svvit.google import dataset_meta_data
 
 _TRAIN_SIZE = 30_000 * 18
-VARIANT = 'Ti/4'
+VERSION = 'Ti'
 
 HIDDEN_SIZE = {'Ti': 192, 'S': 384, 'B': 768, 'L': 1024, 'H': 1280}
 NUM_HEADS = {'Ti': 3, 'S': 6, 'B': 12, 'L': 16, 'H': 16}
@@ -29,15 +29,14 @@ def get_config():
   config.dataset_configs.test_path = ''
 
   # Model.
-  version, patch = VARIANT.split('/')
   config.model_name = 'xvit_classification'
   config.model_dtype_str = 'float32'
   config.model = ml_collections.ConfigDict()
   config.model.patches = ml_collections.ConfigDict()
-  config.model.hidden_size = HIDDEN_SIZE[version]
-  config.model.patches.size = [int(patch), int(patch)]
-  config.model.mlp_dim = MLP_DIM[version]
-  config.model.num_layers = NUM_LAYERS[version]
+  config.model.hidden_size = HIDDEN_SIZE[VERSION]
+  config.model.patches.size = [1, 256]
+  config.model.mlp_dim = MLP_DIM[VERSION]
+  config.model.num_layers = NUM_LAYERS[VERSION]
   config.model.representation_size = None
   config.model.classifier = 'token'
   config.model.attention_dropout_rate = 0.
@@ -48,8 +47,8 @@ def get_config():
   config.model.attention_configs = ml_collections.ConfigDict()
   config.model.attention_configs.attention_fn_cls = 'generalized'
   config.model.attention_configs.attention_fn_configs = None
-  config.model.attention_configs.num_heads = NUM_HEADS[version]
-  config.model.num_heads = NUM_HEADS[version]
+  config.model.attention_configs.num_heads = NUM_HEADS[VERSION]
+  config.model.num_heads = NUM_HEADS[VERSION]
 
   # Training.
   config.trainer_name = 'classification_trainer'
