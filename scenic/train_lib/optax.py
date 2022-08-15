@@ -155,7 +155,7 @@ def make(config: ml_collections.ConfigDict,
     config: Optimizer config.
     schedule: Learning rate schedules as tuple of regexp, name, learning rate
       schedule function and base learning rate (for WD decoupling).
-    params: Model paramters.
+    params: Model parameters.
   """
 
   masks, scheds = _make_mask_trees(params, schedule, log='schedule')
