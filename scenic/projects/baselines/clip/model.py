@@ -28,6 +28,7 @@ CHECKPOINTS_TORCH = {
     'vit_b32': 'https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt',
     'vit_b16': 'https://openaipublic.azureedge.net/clip/models/5806e77cd80f8b59890b7e101eabd078d9fb84e6937f9e85e4ecb61988df416f/ViT-B-16.pt',
     'vit_l14': 'https://openaipublic.azureedge.net/clip/models/b8cca3fd41ae0c99ba7e8951adf17d267cdb84cd88be6f7c2e0eca1737a03836/ViT-L-14.pt',
+    'vit_l14_336px': 'https://openaipublic.azureedge.net/clip/models/3035c92b350959924f9f00213499208652fc7ea050643e8b385c2dac08641f02/ViT-L-14-336px.pt',
 }
 
 CHECKPOINTS = {
@@ -39,6 +40,7 @@ CHECKPOINTS = {
     'vit_b32': None,
     'vit_b16': None,
     'vit_l14': None,
+    'vit_l14_336px': None,
 }
 # pylint: enable=line-too-long
 
@@ -52,7 +54,8 @@ IMAGE_RESOLUTION = {
     'resnet_50x64': 448,
     'vit_b32': 224,
     'vit_b16': 224,
-    'vit_l14': 224
+    'vit_l14': 224,
+    'vit_l14_336px': 336,
 }
 IMAGE_MEAN = np.array([0.48145466, 0.4578275, 0.40821073])
 IMAGE_STD = np.array([0.26862954, 0.26130258, 0.27577711])
@@ -82,6 +85,14 @@ CONFIGS = {
                     text_features=768,
                     text_num_heads=12,
                     text_num_layers=12),
+    'vit_l14_336px': dict(embed_dim=768,
+                          vocab_size=49408,
+                          vision_num_layers=24,
+                          vision_features=1024,
+                          vision_patch_size=14,
+                          text_features=768,
+                          text_num_heads=12,
+                          text_num_layers=12),
     'resnet_50': dict(embed_dim=1024,
                       vocab_size=49408,
                       vision_num_layers=(3, 4, 6, 3),
@@ -170,6 +181,10 @@ def vit_l14():
   return layers.CLIP(**CONFIGS['vit_l14'])
 
 
+def vit_l14_336px():
+  return layers.CLIP(**CONFIGS['vit_l14_336px'])
+
+
 def resnet_50():
   return layers.CLIP(**CONFIGS['resnet_50'])
 
@@ -199,6 +214,7 @@ MODELS = {
     'vit_b32': vit_b32,
     'vit_b16': vit_b16,
     'vit_l14': vit_l14,
+    'vit_l14_336px': vit_l14_336px,
 }
 
 
