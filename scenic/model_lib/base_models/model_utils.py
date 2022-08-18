@@ -721,7 +721,8 @@ def focal_softmax_cross_entropy(
   loss = weighted_unnormalized_softmax_cross_entropy(
       logits, one_hot_targets, weights=None, label_smoothing=label_smoothing,
       label_weights=label_weights, logits_normalized=logits_normalized)
-  prob = jnp.exp(-loss)  # Loss is -log(p_t)
+  prob = jnp.exp(logits) if logits_normalized else jax.nn.softmax(logits)
+  prob = (prob * one_hot_targets).sum(axis=-1)
   loss *= (1. - prob)**gamma
   if weights is not None:
     loss = apply_weights(loss, weights)
