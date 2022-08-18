@@ -371,76 +371,71 @@ def train(
           writer=writer)
       # Reset metric accumulation for next evaluation cycle.
       train_metrics, extra_training_logs = [], []
-      ################### EVALUATION #######################
-      if (step % log_eval_steps == 1) or (step == total_steps):
-        with report_progress.timed('eval'):
-          eval_metrics = []
-          # Sync model state across replicas.
-          train_state = train_utils.sync_model_state_across_replicas(
-              train_state)
-          for _ in range(steps_per_eval):
-            eval_batch = next(dataset.valid_iter)
-            e_metrics, e_output, e_batch = eval_step_pmapped(
-                train_state, eval_batch)
-            eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
-            if compute_global_metrics:
-              # Unreplicate outputs of eval_step_pmapped that are coming from
-              # `lax.all_gather`, fetch to the host and add to the Evaluator:
-              e_batch_mask = train_utils.unreplicate_and_get(
-                  e_batch['batch_mask']).astype(bool)
-              global_metrics_evaluator.add_batch_of_examples(
-                  target=train_utils.unreplicate_and_get(
-                      e_batch['label'])[e_batch_mask],
-                  output=train_utils.unreplicate_and_get(e_output)
-                  [e_batch_mask])
-              del e_batch, e_output, e_batch_mask
-          eval_global_metrics_summary = None
+    ################### EVALUATION #######################
+    if (step % log_eval_steps == 1) or (step == total_steps):
+      with report_progress.timed('eval'):
+        eval_metrics = []
+        # Sync model state across replicas.
+        train_state = train_utils.sync_model_state_across_replicas(train_state)
+        for _ in range(steps_per_eval):
+          eval_batch = next(dataset.valid_iter)
+          e_metrics, e_output, e_batch = eval_step_pmapped(
+              train_state, eval_batch)
+          eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
           if compute_global_metrics:
-            eval_global_metrics_summary = (
-                global_metrics_evaluator.compute_metrics(
-                    clear_annotations=True))
-          eval_summary = train_utils.log_eval_summary(
-              step=step,
-              eval_metrics=eval_metrics,
-              extra_eval_summary=eval_global_metrics_summary,
-              writer=writer)
-        writer.flush()
-        del eval_metrics, eval_global_metrics_summary
+            # Unreplicate outputs of eval_step_pmapped that are coming from
+            # `lax.all_gather`, fetch to the host and add to the Evaluator:
+            e_batch_mask = train_utils.unreplicate_and_get(
+                e_batch['batch_mask']).astype(bool)
+            global_metrics_evaluator.add_batch_of_examples(
+                target=train_utils.unreplicate_and_get(
+                    e_batch['label'])[e_batch_mask],
+                output=train_utils.unreplicate_and_get(e_output)[e_batch_mask])
+            del e_batch, e_output, e_batch_mask
+        eval_global_metrics_summary = None
+        if compute_global_metrics:
+          eval_global_metrics_summary = (
+              global_metrics_evaluator.compute_metrics(clear_annotations=True))
+        eval_summary = train_utils.log_eval_summary(
+            step=step,
+            eval_metrics=eval_metrics,
+            extra_eval_summary=eval_global_metrics_summary,
+            writer=writer)
+      writer.flush()
+      del eval_metrics, eval_global_metrics_summary
 
-      # Evaluation on test set
-      if ((step % log_eval_steps == 1) or
-          (step == total_steps)) and dataset.test_iter:
-        with report_progress.timed('test'):
-          test_metrics = []
-          for _ in range(steps_per_test):
-            test_batch = next(dataset.test_iter)
-            t_metrics, t_output, t_batch = eval_step_pmapped(
-                train_state=train_state, batch=test_batch)
-            test_metrics.append(train_utils.unreplicate_and_get(t_metrics))
-            if compute_global_metrics:
-              # Unreplicate outputs of eval_step_pmapped that are coming from
-              # `lax.all_gather`, fetch to the host and add to the Evaluator:
-              t_batch_mask = train_utils.unreplicate_and_get(
-                  t_batch['batch_mask']).astype(bool)
-              global_metrics_evaluator.add_batch_of_examples(
-                  target=train_utils.unreplicate_and_get(
-                      t_batch['label'])[t_batch_mask],
-                  output=train_utils.unreplicate_and_get(t_output)
-                  [t_batch_mask])
-              del t_batch, t_output, t_batch_mask
-          test_global_metrics_summary = None
+    # Evaluation on test set
+    if ((step % log_eval_steps == 1) or
+        (step == total_steps)) and dataset.test_iter:
+      with report_progress.timed('test'):
+        test_metrics = []
+        for _ in range(steps_per_test):
+          test_batch = next(dataset.test_iter)
+          t_metrics, t_output, t_batch = eval_step_pmapped(
+              train_state=train_state, batch=test_batch)
+          test_metrics.append(train_utils.unreplicate_and_get(t_metrics))
           if compute_global_metrics:
-            test_global_metrics_summary = (
-                global_metrics_evaluator.compute_metrics(
-                    clear_annotations=True))
-          eval_summary = train_utils.log_eval_summary(
-              step=step,
-              eval_metrics=test_metrics,
-              extra_eval_summary=test_global_metrics_summary,
-              prefix='test',
-              writer=writer)
-        writer.flush()
-        del test_metrics, test_global_metrics_summary
+            # Unreplicate outputs of eval_step_pmapped that are coming from
+            # `lax.all_gather`, fetch to the host and add to the Evaluator:
+            t_batch_mask = train_utils.unreplicate_and_get(
+                t_batch['batch_mask']).astype(bool)
+            global_metrics_evaluator.add_batch_of_examples(
+                target=train_utils.unreplicate_and_get(
+                    t_batch['label'])[t_batch_mask],
+                output=train_utils.unreplicate_and_get(t_output)[t_batch_mask])
+            del t_batch, t_output, t_batch_mask
+        test_global_metrics_summary = None
+        if compute_global_metrics:
+          test_global_metrics_summary = (
+              global_metrics_evaluator.compute_metrics(clear_annotations=True))
+        eval_summary = train_utils.log_eval_summary(
+            step=step,
+            eval_metrics=test_metrics,
+            extra_eval_summary=test_global_metrics_summary,
+            prefix='test',
+            writer=writer)
+      writer.flush()
+      del test_metrics, test_global_metrics_summary
     ##################### CHECKPOINTING ###################
     if ((step % checkpoint_steps == 0 and step > 0) or
         (step == total_steps)) and config.checkpoint:

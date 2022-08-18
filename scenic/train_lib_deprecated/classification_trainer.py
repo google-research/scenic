@@ -360,21 +360,20 @@ def train(
           writer=writer)
       # Reset metric accumulation for next evaluation cycle.
       train_metrics, extra_training_logs = [], []
-      ################### EVALUATION #######################
-      if (step % log_eval_steps == 1) or (step == total_steps):
-        with report_progress.timed('eval'):
-          eval_metrics = []
-          # Sync model state across replicas.
-          train_state = train_utils.sync_model_state_across_replicas(
-              train_state)
-          for _ in range(steps_per_eval):
-            eval_batch = next(dataset.valid_iter)
-            e_metrics, _ = eval_step_pmapped(train_state, eval_batch)
-            eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
-          eval_summary = train_utils.log_eval_summary(
-              step=step, eval_metrics=eval_metrics, writer=writer)
-        writer.flush()
-        del eval_metrics
+    ################### EVALUATION #######################
+    if (step % log_eval_steps == 1) or (step == total_steps):
+      with report_progress.timed('eval'):
+        eval_metrics = []
+        # Sync model state across replicas.
+        train_state = train_utils.sync_model_state_across_replicas(train_state)
+        for _ in range(steps_per_eval):
+          eval_batch = next(dataset.valid_iter)
+          e_metrics, _ = eval_step_pmapped(train_state, eval_batch)
+          eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
+        eval_summary = train_utils.log_eval_summary(
+            step=step, eval_metrics=eval_metrics, writer=writer)
+      writer.flush()
+      del eval_metrics
     ##################### CHECKPOINTING ###################
     if ((step % checkpoint_steps == 0 and step > 0) or
         (step == total_steps)) and config.checkpoint:
