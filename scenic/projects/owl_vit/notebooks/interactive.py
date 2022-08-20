@@ -15,7 +15,7 @@ from scenic.model_lib.base_models import box_utils
 from scenic.projects.owl_vit.notebooks import inference
 
 TEXT_INPUT_PY_CALLBACK_NAME = 'text_input_py_callback'
-IMAGE_CONDITIONING_PY_CALLBACK_NAME = 'text_input_py_callback'
+IMAGE_CONDITIONING_PY_CALLBACK_NAME = 'image_conditioning_py_callback'
 
 IMAGE_COND_NMS_IOU_THRESHOLD = 0.7
 IMAGE_COND_MIN_CONF = 0.5
