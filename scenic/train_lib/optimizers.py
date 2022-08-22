@@ -15,6 +15,8 @@
 """Defines different optimizers with optax."""
 import copy
 import dataclasses
+import operator
+import re
 from typing import Any, Callable, Generator, List, Optional, Tuple, Union
 
 from absl import logging
@@ -24,6 +26,7 @@ import jax.numpy as jnp
 import ml_collections
 import numpy as np
 import optax
+
 
 # JAX team is working type checking for pytrees:
 # https://github.com/google/jax/issues/3340
@@ -38,11 +41,25 @@ def get_optimizer(
 ) -> optax.GradientTransformation:
   """Constructs the optimizer from the given configuration.
 
+  The function is constructed in such a way that it will throw errors if
+  fields in the optimizer_config are misspelled.
+
   Args:
-    optimizer_config: Configuration specific to the optimizer.
+    optimizer_config: Configuration specific to the optimizer. The config
+        can contain the following fields:
+        - optimizer: name of the optax optimizer.
+        - **kwargs: fields specific to the optax optimizer.
+        - weight_decay: value of the weight decay.
+        - skip_scale_and_bias_regularization: if True, do not apply weight
+          decay to scale and biases.
+        - grad_clip: configdict with settings of gradient clipping.
+        - freeze_params_reg_exp: regular expression to define which weights
+          will be frozen during training. This uses re.search, so 'conv' would
+          match any parameter which has 'conv' somewhere in its name such as
+          'cnn/first_conv_layer/bias'.
     learning_rate_fn: Learning rate schedule.
     params: Parameters pytree, used when we want to skip weight decay on bias
-      and scale parameters.
+      and scale parameters. Also used for freezing weights.
 
   Returns:
     An optax GradientTransformation, this consists of a pair of pure functions
@@ -92,11 +109,65 @@ def get_optimizer(
         logging.info('%s is not supported', clip_method)
     del config.grad_clip
 
+  # Remove freeze_params_reg_exp here. This should be the last operation to
+  # ensure parameters are truly frozen. But this field needs to be removed
+  # because all remaining fields in the config are given to the optimizer.
+  freeze_mask = None
+  unfreeze_mask = None
+  if 'freeze_params_reg_exp' in config:
+    if params is None:
+      raise ValueError('params must be given to obtain frozen parameters.')
+    freeze_mask = tree_mask(params, config.freeze_params_reg_exp)
+    unfreeze_mask = jax.tree_util.tree_map(lambda x: not x, freeze_mask)
+    del config.freeze_params_reg_exp
+
+    num_params_unfrozen = jax.tree_util.tree_reduce(operator.add, unfreeze_mask)
+    if not num_params_unfrozen:
+      raise ValueError('freeze_params_reg_exp matched all parameters in '
+                       'the model, which prevents any training from happening.')
+
   # Call the optax optimizer with exact arguments as in the config.
+  # This throws an error when the config has (spelling) mistakes.
   optimizer_fn = getattr(optax, config.optimizer)
   del config.optimizer
-  optim_ops.append(optimizer_fn(learning_rate=learning_rate_fn, **config))
+  optax_optimizer = optimizer_fn(learning_rate=learning_rate_fn, **config)
+  # Apply to unfrozen weights to prevent change in optimizer state.
+  # In turn, this prevents unnecessary gradient calculations.
+  if unfreeze_mask:
+    optax_optimizer = optax.masked(optax_optimizer, unfreeze_mask)
+  optim_ops.append(optax_optimizer)
+
+  # Freezing params should be the final operation in the optax chain to ensure
+  # that freezing overrides everything including weight decay.
+  if freeze_mask:
+    optim_ops.append(optax.masked(optax.set_to_zero(), freeze_mask))
+
+    # Log variables which will change during training.
+    freeze_mask_flat = flax.traverse_util.flatten_dict(freeze_mask, sep='/')
+    logging.info('Freeze mask set. Training only on the following params:')
+    for param_name, value in freeze_mask_flat.items():
+      if not value:
+        logging.info('--> %s', param_name)
+
   return optax.chain(*optim_ops)
+
+
+def tree_mask(params: PyTree, reg_exp: str):
+  """Returns a tree mask based on regular expression for use with optax.masked.
+
+  Args:
+    params: PyTree with parameters.
+    reg_exp: Regular expression. Will be compiled and used together with
+        re.search.
+  """
+  pattern = re.compile(reg_exp)
+
+  def match_var_name(_, name):
+    if pattern.search(name):
+      return True
+    return False
+
+  return tree_map_with_names_values(match_var_name, params)
 
 
 def get_optax_optimizer_config(
