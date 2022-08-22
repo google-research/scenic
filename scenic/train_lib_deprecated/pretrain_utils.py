@@ -47,7 +47,10 @@ def get_params_and_model_state_dict(
     A tuple of restored params and restored models state. Note that these are
     not frozen, and need to be frozen before passing them to the optimizer.
   """
-  restored_params = restored_train_state['optimizer']['target']
+  if 'optimizer' in restored_train_state:
+    restored_params = restored_train_state['optimizer']['target']
+  else:
+    restored_params = restored_train_state['params']
   restored_model_state = restored_train_state.get('model_state')
   if 'params' in restored_params:  # Backward compatibility.
     restored_params = restored_params['params']
