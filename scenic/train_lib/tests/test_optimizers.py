@@ -222,6 +222,32 @@ class OptimizersTest(tf.test.TestCase, parameterized.TestCase):
             optimizer_dict_state[param_name],
             jnp.zeros_like(self.expected_sgd_updates[param_name]))
 
+  def test_sgd_freeze_params_with_weight_decay(self):
+    """Frozen parameters should be unaffected by weight decay."""
+    freeze_params_reg_exp = 'bias'
+    frozen_params = [DENSE_0_BIAS, DENSE_1_BIAS]
+    weight_decay = 0.1
+    optimizer_config = ml_collections.ConfigDict()
+    optimizer_config.optimizer = 'sgd'
+    optimizer_config.weight_decay = weight_decay
+    optimizer_config.freeze_params_reg_exp = freeze_params_reg_exp
+    optimizer = optimizers.get_optimizer(optimizer_config, self.lr, self.params)
+    optimizer_state = optimizer.init(self.params)
+
+    _, grad = self.compute_gradient_fn(self.params, self.label_causing_loss)
+    updates, _ = optimizer.update(grad, optimizer_state, self.params)
+    updates = flax.traverse_util.flatten_dict(updates, sep='/')
+
+    for param_name in self.expected_sgd_updates:
+      if param_name in frozen_params:
+        self.assertAllEqual(
+            updates[param_name],
+            jnp.zeros_like(self.expected_sgd_updates[param_name]))
+      else:
+        self.assertAllClose(
+            updates[param_name],
+            self.expected_sgd_updates[param_name] - weight_decay * self.lr)
+
   def test_freeze_params_reg_exp_matches_all_params_raises_value_error(self):
     """Freeze parameter reg_exp is not allowed to freeze the complete model."""
     optimizer_config = ml_collections.ConfigDict()

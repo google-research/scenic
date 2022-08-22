@@ -56,7 +56,8 @@ def get_optimizer(
         - freeze_params_reg_exp: regular expression to define which weights
           will be frozen during training. This uses re.search, so 'conv' would
           match any parameter which has 'conv' somewhere in its name such as
-          'cnn/first_conv_layer/bias'.
+          'cnn/first_conv_layer/bias'. Note that only parameters will be frozen,
+          which means batch_norm remains unaffected.
     learning_rate_fn: Learning rate schedule.
     params: Parameters pytree, used when we want to skip weight decay on bias
       and scale parameters. Also used for freezing weights.
