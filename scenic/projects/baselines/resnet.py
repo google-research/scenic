@@ -43,7 +43,7 @@ class ResidualBlock(nn.Module):
     if self.bottleneck:
       x = conv(self.filters, (1, 1), name='conv1')(x)
       x = batch_norm(name='bn1')(x)
-      x = nn.relu(x)
+      x = nn_layers.IdentityLayer(name='relu1')(nn.relu(x))
 
     y = conv(
         self.filters, (3, 3),
@@ -52,14 +52,14 @@ class ResidualBlock(nn.Module):
         name='conv2')(
             x)
     y = batch_norm(name='bn2')(y)
-    y = nn.relu(y)
+    y = nn_layers.IdentityLayer(name='relu2')(nn.relu(y))
 
     if self.bottleneck:
       y = conv(nout, (1, 1), name='conv3')(y)
     else:
       y = conv(nout, (3, 3), padding=[(1, 1), (1, 1)], name='conv3')(y)
     y = batch_norm(name='bn3', scale_init=nn.initializers.zeros)(y)
-    y = nn.relu(residual + y)
+    y = nn_layers.IdentityLayer(name='relu3')(nn.relu(residual + y))
     return y
 
 
@@ -118,7 +118,7 @@ class ResNet(nn.Module):
         dtype=self.dtype,
         name='init_bn')(
             x)
-    x = nn.relu(x)
+    x = nn_layers.IdentityLayer(name='init_relu')(nn.relu(x))
     x = nn.max_pool(x, (3, 3), strides=(2, 2), padding=[(1, 1), (1, 1)])
 
     residual_block = functools.partial(
