@@ -268,6 +268,7 @@ def train(
     train_state, start_step = train_utils.restore_checkpoint(
         workdir, train_state)
   chrono.load(train_state.metadata['chrono'])
+  del train_state.metadata['chrono']
   # Replicate the optimizer, state, and rng.
   train_state = jax_utils.replicate(train_state)
   del params  # Do not keep a copy of the initial params.

@@ -406,6 +406,7 @@ def train(
     train_state, start_step = train_utils.restore_checkpoint(
         workdir, train_state)
   chrono.load(train_state.metadata['chrono'])
+  del train_state.metadata['chrono']
   if (start_step == 0  # Which means "no" checkpoint is restored!
       and config.get('init_from') is not None):
     restored_model_cfg = config.init_from.get('model_config')
