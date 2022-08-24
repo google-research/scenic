@@ -310,7 +310,7 @@ def get_dataset(
                      'config.shuffle_seed = None to your config if you want '
                      'to run with dataset service.')
 
-  dataset_configs = dataset_configs or config.get('dataset_configs')
+  dataset_configs = dataset_configs or config.get('dataset_configs', {})
   num_local_shards = num_local_shards or jax.local_device_count()
 
   if dataset_configs.get('expects_start_step'):
