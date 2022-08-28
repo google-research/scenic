@@ -73,6 +73,9 @@ Baselines that were reproduced in Scenic:
 * [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385)
 * [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597)
 * [PCT: Point Cloud Transformer](https://arxiv.org/abs/2012.09688)
+* [Universal Transformers](https://arxiv.org/abs/1807.03819)
+* [PonderNet](https://arxiv.org/abs/2107.05407)
+
 
 More information can be found in [baseline models](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines#scenic-baseline-models).
 

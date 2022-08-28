@@ -13,7 +13,9 @@ They include:
  * [Big Transfer ResNet](https://arxiv.org/abs/1912.11370) (BitResNet) for image classification. [[Official Implementation](https://github.com/google-research/big_transfer)]
  * [UNet](http://arxiv.org/abs/1505.04597) for semantic segmentation.
  * [Axial-ResNet](https://arxiv.org/abs/2003.07853) for image classification. [[Official TF Implementation](https://github.com/csrhddlam/axial-deeplab)]
-
+ * [PCT: Point Cloud Transformer](https://arxiv.org/abs/2012.09688) for  shape classification, part segmentation and normal estimation tasks.
+ * [Universal Transformers](https://arxiv.org/abs/1807.03819) for sequence modeling with adaptive computation.
+ * [PonderNet](https://arxiv.org/abs/2107.05407) for sequence modeling with adaptive computation.
 
 ## Model Zoo
 
@@ -82,3 +84,12 @@ pretrained checkpoints.
 ### BERT
 Please check [BERT directory](bert) for more information and link to download
 pretrained checkpoints.
+
+### Universal Transformers
+Please check [Universal Transformer directory](universal_transformer) for more
+information.
+
+### PonderNet
+Please check [PonderNet directory](pondernet) for more information.
+
+
