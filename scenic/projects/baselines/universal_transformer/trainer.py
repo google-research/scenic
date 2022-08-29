@@ -384,7 +384,8 @@ def train(
        input_spec=[(dataset.meta_data['input_shape'],
                     dataset.meta_data.get('input_dtype', jnp.float32))],
        config=config,
-       rngs=init_rng)
+       rngs=init_rng,
+   )
 
   # Create optimizer.
   lr_fn = lr_schedules.get_learning_rate_fn(config)

@@ -115,14 +115,15 @@ class Encoder1DBlock(nn.Module):
   dropout_rate: float = 0.1
   attention_dropout_rate: float = 0.1
   stochastic_depth: float = 0.0
+  deterministic: bool = False
 
   @nn.compact
-  def __call__(self, inputs: jnp.ndarray, deterministic: bool) -> jnp.ndarray:
+  def __call__(self, inputs: jnp.ndarray, *layer_call_args: Any) -> jnp.ndarray:
     """Applies Encoder1DBlock module.
 
     Args:
       inputs: Input data.
-      deterministic: Deterministic or not (to apply dropout).
+      *layer_call_args: Other inputs.
 
     Returns:
       Output after transformer encoder block.
@@ -135,10 +136,10 @@ class Encoder1DBlock(nn.Module):
         dtype=self.dtype,
         kernel_init=nn.initializers.xavier_uniform(),
         broadcast_dropout=False,
-        deterministic=deterministic,
+        deterministic=self.deterministic,
         dropout_rate=self.attention_dropout_rate)(x, x)
-    x = nn.Dropout(rate=self.dropout_rate)(x, deterministic)
-    x = UTStochasticDepth(rate=self.stochastic_depth)(x, deterministic)
+    x = nn.Dropout(rate=self.dropout_rate)(x, deterministic=self.deterministic)
+    x = UTStochasticDepth(rate=self.stochastic_depth)(x, self.deterministic)
     x = x + inputs
 
     # MLP block.
@@ -150,8 +151,8 @@ class Encoder1DBlock(nn.Module):
         activation_fn=nn.gelu,
         kernel_init=nn.initializers.xavier_uniform(),
         bias_init=nn.initializers.normal(stddev=1e-6))(
-            y, deterministic=deterministic)
-    y = UTStochasticDepth(rate=self.stochastic_depth)(y, deterministic)
+            y, deterministic=self.deterministic)
+    y = UTStochasticDepth(rate=self.stochastic_depth)(y, self.deterministic)
     return y + x
 
 
@@ -201,19 +202,23 @@ class UTEncoder(nn.Module):
               num_heads=self.num_heads,
               dropout_rate=self.dropout_rate,
               attention_dropout_rate=self.attention_dropout_rate,
+              stochastic_depth=self.stochastic_depth,
+              deterministic=not train,
               name='encoderblock_' + str(i),
               dtype=dtype)(
-                  x, deterministic=not train)
+                  x)
         else:
           encoder_block = Encoder1DBlock(
               mlp_dim=self.mlp_dim,
               num_heads=self.num_heads,
               dropout_rate=self.dropout_rate,
               attention_dropout_rate=self.attention_dropout_rate,
+              stochastic_depth=self.stochastic_depth,
+              deterministic=not train,
               name='encoderblock',
               dtype=dtype)
           for i in range(self.num_layers):
-            x = encoder_block(x, deterministic=not train)
+            x = encoder_block(x)
       auxiliary_outputs = None
     else:
       encoder_block = Encoder1DBlock(
@@ -221,6 +226,8 @@ class UTEncoder(nn.Module):
           num_heads=self.num_heads,
           dropout_rate=self.dropout_rate,
           attention_dropout_rate=self.attention_dropout_rate,
+          stochastic_depth=self.stochastic_depth,
+          deterministic=not train,
           name='encoderblock',
           dtype=dtype)
       x, auxiliary_outputs = layers.AdaptiveComputationTime(
