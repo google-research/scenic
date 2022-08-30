@@ -118,12 +118,11 @@ class Encoder1DBlock(nn.Module):
   deterministic: bool = False
 
   @nn.compact
-  def __call__(self, inputs: jnp.ndarray, *layer_call_args: Any) -> jnp.ndarray:
+  def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:
     """Applies Encoder1DBlock module.
 
     Args:
       inputs: Input data.
-      *layer_call_args: Other inputs.
 
     Returns:
       Output after transformer encoder block.
@@ -232,7 +231,7 @@ class UTEncoder(nn.Module):
           dtype=dtype)
       x, auxiliary_outputs = layers.AdaptiveComputationTime(
           self.ac_config, encoder_block, self.parameter_sharing,
-          name='act')(x, not train)
+          name='act')(x)
     encoded = nn.LayerNorm(name='encoder_norm')(x)
     return encoded, auxiliary_outputs
 
