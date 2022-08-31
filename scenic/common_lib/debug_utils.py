@@ -79,6 +79,8 @@ def input_spec_to_jax_shape_dtype_struct(
     batch_size: Optional[int] = None) -> jax.ShapeDtypeStruct:
   """Parse an input specs into a jax.ShapeDtypeStruct."""
   spec = tuple(spec)
+  if batch_size and len(spec) == 1:
+    raise ValueError('batch_size unsupported when len(spec) is 1.')
   if len(spec) == 2 and isinstance(spec[0], collections.abc.Iterable):
     shape = (batch_size,) + tuple(spec[0][1:]) if batch_size else spec[0]
     dtype = spec[1]
@@ -247,7 +249,7 @@ class DummyExecutor(futures.Executor):
     self._shutdown = False
     self._shutdown_lock = threading.Lock()
 
-  def submit(self, fn: Callable[..., Any], *args, **kwargs) -> futures.Future:
+  def submit(self, fn: Callable[..., Any], *args, **kwargs) -> futures.Future:  # pylint: disable=g-bare-generic
     with self._shutdown_lock:
       if self._shutdown:
         raise RuntimeError('Cannot schedule new futures after shutdown.')

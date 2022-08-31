@@ -58,14 +58,14 @@ class OptimizersTest(tf.test.TestCase, parameterized.TestCase):
 
     self.params, _, _, _ = train_utils.initialize_model(
         model_def=model,
-        input_spec=[((2,), jnp.float32)],
+        input_spec=[((1, 2), jnp.float32)],
         config=config,
         rngs=rng)
 
     def training_loss_fn(params, label):
       prediction = model.apply(
           variables={'params': params},
-          x=jnp.array([1., 1.]))
+          x=jnp.array([[1., 1.]]))
       return jnp.mean(jnp.square(prediction - label))
 
     self.compute_gradient_fn = jax.value_and_grad(training_loss_fn)

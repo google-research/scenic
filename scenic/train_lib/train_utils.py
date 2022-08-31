@@ -133,7 +133,8 @@ def initialize_model(
   num_trainable_params = debug_utils.log_param_shapes(init_params)
 
   # Count gflops:
-  count_flops = config.get('count_flops', ml_collections.ConfigDict())
+  count_flops = config.get(
+      'count_flops', ml_collections.ConfigDict({'count_flops': True}))
   if count_flops:
     variables = {'params': init_params, **init_model_state}
     flops = debug_utils.compute_flops(
@@ -233,7 +234,8 @@ def initialize_model_with_pytree(
   num_trainable_params = debug_utils.log_param_shapes(init_params)
 
   # Count gflops:
-  count_flops = config.get('count_flops', ml_collections.ConfigDict())
+  count_flops = config.get(
+      'count_flops', ml_collections.ConfigDict({'count_flops': True}))
   if count_flops:
     variables = {'params': init_params, **init_model_state}
     flops = debug_utils.compute_flops_with_pytree(
