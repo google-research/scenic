@@ -180,15 +180,16 @@ projects.
 
 
 ## Citing Scenic
-If you use Scenic, you can cite our [white paper](https://arxiv.org/abs/2110.11403).
+If you use Scenic, you can cite our [white paper](https://openaccess.thecvf.com/content/CVPR2022/html/Dehghani_Scenic_A_JAX_Library_for_Computer_Vision_Research_and_Beyond_CVPR_2022_paper.html).
 Here is an example BibTeX entry:
 
 ```bibtex
-@article{dehghani2021scenic,
-  author={Mostafa Dehghani and Alexey Gritsenko and Anurag Arnab and Matthias Minderer and Yi Tay},
-  title={{Scenic}: A {JAX} Library for Computer Vision Research and Beyond},
-  year={2021},
-  journal={arXiv preprint arXiv:2110.11403},
+@InProceedings{dehghani2021scenic,
+    author    = {Dehghani, Mostafa and Gritsenko, Alexey and Arnab, Anurag and Minderer, Matthias and Tay, Yi},
+    title     = {Scenic: A JAX Library for Computer Vision Research and Beyond},
+    booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+    year      = {2022},
+    pages     = {21393-21398}
 }
 ```
 
