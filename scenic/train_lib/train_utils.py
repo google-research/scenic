@@ -959,6 +959,7 @@ class Chrono:
     self.pause_start = time.time()
 
   def resume(self):
+    assert self.pause_start is not None, 'Cannot resume without pausing first.'
     self.paused_time += time.time() - self.pause_start
     self.pause_start = None
 
