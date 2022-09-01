@@ -171,9 +171,14 @@ def restore_pretrained_checkpoint(
   else:
     # restored_train_state was trained using flax.optim. Note that this does
     # not convert the naming of pre-Linen checkpoints.
-    restored_params = flax.core.freeze(
-        restored_train_state['optimizer']['target'])
+    restored_params = restored_train_state['optimizer']['target']
+    if 'params' in restored_params:  # Backward compatibility.
+      restored_params = restored_params['params']
+      restored_params = dict(checkpoints.convert_pre_linen(restored_params))
+    restored_params = flax.core.freeze(restored_params)
+
   restored_model_state = flax.core.freeze(restored_train_state['model_state'])
+
   if not train_state:
     train_state = train_utils.TrainState()
     params = restored_params
