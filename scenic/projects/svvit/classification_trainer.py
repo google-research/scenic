@@ -400,6 +400,7 @@ def train(
             step=step,
             eval_metrics=eval_metrics,
             extra_eval_summary=eval_global_metrics_summary,
+            prefix=dataset.meta_data['eval_name'],
             writer=writer)
       writer.flush()
       del eval_metrics, eval_global_metrics_summary
@@ -432,7 +433,7 @@ def train(
             step=step,
             eval_metrics=test_metrics,
             extra_eval_summary=test_global_metrics_summary,
-            prefix='test',
+            prefix=dataset.meta_data['test_name'],
             writer=writer)
       writer.flush()
       del test_metrics, test_global_metrics_summary
@@ -445,7 +446,7 @@ def train(
         if lead_host:
           train_state.replace(  # pytype: disable=attribute-error
               accum_train_time=chrono.accum_train_time)
-          train_utils.save_checkpoint(workdir, train_state)
+          train_utils.save_checkpoint(workdir, train_state, max_to_keep=20)
     chrono.resume()  # un-pause now
   # Wait until computations are done before exiting.
   jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()

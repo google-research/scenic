@@ -36,7 +36,9 @@ def pileup_parser(
                   [pileup_height * pileup_width * PILEUP_NUM_CHANNELS],
                   dtype=tf.float32),
           'zygosity':
-              tf.io.FixedLenFeature([1], dtype=tf.int64)
+              tf.io.FixedLenFeature([1], dtype=tf.int64),
+          'event_len':
+              tf.io.FixedLenFeature([1], dtype=tf.int64),
       })
 
   features = {
@@ -46,7 +48,9 @@ def pileup_parser(
               pileup_width,
               PILEUP_NUM_CHANNELS,
           ]),
-      'key': example['event_name']
+      'key': example['event_name'],
+      'event_len':
+          tf.squeeze(example['event_len'], [-1])
   }
 
   # Define the label.
@@ -86,9 +90,23 @@ def preprocess(features, label):
           features['pileup'],
           [256, 256]),  # Resize pileups to make side length divisible by 4.
       'label': label,
+      'event_len': features['event_len'],
       'key': tf.strings.unicode_decode(padded_key, 'UTF-8').to_tensor(),
       'key_length': tf.strings.length(features['key']),
   }
+
+
+def get_dataset_name(dataset_path: Optional[str] = None):
+  """Extract dataset name for eval_iter in xmanager measurements.
+
+  Parent directory of the dataset files is used as its name.
+  Args:
+    dataset_path: Path to the dataset files.
+
+  Returns:
+    Dataset name.
+  """
+  return 'test' if not dataset_path else dataset_path.split('/')[-2]
 
 
 def build_dataset(dataset_fn,
@@ -183,9 +201,15 @@ def get_dataset(*,
       else:
         # Add path to your training data here:
         path = ''
-    else:
+    elif split == 'valid':
       if dataset_configs.eval_path:
         path = dataset_configs.eval_path
+      else:
+        # Add path to your test data here:
+        path = ''
+    elif split == 'test':
+      if dataset_configs.test_path:
+        path = dataset_configs.test_path
       else:
         # Add path to your test data here:
         path = ''
@@ -251,6 +275,12 @@ def get_dataset(*,
       batch_size=eval_batch_size,
       strategy=None)
 
+  test_dataset = build_dataset(
+      dataset_fn=build_pileup_window_dataset,
+      split='test',
+      batch_size=eval_batch_size,
+      strategy=None)
+
   shard_batches = functools.partial(dataset_utils.shard, n_devices=num_shards)
   maybe_pad_batches_train = functools.partial(
       dataset_utils.maybe_pad_batch, train=True, batch_size=batch_size)
@@ -269,6 +299,12 @@ def get_dataset(*,
   valid_iter = map(shard_batches, valid_iter)
   valid_iter = jax_utils.prefetch_to_device(valid_iter, prefetch_buffer_size)
 
+  test_iter = iter(test_dataset)
+  test_iter = map(dataset_utils.tf_to_numpy, test_iter)
+  test_iter = map(maybe_pad_batches_eval, test_iter)
+  test_iter = map(shard_batches, test_iter)
+  test_iter = jax_utils.prefetch_to_device(test_iter, prefetch_buffer_size)
+
   num_classes = 3
   image_size = 256
   input_shape = [-1, image_size, image_size, 7]
@@ -278,8 +314,11 @@ def get_dataset(*,
       'input_shape': input_shape,
       'num_train_examples': 30_000 * 19,
       'num_eval_examples': 30_000 * 5,
+      'num_test_examples': 30_000,
+      'test_name': get_dataset_name(dataset_configs.test_path),
+      'eval_name': get_dataset_name(dataset_configs.eval_path),
       'input_dtype': getattr(jnp, dtype_str),
       'target_is_onehot': True,
   }
 
-  return dataset_utils.Dataset(train_iter, valid_iter, None, meta_data)
+  return dataset_utils.Dataset(train_iter, valid_iter, test_iter, meta_data)

@@ -615,12 +615,12 @@ def train(
       with report_progress.timed('eval'):
         eval_summary = evaluate(train_state, step, dataset.valid_iter,
                                 dataset.meta_data['num_eval_examples'],
-                                'SV_test')
+                                dataset.meta_data['eval_name'])
       if dataset.test_iter:
         with report_progress.timed('test'):
           eval_summary = evaluate(train_state, step, dataset.test_iter,
                                   dataset.meta_data['num_test_examples'],
-                                  'Indel_test')
+                                  dataset.meta_data['test_name'])
     ##################### CHECKPOINTING ############################
     if ((step % checkpoint_steps == 1 and step > 1) or
         (step == total_steps)) and config.checkpoint:
@@ -630,7 +630,7 @@ def train(
         if lead_host:
           train_state.replace(  # pytype: disable=attribute-error
               accum_train_time=chrono.accum_train_time)
-          train_utils.save_checkpoint(workdir, train_state)
+          train_utils.save_checkpoint(workdir, train_state, max_to_keep=20)
 
     ##################### FEWSHOT EVALUATION ############################
     if 'fewshot' in config:

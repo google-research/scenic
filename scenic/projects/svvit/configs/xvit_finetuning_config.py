@@ -1,0 +1,142 @@
+# pylint: disable=line-too-long
+r"""Default configs for ViT on structural variant classification using pileups.
+
+"""
+
+import ml_collections
+from scenic.projects.svvit.google import dataset_meta_data
+
+_TRAIN_SIZE = 30_000 * 19
+VERSION = 'S'  # Version has to match with the pretraining job.
+
+
+
+def get_config(runlocal=''):
+  """Returns the ViT experiment configuration for SV classification."""
+
+  runlocal = bool(runlocal)
+
+  config = ml_collections.ConfigDict()
+  config.experiment_name = 'sv-xvit'
+
+  # Dataset.
+  config.dataset_name = 'pileup_window'
+  config.data_dtype_str = 'float32'
+  config.dataset_configs = ml_collections.ConfigDict()
+  config.dataset_configs.train_path = dataset_meta_data.DATASET_PATHS[
+      'del', 'paired', 'ref_right']['hgsvc2_train']
+  config.dataset_configs.eval_path = dataset_meta_data.DATASET_PATHS[
+      'del', 'paired', 'ref_right']['hgsvc2_test']
+  config.dataset_configs.test_path = dataset_meta_data.DATASET_PATHS[
+      'del', 'paired', 'ref_right']['NA12878_freeze3_hg38_ready']
+
+  # Model.
+  config.model_name = 'xvit_classification'
+  config.model_dtype_str = 'float32'
+  config.model = ml_collections.ConfigDict()
+  config.model.hidden_size = {
+      'Ti': 192,
+      'S': 384,
+      'B': 768,
+      'L': 1024,
+      'H': 1280
+  }[VERSION]
+  config.model.patches = ml_collections.ConfigDict()
+  config.model.patches.size = [1, 256]
+  config.model.num_heads = {
+      'Ti': 3,
+      'S': 6,
+      'B': 12,
+      'L': 16,
+      'H': 16,
+  }[VERSION]
+  config.model.mlp_dim = {
+      'Ti': 768,
+      'S': 1536,
+      'B': 3072,
+      'L': 4096,
+      'H': 5120
+  }[VERSION]
+  config.model.num_layers = {
+      'Ti': 12,
+      'S': 12,
+      'B': 12,
+      'L': 24,
+      'H': 32,
+  }[VERSION]
+  config.model.representation_size = None
+  config.model.classifier = 'token'
+  config.model.attention_dropout_rate = 0.
+  config.model.dropout_rate = 0.
+  config.model_dtype_str = 'float32'
+  config.model.transformer_encoder_configs = ml_collections.ConfigDict()
+  config.model.transformer_encoder_configs.type = 'global'
+  config.model.attention_fn = 'performer'
+  config.model.attention_configs = ml_collections.ConfigDict()
+  config.model.attention_configs.attention_fn_cls = 'generalized'
+  config.model.attention_configs.attention_fn_configs = None
+  config.model.attention_configs.num_heads = {
+      'Ti': 3,
+      'S': 6,
+      'B': 12,
+      'L': 16,
+      'H': 16,
+  }['Ti']
+
+  # Pretrained model info.
+  config.init_from = ml_collections.ConfigDict()
+  config.init_from.xm = None
+  config.init_from.checkpoint_path = ''
+
+  # Training.
+  config.trainer_name = 'transfer_trainer'
+  config.optimizer = 'adam'
+  config.optimizer_configs = ml_collections.ConfigDict()
+  config.optimizer_configs.beta1 = 0.9
+  config.optimizer_configs.beta2 = 0.999
+  config.optimizer_configs.weight_decay = 0.1
+  config.explicit_weight_decay = None  # No explicit weight decay
+  config.l2_decay_factor = None
+  config.max_grad_norm = None
+  config.label_smoothing = None
+  config.num_training_epochs = 50
+  config.log_eval_steps = 1000
+  config.batch_size = 8 if runlocal else 512
+  config.rng_seed = 42
+  config.init_head_bias = -10.0
+
+  # Learning rate.
+  steps_per_epoch = _TRAIN_SIZE // config.batch_size
+  total_steps = config.num_training_epochs * steps_per_epoch
+  base_lr = 3e-3
+  config.lr_configs = ml_collections.ConfigDict()
+  config.lr_configs.learning_rate_schedule = 'compound'
+  config.lr_configs.factors = 'constant*linear_warmup*linear_decay'
+  config.lr_configs.total_steps = int(0.95 * total_steps)
+  config.lr_configs.end_learning_rate = 1e-7
+  config.lr_configs.warmup_steps = 20_000
+  config.lr_configs.base_learning_rate = base_lr
+
+  # Logging.
+  config.write_summary = True
+  config.xprof = True  # Profile using xprof.
+  config.checkpoint = True  # Do checkpointing.
+  config.checkpoint_steps = 5000
+  config.debug_train = False  # Debug mode during training.
+  config.debug_eval = False  # Debug mode during eval.
+
+  # Evaluation:
+  config.global_metrics = [
+      'truvari_recall_events',
+      'truvari_precision_events',
+      'truvari_recall',
+      'truvari_precision',
+      'gt_concordance',
+      'nonref_concordance',
+  ]
+
+  if runlocal:
+    config.count_flops = False
+  return config
+
+
