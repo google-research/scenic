@@ -535,6 +535,7 @@ class SpaceTimeViViT(nn.Module):
   stochastic_droplayer_rate: float = 0.
   classifier: str = 'gap'
   return_prelogits: bool = False
+  return_preclassifier: bool = False
   dtype: jnp.dtype = jnp.float32
 
   @nn.compact
@@ -547,7 +548,12 @@ class SpaceTimeViViT(nn.Module):
     bs, t, h, w, c = x.shape
     x = x.reshape(bs, t, h * w, c)
 
-    def vit_body(x, mlp_dim, num_layers, num_heads, encoder_name='Transformer'):
+    def vit_body(x,
+                 mlp_dim,
+                 num_layers,
+                 num_heads,
+                 return_preclassifier,
+                 encoder_name='Transformer'):
       # If we want to add a class token, add it here.
       if self.classifier in ['token']:
         n, _, c = x.shape
@@ -568,6 +574,9 @@ class SpaceTimeViViT(nn.Module):
           dtype=self.dtype,
           name=encoder_name)(x, train=train)
 
+      if return_preclassifier:
+        return x
+
       if self.classifier in ['token', '0']:
         x = x[:, 0]
       elif self.classifier in ('gap', 'gmp', 'gsp'):
@@ -576,12 +585,16 @@ class SpaceTimeViViT(nn.Module):
       return x
 
     # run attention across spacec, per frame
+    is_spatial_only_baseline = self.attention_config.get(
+        'spatial_only_baseline', False)
     x = jax.vmap(
         functools.partial(
             vit_body,
             mlp_dim=self.spatial_mlp_dim,
             num_layers=self.spatial_num_layers,
             num_heads=self.spatial_num_heads,
+            return_preclassifier=self.return_preclassifier and
+            is_spatial_only_baseline,
             encoder_name='SpatialTransformer'),
         in_axes=1,
         out_axes=1,
@@ -590,16 +603,20 @@ class SpaceTimeViViT(nn.Module):
     assert x.ndim == 3 and x.shape[:2] == (bs, t)
 
     # run attention across time, over all frames
-    if not self.attention_config.get('spatial_only_baseline', False):
+    if not is_spatial_only_baseline:
       x = vit_body(
           x,
           mlp_dim=self.temporal_mlp_dim,
           num_layers=self.temporal_num_layers,
           num_heads=self.temporal_num_heads,
+          return_preclassifier=self.return_preclassifier,
           encoder_name='TemporalTransformer')
     else:
       # Do global average pooling instead, as method of combining temporal info.
       x = jnp.mean(x, axis=list(range(1, x.ndim - 1)))
+
+    if self.return_preclassifier:
+      return x
 
     if self.representation_size is not None:
       x = nn.Dense(self.representation_size, name='pre_logits')(x)
@@ -672,6 +689,8 @@ class ViViTClassificationModel(ClassificationModel):
           stochastic_droplayer_rate=self.config.model.get(
               'stochastic_droplayer_rate', 0),
           return_prelogits=self.config.model.get('return_prelogits', False),
+          return_preclassifier=self.config.model.get(
+              'return_preclassifier', False),
           dtype=model_dtype,
       )
     else:
@@ -774,6 +793,8 @@ class ViViTMultilabelClassificationModel(vit.ViTMultiLabelClassificationModel):
           stochastic_droplayer_rate=self.config.model.get(
               'stochastic_droplayer_rate', 0),
           return_prelogits=self.config.model.get('return_prelogits', False),
+          return_preclassifier=self.config.model.get(
+              'return_preclassifier', False),
           dtype=model_dtype,
       )
     else:
