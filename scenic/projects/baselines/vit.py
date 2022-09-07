@@ -213,6 +213,7 @@ class ViT(nn.Module):
   dropout_rate: float = 0.1
   attention_dropout_rate: float = 0.1
   stochastic_depth: float = 0.0
+  return_preclassifier: bool = False
   classifier: str = 'gap'
   dtype: Any = jnp.float32
 
@@ -247,6 +248,9 @@ class ViT(nn.Module):
         dtype=self.dtype,
         name='Transformer')(
             x, train=train)
+
+    if self.return_preclassifier:
+      return x
 
     if self.classifier in ('token', '0'):
       x = x[:, 0]
@@ -289,6 +293,8 @@ class ViTMultiLabelClassificationModel(MultiLabelClassificationModel):
         patches=self.config.model.patches,
         hidden_size=self.config.model.hidden_size,
         classifier=self.config.model.classifier,
+        return_preclassifier=self.config.model.get(
+            'return_preclassifier', False),
         dropout_rate=self.config.model.get('dropout_rate'),
         attention_dropout_rate=self.config.model.get('attention_dropout_rate'),
         stochastic_depth=self.config.model.get('stochastic_depth', 0.0),
