@@ -45,6 +45,9 @@ def get_config():
   wikibooks_train_loader.sharding = True
   wikibooks_train_loader.enable_tf_data_service = False
   wikibooks_train_loader.tf_data_service_address = None
+  wikibooks_train_loader.enable_shared_tf_data_service_between_parallel_trainers = False
+  wikibooks_train_loader.apply_tf_data_service_before_batching = False
+  wikibooks_train_loader.trainer_id = ''
   wikibooks_train_loader.tfds_name = None
   wikibooks_train_loader.tfds_split = None
   wikibooks_train_loader.tfds_as_supervised = False
@@ -68,6 +71,9 @@ def get_config():
   wikibooks_val_loader.sharding = True
   wikibooks_val_loader.enable_tf_data_service = False
   wikibooks_val_loader.tf_data_service_address = None
+  wikibooks_val_loader.enable_shared_tf_data_service_between_parallel_trainers = False
+  wikibooks_val_loader.apply_tf_data_service_before_batching = False
+  wikibooks_val_loader.trainer_id = ''
   wikibooks_val_loader.tfds_name = None
   wikibooks_val_loader.tfds_split = None
   wikibooks_val_loader.tfds_as_supervised = False
