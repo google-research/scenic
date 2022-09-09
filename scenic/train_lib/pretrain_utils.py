@@ -14,7 +14,7 @@
 
 """Utility functions for using pretrained models."""
 
-import collections
+from collections import abc
 import os
 import re
 from typing import Any, Dict, Mapping, List, Optional, Union
@@ -213,7 +213,7 @@ def inspect_params(*,
     items = []
     for k, v in d.items():
       path = parent_key + sep + k if parent_key else k
-      if isinstance(v, collections.MutableMapping):
+      if isinstance(v, abc.MutableMapping):
         items.extend(_flatten_params(v, path, sep=sep).items())
       else:
         items.append((path, v))
