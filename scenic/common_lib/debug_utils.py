@@ -14,7 +14,7 @@
 
 """Utilities for logging, debugging, profiling, testing, and visualization."""
 
-import collections
+from collections import abc
 from concurrent import futures
 import json
 import operator
@@ -81,7 +81,7 @@ def input_spec_to_jax_shape_dtype_struct(
   spec = tuple(spec)
   if batch_size and len(spec) == 1:
     raise ValueError('batch_size unsupported when len(spec) is 1.')
-  if len(spec) == 2 and isinstance(spec[0], collections.abc.Iterable):
+  if len(spec) == 2 and isinstance(spec[0], abc.Iterable):
     shape = (batch_size,) + tuple(spec[0][1:]) if batch_size else spec[0]
     dtype = spec[1]
   else:
@@ -152,7 +152,7 @@ def compute_flops_with_pytree(flax_model_apply_fn: Callable[[jnp.ndarray], Any],
   """
 
   def check_leaf_spec(spec: Sequence[PyTree]) -> bool:
-    return ((len(spec) == 2 and isinstance(spec[0], collections.Sequence) and
+    return ((len(spec) == 2 and isinstance(spec[0], abc.Sequence) and
              all(isinstance(i, int) for i in spec[0]) and
              isinstance(spec[1], jnp.dtype)) or
             (all(isinstance(i, int) for i in spec[0])))
@@ -160,7 +160,7 @@ def compute_flops_with_pytree(flax_model_apply_fn: Callable[[jnp.ndarray], Any],
   def create_dummy_input(spec: PyTree) -> PyTree:
     if isinstance(spec, dict):
       return {k: create_dummy_input(v) for k, v in spec.items()}
-    elif isinstance(spec, collections.Sequence):
+    elif isinstance(spec, abc.Sequence):
       if check_leaf_spec(spec):
         in_st = input_spec_to_jax_shape_dtype_struct(spec, batch_size=1)
         return jnp.zeros(in_st.shape, in_st.dtype)
