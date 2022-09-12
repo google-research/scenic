@@ -16,13 +16,13 @@
 
 """
 
-import collections
+from collections import abc
 import functools
 import tensorflow.compat.v1 as tf
 
 
 def maybe_repeat(arg, n_reps):
-  if not isinstance(arg, collections.Sequence):
+  if not isinstance(arg, abc.Sequence):
     arg = (arg,) * n_reps
   return arg
 
