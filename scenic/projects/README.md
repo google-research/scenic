@@ -5,6 +5,13 @@
 
 ## List of projects hosted in Scenic
 
+*   [AdversarialTraining](adversarialtraining)
+
+    > Adversarial training is an implementation of modern forms of adversarial
+    > training that achieved state-of-the-art robustness results on image
+    > classifications. This includes [AdvProp](https://arxiv.org/abs/1911.09665)
+    > and (Pyramid Adversarial Training Improves ViT Performance)[https://arxiv.org/abs/2111.15121].
+
 *   [ViViT](vivit)
 
     > ViViT is a family of pure-transformer based models for video
