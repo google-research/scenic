@@ -717,6 +717,9 @@ def stack_forest(forest: PyTree) -> PyTree:
   Returns:
     a dict of lists.
   """
+  if not forest:
+    return {}
+
   stack_args = lambda *args: np.stack(args)
   return jax.tree_map(stack_args, *forest)
 
