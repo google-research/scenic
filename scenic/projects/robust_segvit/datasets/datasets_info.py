@@ -19,6 +19,9 @@ ADE20K_CORRUPTED_DIR = 'gs://ub-ekb/tensorflow_datasets/ad_e20k_corrupted/tfreco
 ADE20K_TFDS_NAME = 'ade20k'
 ADE20K_DIR = 'gs://ub-ekb/tensorflow_datasets/ad_e20k/tfrecords/v.0.0'
 ADE20K_LABEL_KEY = 'annotations'  # instead of 'segmentation'
+
+CITYSCAPES_DIR = 'gs://ub-ekb/tensorflow_datasets/cityscapes/tfrecords/v.0.0'
+STREETHAZARDS_DIR = 'gs://ub-ekb/tensorflow_datasets/street_hazards/tfrecords/v.0.0'
 # pylint: enable=line-too-long
 
 # ADE20K-C
@@ -37,6 +40,7 @@ class DatasetInfo:
   pixels_per_class: Optional[Dict[int, int]] = None
   ood_classes: Optional[List[Any]] = None
   data_dir: Optional[str] = None
+
 
 # Information for Cityscapes dataset.
 # Based on https://github.com/mcordts/cityscapesScripts
@@ -146,8 +150,101 @@ CITYSCAPES = DatasetInfo(
     image_key='image_left',
     label_key='segmentation_label',
     classes=CITYSCAPES_CLASSES,
-    pixels_per_class=CITYSCAPES_PIXELS_PER_CID)
+    pixels_per_class=CITYSCAPES_PIXELS_PER_CID,
+    data_dir=CITYSCAPES_DIR,
+)
 
+# ---------------------------------------------------------------------------------
+# Information for Street harzards dataset
+# Based on https://github.com/hendrycks/anomaly-seg
+StreetHazardsClass = collections.namedtuple(
+    'StreetHazardsClass', ['name', 'id', 'train_id', 'ignore_in_eval', 'color'])
+
+STREETHAZARDS_CLASS_NAMES = [
+  'unlabeled', 'building', 'fence', 'other', 'pedestrian', 'pole', 'road line',
+  'road', 'sidewalk', 'vegetation', 'car','wall', 'traffic sign', 'anomaly'
+]
+STREETHAZARDS_CLASS_COLORS = [
+[ 0,   0,   0], # // unlabeled     =   0,
+[ 70,  70,  70], # // building      =   1,
+[190, 153, 153], # // fence         =   2,
+[250, 170, 160], # // other         =   3,
+[220,  20,  60], # // pedestrian    =   4,
+[153, 153, 153], # // pole          =   5,
+[157, 234,  50], # // road line     =   6,
+[128,  64, 128], # // road          =   7,
+[244,  35, 232], # // sidewalk      =   8,
+[107, 142,  35], # // vegetation    =   9,
+[  0,   0, 142], # // car           =  10,
+[102, 102, 156], # // wall          =  11,
+[220, 220,   0], # // traffic sign  =  12,
+[ 60, 250, 240], # // anomaly       =  13,
+]
+
+# -------------------------------
+# Construct streethazards dataset:
+# -------------------------------
+
+# ignoring background, other, and anomaly class
+STREETHAZARDS_CLASSES = []
+train_class=0
+for i in range(14):
+  name = STREETHAZARDS_CLASS_NAMES[i]
+  if name == 'unlabeled' or name == 'anomaly' or name == 'other':
+    train_id = 255
+    ignore_in_eval = True
+  else:
+    train_id = train_class
+    ignore_in_eval = False
+    train_class += 1
+  c = StreetHazardsClass(name, i, train_id, ignore_in_eval, STREETHAZARDS_CLASS_COLORS[i])
+  STREETHAZARDS_CLASSES.append(c)
+
+STREETHAZARDS = DatasetInfo(
+    tfds_name='street_hazards',
+    image_key='image',
+    label_key='annotations',
+    classes=STREETHAZARDS_CLASSES,
+    pixels_per_class=None,
+    data_dir=STREETHAZARDS_DIR)
+
+
+# -------------------------------
+# Construct streethazards_open dataset:
+# -------------------------------
+STREETHAZARDSOPEN_CLASSES = []
+for i in range(14):
+  name = STREETHAZARDS_CLASS_NAMES[i]
+  if name =='anomaly':
+    train_id = 1
+    ignore_in_eval = False
+  elif name == 'background' or  name == 'unlabeled':
+    train_id = 255
+    ignore_in_eval = True
+  else:
+    train_id = 0
+    ignore_in_eval = False
+
+  c = StreetHazardsClass(name, i, train_id, ignore_in_eval, STREETHAZARDS_CLASS_COLORS[i])
+  STREETHAZARDSOPEN_CLASSES.append(c)
+
+# Classes defined as Background/InD/OOD sets.
+c255 = StreetHazardsClass('background', 0, 255, True, [0, 0, 0])
+c0 = StreetHazardsClass('ind', 1, 0, False, [0, 0, 1])
+c1 = StreetHazardsClass('ood', 2, 1, False, [1, 0, 0])
+STREETHAZARDSOPEN_3CLASSES = [c255, c0, c1]
+
+STREETHAZARDSOPEN = DatasetInfo(
+    tfds_name='street_hazards',
+    image_key='image',
+    label_key='annotations',
+    classes=STREETHAZARDSOPEN_3CLASSES,
+    ood_classes=STREETHAZARDSOPEN_CLASSES,
+    pixels_per_class=None,
+    data_dir=STREETHAZARDS_DIR)
+
+
+# ---------------------------------------------------------------------------------
 # Information for ADE20k dataset
 ADE20KClass = collections.namedtuple(
     'ADE20KClass', ['name', 'id', 'train_id', 'ignore_in_eval', 'color'])
@@ -312,6 +409,8 @@ def build_datasets():
       'ade20k': ADE20K,
       'ade20k_ind': ADE20KSUBSET,
       'ade20k_ood_open': ADE20KOPEN,
+      'street_hazards': STREETHAZARDS,
+      'street_hazards_open': STREETHAZARDSOPEN,
   }
 
   # -----------------------------
