@@ -46,6 +46,13 @@ KERNEL_INITIALIZERS = immutabledict({
     'xavier': nn.initializers.xavier_uniform(),
 })
 
+ViViT_CLASSIFICATION_METRICS_BASIC = immutabledict({
+    'accuracy': (base_model_utils.weighted_correctly_classified,
+                 base_model_utils.num_examples),
+    'loss': (base_model_utils.weighted_unnormalized_softmax_cross_entropy,
+             base_model_utils.num_examples)
+})
+
 ViViT_CLASSIFICATION_METRICS = immutabledict({
     'accuracy': (base_model_utils.weighted_correctly_classified,
                  base_model_utils.num_examples),
@@ -687,7 +694,12 @@ class ViViTClassificationModel(ClassificationModel):
       label, weights)```
     """
     del split  # for all splits, we return the same metric functions
-
+    if self.dataset_meta_data.get('num_classes', -1) <= 5:
+      return functools.partial(
+          classification_model.classification_metrics_function,
+          target_is_onehot=self.dataset_meta_data.get('target_is_onehot',
+                                                      False),
+          metrics=ViViT_CLASSIFICATION_METRICS_BASIC)
     return functools.partial(
         classification_model.classification_metrics_function,
         target_is_onehot=self.dataset_meta_data.get('target_is_onehot', False),
