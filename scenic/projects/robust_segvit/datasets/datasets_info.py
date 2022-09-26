@@ -21,6 +21,8 @@ ADE20K_DIR = 'gs://ub-ekb/tensorflow_datasets/ad_e20k/tfrecords/v.0.0'
 ADE20K_LABEL_KEY = 'annotations'  # instead of 'segmentation'
 
 CITYSCAPES_DIR = 'gs://ub-ekb/tensorflow_datasets/cityscapes/tfrecords/v.0.0'
+CITYSCAPES_CORRUPTED_DIR = 'gs://ub-ekb/tensorflow_datasets/cityscapes_corrupted/tfrecords/v.0.0'
+FISHYSCAPES_DIR = 'gs://ub-ekb/tensorflow_datasets/fishyscapes/tfrecords/v.0.0'
 STREETHAZARDS_DIR = 'gs://ub-ekb/tensorflow_datasets/street_hazards/tfrecords/v.0.0'
 # pylint: enable=line-too-long
 
@@ -30,6 +32,11 @@ ADE20K_C_CORRUPTIONS = [
     'gaussian_noise',
 ]
 
+# CITYSCAPES_C
+CITYSCAPES_C_SEVERITIES = range(1, 6)
+CITYSCAPES_C_CORRUPTIONS = [
+    'gaussian_noise',
+]
 
 @dataclasses.dataclass(frozen=True)
 class DatasetInfo:
@@ -40,7 +47,6 @@ class DatasetInfo:
   pixels_per_class: Optional[Dict[int, int]] = None
   ood_classes: Optional[List[Any]] = None
   data_dir: Optional[str] = None
-
 
 # Information for Cityscapes dataset.
 # Based on https://github.com/mcordts/cityscapesScripts
@@ -401,6 +407,27 @@ ADE20KOPEN = DatasetInfo(
     data_dir=ADE20K_DIR)
 
 
+# ----------------------------------
+# Construct fishyscapes dataset:
+# ----------------------------------
+FishyscapesClass = collections.namedtuple(
+    'FishyscapesClass', ['name', 'id', 'train_id', 'ignore_in_eval', 'color'])
+
+# Classes defined as Background/InD/OOD sets.
+c255 = FishyscapesClass('background', 0, 255, True, [0, 0, 0])
+c0 = FishyscapesClass('ind', 1, 0, False, [0, 0, 1])
+c1 = FishyscapesClass('ood', 2, 1, False, [1, 0, 0])
+FISHYSCAPES_3CLASSES = [c255, c0, c1]
+
+FISHYSCAPES_STATIC = DatasetInfo(
+    tfds_name='fishyscapes/Static',
+    image_key='image_left',
+    label_key='mask',
+    classes=FISHYSCAPES_3CLASSES,
+    pixels_per_class=None,
+    data_dir=FISHYSCAPES_DIR)
+
+
 def build_datasets():
   """Build datasets."""
 
@@ -411,7 +438,24 @@ def build_datasets():
       'ade20k_ood_open': ADE20KOPEN,
       'street_hazards': STREETHAZARDS,
       'street_hazards_open': STREETHAZARDSOPEN,
+      'fishyscapes/Static': FISHYSCAPES_STATIC,
   }
+
+  # -----------------------------
+  # Construct cityscapes_c dataset:
+  # -----------------------------
+  for severity in CITYSCAPES_C_SEVERITIES:
+    for corruption in CITYSCAPES_C_CORRUPTIONS:
+      tfds_dataset_name = f'cityscapes_corrupted/semantic_segmentation_{corruption}_{severity}'
+      temp_dataset_name = f'cityscapes_c_{corruption}_{severity}'
+      local_dataset[temp_dataset_name] = DatasetInfo(
+        tfds_name=tfds_dataset_name,
+        image_key='image_left',
+        label_key='segmentation_label',
+        classes=CITYSCAPES_CLASSES,
+        pixels_per_class=CITYSCAPES_PIXELS_PER_CID,
+        data_dir=CITYSCAPES_CORRUPTED_DIR,
+      )
 
   # -----------------------------
   # Construct ade20k_c dataset:

@@ -7,7 +7,7 @@ import ml_collections
 from scenic.projects.robust_segvit.datasets import segmentation_variants
 
 EXPECTED_DATASETS = [
-    ('ade20k_ind_c', 'ade20k_ind_c', 'gaussian_noise', 1, 'validation'),
+    ('ade20k_ind_c', 'ade20k_ind_c', 'gaussian_noise', 1, 'validation[:32]'),
 ]
 
 
