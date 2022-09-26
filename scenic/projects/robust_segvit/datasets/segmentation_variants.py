@@ -18,25 +18,9 @@ from scenic.projects.robust_segvit.datasets.segmentation_datasets import exclude
 from scenic.projects.robust_segvit.datasets.segmentation_datasets import get_class_colors
 from scenic.projects.robust_segvit.datasets.segmentation_datasets import get_class_names
 from scenic.projects.robust_segvit.datasets.segmentation_datasets import get_class_proportions
+from scenic.projects.robust_segvit.datasets.segmentation_datasets import get_instance_mask
 from scenic.projects.robust_segvit.datasets.segmentation_datasets import get_post_exclusion_labels
 import tensorflow as tf
-
-
-def unique_with_inverse(x):
-  x = tf.reshape(x, [-1])
-  y, idx, _ = tf.unique_with_counts(x)
-  return tf.gather(y, idx)
-
-
-def get_instance_mask(instance_segmentation):
-  """Obtain the instance mask from the blue channel of the segmentation file."""
-  # Based on DevKit:
-  # https://github.com/CSAILVision/ADE20K/blob/main/utils/utils_ade20k.py
-  instance_segmentation_blue = instance_segmentation[:, :, 2]
-  instance_mask = unique_with_inverse(instance_segmentation_blue)
-  instance_mask = tf.expand_dims(
-      tf.reshape(instance_mask, tf.shape(instance_segmentation_blue)), -1)
-  return tf.cast(instance_mask, tf.uint16)
 
 
 def preprocess_example(

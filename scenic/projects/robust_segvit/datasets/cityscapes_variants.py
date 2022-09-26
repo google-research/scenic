@@ -195,6 +195,7 @@ def cityscapes_load_split(
   split = cityscapes_variant_info['split']  # only supports validation
 
   # Load the preprocessing function
+  # TODO(kellybuchanan): load dataset from gcp bucket.
   if 'cityscapes' in cityscapes_variant_info.get('tfds_name'):
     if dataset_name == 'cityscapes':
       builder = tfds.builder(dataset_name, dtype=dtype)

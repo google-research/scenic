@@ -14,6 +14,23 @@ from scenic.projects.robust_segvit.datasets import denoise_utils
 import tensorflow as tf
 
 
+def unique_with_inverse(x):
+  x = tf.reshape(x, [-1])
+  y, idx, _ = tf.unique_with_counts(x)
+  return tf.gather(y, idx)
+
+
+def get_instance_mask(instance_segmentation):
+  """Obtain the instance mask from the blue channel of the segmentation file."""
+  # Based on DevKit:
+  # https://github.com/CSAILVision/ADE20K/blob/main/utils/utils_ade20k.py
+  instance_segmentation_blue = instance_segmentation[:, :, 2]
+  instance_mask = unique_with_inverse(instance_segmentation_blue)
+  instance_mask = tf.expand_dims(
+      tf.reshape(instance_mask, tf.shape(instance_segmentation_blue)), -1)
+  return tf.cast(instance_mask, tf.uint16)
+
+
 def preprocess_example(
     example: Dict[str, tf.Tensor],
     train: bool,
@@ -38,6 +55,11 @@ def preprocess_example(
   """
   image = dataset_utils.normalize(example[dataset_info.image_key], dtype)
   mask = example[dataset_info.label_key]
+
+  # preprocess mask following:
+  # https://github.com/CSAILVision/ADE20K/blob/main/utils/utils_ade20k.py
+  if mask.shape[-1] == 3:
+    mask = get_instance_mask(mask)
 
   # Resize test images (train images are cropped/resized during augmentation):
   if not train:
@@ -240,10 +262,11 @@ def get_dataset(
 
   train_split = dataset_configs.get('train_split', 'train')
   num_train_examples = fine_train_size = dataset_utils.get_num_examples(
-      dataset_info.tfds_name, split=train_split)
+      dataset_info.tfds_name, split=train_split, data_dir=dataset_info.data_dir)
+
   validation_split = dataset_configs.get('validation_split', 'validation')
   num_eval_examples = dataset_utils.get_num_examples(dataset_info.tfds_name,
-                                                     validation_split)
+                                                     validation_split, data_dir=dataset_info.data_dir)
 
   logging.info('number of examples in %s: %d', train_split, fine_train_size)
 

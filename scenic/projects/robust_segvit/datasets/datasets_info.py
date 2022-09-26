@@ -17,7 +17,8 @@ ADE20K_OOD_CLASSES = ['chair', 'armchair', 'swivel chair']
 ADE20K_CORRUPTED_DIR = 'gs://ub-ekb/tensorflow_datasets/ad_e20k_corrupted/tfrecords/v.0.0'
 
 ADE20K_TFDS_NAME = 'ade20k'
-ADE20K_CORRUPTED_DIR = 'gs://ub-ekb/tensorflow_datasets/ade20k/tfrecords/v.0.0'
+ADE20K_DIR = 'gs://ub-ekb/tensorflow_datasets/ad_e20k/tfrecords/v.0.0'
+ADE20K_LABEL_KEY = 'annotations'  # instead of 'segmentation'
 # pylint: enable=line-too-long
 
 # ADE20K-C
@@ -231,7 +232,7 @@ for i in range(151):
 ADE20K = DatasetInfo(
     tfds_name=ADE20K_TFDS_NAME,
     image_key='image',
-    label_key='segmentation',
+    label_key=ADE20K_LABEL_KEY,
     classes=ADE20K_CLASSES,
     pixels_per_class=None,
     data_dir=ADE20K_DIR)
@@ -260,7 +261,7 @@ for i in range(151):
 ADE20KSUBSET = DatasetInfo(
     tfds_name=ADE20K_TFDS_NAME,
     image_key='image',
-    label_key='segmentation',
+    label_key=ADE20K_LABEL_KEY,
     classes=ADE20KSUBSET_CLASSES,
     pixels_per_class=None,
     data_dir=ADE20K_DIR)
@@ -296,7 +297,7 @@ ADE20KOPEN_3CLASSES = [c255, c0, c1]
 ADE20KOPEN = DatasetInfo(
     tfds_name=ADE20K_TFDS_NAME,
     image_key='image',
-    label_key='segmentation',
+    label_key=ADE20K_LABEL_KEY,
     classes=ADE20KOPEN_3CLASSES,
     ood_classes=ADE20KOPEN_CLASSES,
     pixels_per_class=None,
