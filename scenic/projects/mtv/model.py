@@ -1,7 +1,8 @@
 """Implements the MTV model."""
 import functools
-from typing import Any, Callable, List, Iterable, Optional, Union, Sequence, Tuple
+from typing import Any, Callable, Iterable, List, MutableSequence, Optional, Sequence, Tuple, Union
 
+from absl import logging
 import flax.linen as nn
 import jax
 import jax.numpy as jnp
@@ -9,6 +10,7 @@ import ml_collections
 from scenic.model_lib.layers import attention_layers
 from scenic.model_lib.layers import nn_layers
 from scenic.projects.baselines import vit
+from scenic.projects.mfp import mvit
 from scenic.projects.mtv import model_utils
 from scenic.projects.vivit import model as vivit_model
 from scenic.train_lib_deprecated import train_utils
@@ -222,6 +224,8 @@ class CrossViewAttentionEncoderBlock(nn.Module):
   Returns:
     output after transformer encoder block.
   """
+  num_layers: Sequence[int]
+  mlp_widths: Sequence[int]
   view_configs: Sequence[ml_collections.ConfigDict]
   cross_view_fusion: ml_collections.ConfigDict
   dtype: Any = jnp.float32
@@ -255,7 +259,7 @@ class CrossViewAttentionEncoderBlock(nn.Module):
                              deterministic: bool) -> List[jnp.ndarray]:
     """Applies self attentions for each view."""
     for view_idx, x in enumerate(tokens):
-      if cur_layer >= self.view_configs[view_idx]['num_layers']:
+      if cur_layer >= self.num_layers[view_idx]:
         continue
       y = nn.LayerNorm(dtype=self.dtype, name=f'msa_ln_view{view_idx}')(x)
       config = self.view_configs[view_idx]
@@ -268,7 +272,7 @@ class CrossViewAttentionEncoderBlock(nn.Module):
           name=f'msa_view{view_idx}')(y, y)
       y = nn.Dropout(rate=self.dropout_rate)(y, deterministic)
       tokens[view_idx] += y * (1.0 - self.get_stochastic_depth_mask(
-          cur_layer, self.view_configs[view_idx]['num_layers'], y,
+          cur_layer, self.num_layers[view_idx], y,
           deterministic))
     return tokens
 
@@ -276,6 +280,7 @@ class CrossViewAttentionEncoderBlock(nn.Module):
       self,
       tokens: List[jnp.ndarray],
       cur_layer: int,
+      num_heads_per_view: Sequence[int],
       deterministic: bool,
       fuse_in_descending_order: bool,
   ) -> List[jnp.ndarray]:
@@ -294,9 +299,9 @@ class CrossViewAttentionEncoderBlock(nn.Module):
       query = xs[query_view_index]
       key_value = xs[key_value_view_index]
       num_heads = (
-          self.view_configs[query_view_index]['num_heads']
+          num_heads_per_view[query_view_index]
           if self.cross_view_fusion.use_query_config else
-          self.view_configs[key_value_view_index]['num_heads'])
+          num_heads_per_view[key_value_view_index])
       qkv_features = (
           query.shape[-1]
           if self.cross_view_fusion.use_query_config else key_value.shape[-1])
@@ -315,19 +320,18 @@ class CrossViewAttentionEncoderBlock(nn.Module):
       y = nn.Dropout(rate=self.dropout_rate)(y, deterministic)
       tokens[query_view_index] += (
           y * (1.0 - self.get_stochastic_depth_mask(
-              cur_layer, self.view_configs[query_view_index]['num_layers'], y,
-              deterministic)))
+              cur_layer, self.num_layers[query_view_index], y, deterministic)))
     return tokens
 
   def _apply_mlp(self, tokens: List[jnp.ndarray], cur_layer: int,
                  deterministic: bool) ->List[jnp.ndarray]:
     """Applies MLP block."""
     for view_idx, x in enumerate(tokens):
-      if cur_layer >= self.view_configs[view_idx]['num_layers']:
+      if cur_layer >= self.num_layers[view_idx]:
         continue
       y = nn.LayerNorm(dtype=self.dtype, name=f'mlp_ln_view{view_idx}')(x)
       y = attention_layers.MlpBlock(
-          mlp_dim=self.view_configs[view_idx]['mlp_dim'],
+          mlp_dim=self.mlp_widths[view_idx],
           dtype=self.dtype,
           dropout_rate=self.dropout_rate,
           activation_fn=nn.gelu,
@@ -337,28 +341,32 @@ class CrossViewAttentionEncoderBlock(nn.Module):
               y, deterministic=deterministic)
       tokens[view_idx] += (
           y * (1.0 - self.get_stochastic_depth_mask(
-              cur_layer, self.view_configs[view_idx]['num_layers'], y,
-              deterministic)))
+              cur_layer, self.num_layers[view_idx], y, deterministic)))
     return tokens
 
   @nn.compact
   def __call__(self, tokens: List[jnp.ndarray], cur_layer: int,
-               deterministic: bool) -> List[jnp.ndarray]:
+               num_heads_per_view: Sequence[int],
+               deterministic: bool,
+               skip_mlp_and_selfattention: bool = False) -> List[jnp.ndarray]:
     """Applies CrossViewAttentionEncoderBlock module.
 
     Args:
       tokens: Input tokens from each view.
       cur_layer: Which layer we apply cross attention.
+      num_heads_per_view: Number of attention heads in each view.
       deterministic: Deterministic or not (to apply dropout).
+      skip_mlp_and_selfattention: If true, skip the MLP and SelfAttn.
 
     Returns:
       Output tokens for each view.
     """
     tokens = self._apply_cross_attention(
-        tokens, cur_layer, deterministic,
+        tokens, cur_layer, num_heads_per_view, deterministic,
         self.cross_view_fusion.get('fuse_in_descending_order', True))
-    tokens = self._apply_self_attentions(tokens, cur_layer, deterministic)
-    tokens = self._apply_mlp(tokens, cur_layer, deterministic)
+    if not skip_mlp_and_selfattention:
+      tokens = self._apply_self_attentions(tokens, cur_layer, deterministic)
+      tokens = self._apply_mlp(tokens, cur_layer, deterministic)
     return tokens
 
 
@@ -457,9 +465,12 @@ class MultiviewEncoder(nn.Module):
       dtype: Any,
   ) -> List[jnp.ndarray]:
     """Builds the encoder with bottlenecks."""
+    num_heads_per_view = [v['num_heads'] for v in self.view_configs]
     for lyr in range(max_num_layers):
       if lyr in fusion_layers:
         xs = CrossViewAttentionEncoderBlock(
+            num_layers=[v['num_layers'] for v in self.view_configs],
+            mlp_widths=[v['mlp_dim'] for v in self.view_configs],
             view_configs=self.view_configs,
             cross_view_fusion=self.cross_view_fusion,
             dtype=self.dtype,
@@ -467,7 +478,7 @@ class MultiviewEncoder(nn.Module):
             attention_dropout_rate=self.attention_dropout_rate,
             stochastic_depth=self.stochastic_depth,
             name=f'cross_view_encoderblock_{lyr}')(
-                xs, lyr, deterministic=not train)
+                xs, lyr, num_heads_per_view, deterministic=not train)
       else:
         for view_idx, view_config in enumerate(self.view_configs):
           if lyr >= view_config['num_layers']:
@@ -484,11 +495,90 @@ class MultiviewEncoder(nn.Module):
                   xs[view_idx], deterministic=not train)
     return xs
 
+  def _build_with_cross_view_attention_mvit(
+      self,
+      xs: MutableSequence[jnp.ndarray],
+      fusion_layers: Sequence[int],
+      spacetime_shapes: Any,
+      train: bool,
+      dtype: Any,
+  ) -> MutableSequence[jnp.ndarray]:
+    """Builds the encoder with bottlenecks."""
+
+    num_heads_per_view = [
+        v.get('num_initial_heads', 1) for v in self.view_configs
+    ]
+    stride_kv = [v.initial_kv_pooling_strides[:] for v in self.view_configs]
+    num_layers = [v.depth for v in self.view_configs]
+
+    for layer_idx in range(max(num_layers)):
+      if layer_idx in fusion_layers:
+        xs = CrossViewAttentionEncoderBlock(
+            num_layers=num_layers,
+            mlp_widths=[v.width*4 for v in self.view_configs],
+            view_configs=self.view_configs,
+            cross_view_fusion=self.cross_view_fusion,
+            dtype=self.dtype,
+            dropout_rate=self.dropout_rate,
+            attention_dropout_rate=self.attention_dropout_rate,
+            stochastic_depth=self.stochastic_depth,
+            name=f'cross_view_encoderblock_{layer_idx}')(
+                xs,
+                layer_idx,
+                num_heads_per_view,
+                train,
+                skip_mlp_and_selfattention=True)
+
+      for view_idx, view_config in enumerate(self.view_configs):
+        if layer_idx >= view_config['depth']:
+          continue
+
+        x = xs[view_idx]
+        x = x.reshape(x.shape[0], -1, x.shape[-1])
+        logging.info('view %d, layer %d shape %s (spacetime: %s',
+                     view_idx, layer_idx, x.shape, spacetime_shapes[view_idx])
+        out_dim = x.shape[-1]
+        pool_q = view_config.pooling_kernel
+        if layer_idx in view_config.pooling_layers:
+          num_heads_per_view[view_idx] *= 2
+          stride_kv[view_idx] = [
+              (x // 2) if x > 1 else 1 for x in stride_kv[view_idx]
+          ]
+          stride_q = view_config.pooling_strides_q
+        else:
+          stride_q = [1 for _ in view_config.pooling_strides_q]
+          if not view_config.pool_q_every_layer:
+            pool_q = [1 for _ in view_config.pooling_strides_q]
+
+        if layer_idx + 1 in view_config.pooling_layers:
+          out_dim = x.shape[-1] * 2
+
+        stoch_depth = (layer_idx / max(view_config.depth - 1,
+                                       1)) * view_config.stochastic_depth
+
+        attn_kwargs = mvit.convert_attention_kwargs(
+            view_config.get('attention_kwargs', {}))
+        x, spacetime_shapes[view_idx] = mvit.Block(
+            num_heads=num_heads_per_view[view_idx],
+            out_dim=out_dim,
+            pooling_kernel_q=pool_q,
+            pooling_kernel_kv=view_config.pooling_kernel,
+            pooling_stride_q=stride_q,
+            pooling_stride_kv=stride_kv[view_idx],
+            attention_kwargs=attn_kwargs,
+            stochastic_depth=stoch_depth,
+            name=f'view{view_idx}_block_{layer_idx}',
+            use_bias=view_config.get('use_bias', False),
+        )(x, spacetime_shapes[view_idx], deterministic=not train)
+        xs[view_idx] = x
+    return xs
+
   @nn.compact
   def __call__(self,
-               tokens: Sequence[jnp.ndarray],
+               tokens: MutableSequence[jnp.ndarray],
                bottleneck: Union[jnp.ndarray, None],
-               train: bool = False) -> List[jnp.ndarray]:
+               spacetime_shapes: Any,
+               train: bool = False) -> MutableSequence[jnp.ndarray]:
     """Applies Transformer model on the tokens.
 
     This function will be called within a vmap along the time axis. Before
@@ -503,6 +593,7 @@ class MultiviewEncoder(nn.Module):
         composed of tubelets. A larger view corresponds to larger tubelets.
       bottleneck: A 3D float tensor of shape (batch, num_tokens, channels)
         representing a set of tokens used for fusing information among views.
+      spacetime_shapes: spatiotemoral shapes of the tokens.
       train: Whether or not it is in training.
 
     Returns:
@@ -513,16 +604,22 @@ class MultiviewEncoder(nn.Module):
     for t in tokens:
       assert t.ndim == 3  # Shape is `[batch, len, emb]`.
     dtype = jax.dtypes.canonicalize_dtype(self.dtype)
-    xs = self._add_posembed(tokens)
-    max_num_layers = max([config['num_layers'] for config in self.view_configs])
     fusion_layers = ([] if self.cross_view_fusion is None else
                      self.cross_view_fusion.fusion_layers)
 
+    is_mvit = 'patch_size' in self.view_configs[0]
+    if is_mvit:  # MViT
+      return self._build_with_cross_view_attention_mvit(
+          tokens, fusion_layers, spacetime_shapes, train, dtype)
+
+    xs = self._add_posembed(tokens)
+    max_num_layers = max([config['num_layers'] for config in self.view_configs])
     if (self.cross_view_fusion is None or
         self.cross_view_fusion.type == 'cross_view_attention'):
       return self._build_with_cross_view_attention(xs, fusion_layers,
                                                    max_num_layers, train, dtype)
     if self.cross_view_fusion.type == 'bottleneck':
+      assert not is_mvit, 'Bottlenecks not implemented in MTV-MViT'
       return self._build_with_bottleneck(xs, bottleneck, fusion_layers,
                                          max_num_layers, train, dtype)
     raise ValueError(
@@ -538,7 +635,7 @@ class MTV(nn.Module):
   input_token_temporal_dims: Sequence[int]
   num_classes: int
   classifier: str
-  dropout_rate: float = 0.1
+  dropout_rate: float = 0.0
   attention_dropout_rate: float = 0.1
   stochastic_depth: float = 0.0
   keep_spatiotemporal_features: bool = False
@@ -612,7 +709,9 @@ class MTV(nn.Module):
       x = fn(x, axis=list(range(axis, x.ndim - 1)))
     return x
 
-  def _tokenize(self, x: jnp.ndarray) -> List[jnp.ndarray]:
+  def _tokenize(
+      self, x: jnp.ndarray
+  ) -> Tuple[MutableSequence[jnp.ndarray], MutableSequence[jnp.ndarray]]:
     """Creates tokens for each view.
 
     Args:
@@ -621,32 +720,47 @@ class MTV(nn.Module):
 
     Returns:
       Tokens for each view and each one has a shape of (batch, time,
-      sequence_len, channels).
+      sequence_len, channels), and a list with the original shapes of
+      each token.
     """
     tokens = []
+    shapes = []
     for idx, config in enumerate(self.view_configs):
-      view_tokens, _ = vivit_model.temporal_encode(
-          x,
-          self.temporal_encoding_config,
-          ml_collections.ConfigDict(config['patches']),
-          config['hidden_size'],
-          return_1d=False,
-          name=f'embedding_view{idx}')
+      if 'patch_size' in config:  # MViT.
+        view_tokens = mvit.create_patches(x, config.width, config.patch_size,
+                                          config.patch_stride,
+                                          f'view{idx}_embedding',
+                                          padding='SAME')
+        view_tokens = mvit.add_position_embedding(view_tokens, 'learned',
+                                                  f'view{idx}_posemb_kernel')
+      else:
+        view_tokens, _ = vivit_model.temporal_encode(
+            x,
+            self.temporal_encoding_config,
+            ml_collections.ConfigDict(config['patches']),
+            config['hidden_size'],
+            return_1d=False,
+            name=f'embedding_view{idx}')
+      shapes.append(view_tokens.shape)
       bs, t, h, w, c = view_tokens.shape
       view_tokens = view_tokens.reshape(bs, t, h * w, c)
       tokens.append(view_tokens)
-    return tokens
+    return tokens, shapes
 
   def _align_temporal_dimension_across_views(
-      self, tokens: Sequence[jnp.ndarray]) -> List[jnp.ndarray]:
+      self, tokens: MutableSequence[jnp.ndarray],
+      spacetime_shapes: MutableSequence[MutableSequence[int]]
+  ) -> Tuple[MutableSequence[jnp.ndarray],
+             MutableSequence[MutableSequence[int]]]:
     """Reshapes tokens from each view so they have the same temporal dim."""
     min_temporal_dim = min(self.input_token_temporal_dims)
     outputs = []
-    for t in tokens:
-      bs, time, n, c = t.shape
-      outputs.append(
-          t.reshape(bs, min_temporal_dim, (n * time) // min_temporal_dim, c))
-    return outputs
+    for i, t in enumerate(tokens):
+      n, time, wh, c = t.shape
+      seq_len = (wh * time) // min_temporal_dim
+      outputs.append(t.reshape(n, min_temporal_dim, seq_len, c))
+      spacetime_shapes[i][0] = time // min_temporal_dim
+    return outputs, spacetime_shapes
 
   def _merge_views_along_time_axis(self, tokens: Sequence[jnp.ndarray],
                                    hidden_size: int) -> jnp.ndarray:
@@ -681,7 +795,7 @@ class MTV(nn.Module):
         xs.append(jnp.tile(x, (1, max_temporal_dim // x.shape[1], 1)))
     return jnp.concatenate(xs, axis=-1)
 
-  def _global_encode(self, tokens: Sequence[jnp.ndarray],
+  def _global_encode(self, tokens: MutableSequence[jnp.ndarray],
                      is_train: bool) -> jnp.ndarray:
     """Applies the global encoder.
 
@@ -734,10 +848,11 @@ class MTV(nn.Module):
 
   def _encode_per_time(
       self,
-      tokens: Sequence[jnp.ndarray],
+      tokens: MutableSequence[jnp.ndarray],
       bottleneck: Union[jnp.ndarray, None],
+      spacetime_shapes: Sequence[int],
       is_train: bool,
-  ) -> List[jnp.ndarray]:
+  ) -> MutableSequence[jnp.ndarray]:
     """Encodes input tokens on a per-time basis."""
 
     tokens = MultiviewEncoder(
@@ -749,11 +864,14 @@ class MTV(nn.Module):
         stochastic_depth=self.stochastic_depth,
         dtype=self.dtype,
         name='MultiviewEncoder')(
-            tokens, bottleneck=bottleneck, train=is_train)
+            tokens, bottleneck=bottleneck, train=is_train,
+            spacetime_shapes=spacetime_shapes)
     return tokens
 
   def _check_config(self, x: jnp.ndarray):
     """Checks configuration errors."""
+    if 'patch_size' in self.view_configs[0]:  # MViT.
+      return
     if self.keep_spatiotemporal_features and self.classifier == 'token':
       raise ValueError('Classifier cannot be `token` when '
                        '`keep_spatiotemporal_features` is True.')
@@ -783,9 +901,16 @@ class MTV(nn.Module):
     """
     del debug
     self._check_config(x)
-    tokens = self._tokenize(x)
-    tokens = self._add_cls_tokens_for_all_views(tokens)
-    tokens = self._align_temporal_dimension_across_views(tokens)
+    tokens, shapes = self._tokenize(x)
+    logging.info('token shapes after tokenizing: %s', [t.shape for t in tokens])
+    spacetime_shapes = [list(s[1:-1]) for s in shapes]
+    if 'patch_size' not in self.view_configs[0]:  # ViViT.
+      tokens = self._add_cls_tokens_for_all_views(tokens)
+    tokens, spacetime_shapes = self._align_temporal_dimension_across_views(
+        tokens, spacetime_shapes)
+    logging.info('token shapes after aligning: %s (spacetime: %s)',
+                 [t.shape for t in tokens], spacetime_shapes)
+
     if (self.cross_view_fusion is not None and
         self.cross_view_fusion.type == 'bottleneck'):
       if self.cross_view_fusion.get('fuse_in_descending_order', True):
@@ -798,17 +923,22 @@ class MTV(nn.Module):
            channels), self.dtype)
       bottleneck = jnp.tile(bottleneck, [x.shape[0], 1, 1, 1])
       tokens = jax.vmap(
-          functools.partial(self._encode_per_time, is_train=train),
+          functools.partial(self._encode_per_time, is_train=train,
+                            spacetime_shapes=spacetime_shapes),
           in_axes=(1, 1),
           out_axes=1)(tokens, bottleneck)
     else:
       tokens = jax.vmap(
           functools.partial(
-              self._encode_per_time, bottleneck=None, is_train=train),
+              self._encode_per_time, bottleneck=None,
+              is_train=train, spacetime_shapes=spacetime_shapes),
           in_axes=1,
-          out_axes=1)(
-              tokens)
+          out_axes=1)(tokens)
+    logging.info('token shapes after per_time_encoding: %s',
+                 [t.shape for t in tokens])
     tokens = self._global_encode(tokens, train)
+    logging.info('token shapes after global encoding: %s',
+                 [t.shape for t in tokens])
     if self.keep_spatiotemporal_features:
       bs, _, h, w, _ = x.shape
       tokens = tokens.reshape(
@@ -835,23 +965,11 @@ class MTVClassificationModel(vivit_model.ViViTClassificationModel):
   def build_flax_model(self) -> nn.Module:
     model_dtype = getattr(jnp, self.config.get('model_dtype_str', 'float32'))
     return MTV(
-        view_configs=self.config.model.view_configs,
-        cross_view_fusion=self.config.model.cross_view_fusion,
-        temporal_encoding_config=self.config.model.temporal_encoding_config,
-        global_encoder_config=self.config.model.global_encoder_config,
         input_token_temporal_dims=model_utils.get_input_token_temporal_dims(
             self.config.dataset_configs.num_frames,
             self.config.model.view_configs),
         num_classes=self.dataset_meta_data['num_classes'],
-        classifier=self.config.model.classifier,
-        dropout_rate=self.config.model.get('dropout_rate', 0.0),
-        attention_dropout_rate=self.config.model.get('attention_dropout_rate',
-                                                     0.1),
-        stochastic_depth=self.config.model.get('stochastic_depth', 0.0),
-        keep_spatiotemporal_features=self.config.model.get(
-            'keep_spatiotemporal_features', False),
-        final_endpoint=self.config.model.get('final_endpoint', 'logits'),
-        dtype=model_dtype)
+        dtype=model_dtype, **self.config.model)
 
   def default_flax_model_config(self) -> ml_collections.ConfigDict:
     return _DEFAULT_MTV_CONFIG
@@ -916,6 +1034,33 @@ class MTVClassificationModel(vivit_model.ViViTClassificationModel):
                                                         restored_train_states,
                                                         restored_model_cfgs,
                                                         restored_model_formats)
+
+  def init_from_mvit_train_states(
+      self,
+      train_state: train_utils.TrainState,
+      restored_train_states: Sequence[train_utils.TrainState],
+      restored_model_cfgs: Sequence[ml_collections.ConfigDict],
+  ) -> train_utils.TrainState:
+    """Updates the train_state with data from restored_train_states.
+
+    This function is used to initialize a MTV model from a list of MViT
+    checkpoints. We assume that the number of restored_train_states is equal to
+    the number of views.
+
+    Args:
+      train_state: A raw TrainState for the model.
+      restored_train_states: A sequence of TrainStates that is loaded with
+        parameters/state of a pretrained ViT model.
+      restored_model_cfgs: A sequence of model configuration of the pretrained
+        ViT models. Usually used for some asserts.
+
+    Returns:
+      Updated train_state.
+    """
+    return model_utils.initialize_from_mvit_train_states(self.config,
+                                                         train_state,
+                                                         restored_train_states,
+                                                         restored_model_cfgs)
 
 
 class MTVMultiheadClassificationModel(

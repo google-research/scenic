@@ -7,6 +7,7 @@ import flax
 import jax.numpy as jnp
 import ml_collections
 import numpy as np
+from scenic.projects.mfp import mvit
 from scenic.projects.vivit import model_utils as vivit_utils
 from scenic.train_lib_deprecated import train_utils
 import scipy
@@ -27,7 +28,10 @@ def get_input_token_temporal_dims(
   Returns:
     Temporal dimensions of input tokens from each view.
   """
-  return [num_frames // view['patches']['size'][2] for view in view_configs]
+  if 'patch_size' in view_configs[0]:  # MViT.
+    return [num_frames // view['patch_stride'][0] for view in view_configs]
+  else:
+    return [num_frames // view['patches']['size'][2] for view in view_configs]
 
 
 def get_temporal_dims_merged_into_space(
@@ -130,8 +134,8 @@ def init_bottleneck(params: Dict[str, Any], restored_bottleneck: jnp.ndarray):
 def central_frame_init_embedding(
     to_params: Dict[str, Any],
     from_params: Dict[str, Any],
-    view_idx: int,
-    config: ml_collections.ConfigDict,
+    name: str,
+    patch_size: Sequence[int],
 ):
   """Initialize input embedding from a ViT model.
 
@@ -142,33 +146,30 @@ def central_frame_init_embedding(
   Args:
     to_params: Parameters of the current model.
     from_params: Model parameters where we load the weights from.
-    view_idx: View index.
-    config: Current model config.
+    name: name of the parameter.
+    patch_size: patch size of the current model.
   """
-  if config.init_from.get('restore_input_embedding', True):
-    name = f'embedding_view{view_idx}'
-    input_kernel = to_params[name]['kernel']
-    restored_kernel = from_params['kernel']
-    restored_bias = from_params['bias']
-    logging.info('Initializing input kernel to select centre frame.')
-    if input_kernel.shape[1:] != restored_kernel.shape:
-      logging.info('Kernel sizes do not match. Interpolation is performed.')
-      restored_kernel_h, restored_kernel_w, in_depth, out_depth = restored_kernel.shape
-      reshaped_kernel = restored_kernel.reshape(restored_kernel_h,
-                                                restored_kernel_w, -1)
-      patch_size = config.model.view_configs[view_idx].patches.size
-      zoom = (patch_size[0] / restored_kernel_h,
-              patch_size[1] / restored_kernel_w, 1)
-      resized_kernel = scipy.ndimage.zoom(reshaped_kernel, zoom, order=1)
-      resized_kernel = resized_kernel.reshape(
-          (patch_size[0], patch_size[1], in_depth, out_depth))
-    else:
-      resized_kernel = restored_kernel
-    central_time_index = input_kernel.shape[0] // 2
-    temp = np.zeros(input_kernel.shape)
-    temp[central_time_index] = resized_kernel.copy()
-    to_params[name]['kernel'] = temp
-    to_params[name]['bias'] = restored_bias
+  input_kernel = to_params[name]['kernel']
+  restored_kernel = from_params['kernel']
+  restored_bias = from_params['bias']
+  logging.info('Initializing input kernel to select centre frame.')
+  if input_kernel.shape[1:] != restored_kernel.shape:
+    logging.info('Kernel sizes do not match. Interpolation is performed.')
+    restored_kernel_h, restored_kernel_w, in_depth, out_depth = restored_kernel.shape
+    reshaped_kernel = restored_kernel.reshape(restored_kernel_h,
+                                              restored_kernel_w, -1)
+    zoom = (patch_size[0] / restored_kernel_h,
+            patch_size[1] / restored_kernel_w, 1)
+    resized_kernel = scipy.ndimage.zoom(reshaped_kernel, zoom, order=1)
+    resized_kernel = resized_kernel.reshape(
+        (patch_size[0], patch_size[1], in_depth, out_depth))
+  else:
+    resized_kernel = restored_kernel
+  central_time_index = input_kernel.shape[0] // 2
+  temp = np.zeros(input_kernel.shape)
+  temp[central_time_index] = resized_kernel.copy()
+  to_params[name]['kernel'] = temp
+  to_params[name]['bias'] = restored_bias
 
 
 def initialize_from_mtv_parameters(
@@ -350,8 +351,11 @@ def initialize_one_view_from_vit_parameters(
           logging.info(
               'Skipping restoring `%s`, in restored model but not in the'
               ' target.', tm_key)
-    elif m_key == 'embedding':
-      central_frame_init_embedding(params, m_params, view_idx, config)
+    elif m_key == 'embedding' and config.init_from.get(
+        'restore_input_embedding', True):
+      name = f'embedding_view{view_idx}'
+      patch_size = config.model.view_configs[view_idx].patches.size
+      central_frame_init_embedding(params, m_params, name, patch_size)
     else:
       logging.info('Skipping `%s`, in restored model but not in target', m_key)
 
@@ -392,6 +396,102 @@ def initialize_from_vit_train_states(
     initialize_one_view_from_vit_parameters(config, params,
                                             restored_model_cfgs[view_idx],
                                             restored_model_params, view_idx)
+  return train_state.replace(
+      optimizer=train_state.optimizer.replace(target=flax.core.freeze(params)))
+
+
+def initialize_from_mvit_train_states(
+    config: ml_collections.ConfigDict,
+    train_state: train_utils.TrainState,
+    restored_train_states: Sequence[train_utils.TrainState],
+    restored_configs: Sequence[ml_collections.ConfigDict],
+) -> train_utils.TrainState:
+  """Updates MTV's train_state with pretrained ViT weights.
+
+  Args:
+    config: Configurations for the model being updated.
+    train_state: A raw TrainState for the model.
+    restored_train_states: A dict. Each key is a Ti/S/B/L ViT model and the
+      corresponding value is a TrainState that is loaded with parameters/state
+      of pretrained models.
+    restored_configs: Configurations of models from which the
+      restored_train_states come from.
+  Returns:
+    Updated train_state.
+  """
+
+  params = flax.core.unfreeze(train_state.optimizer.target)
+  for view_idx, restored_state in enumerate(restored_train_states):
+    if hasattr(restored_state, 'optimizer'):  # A flax.optim based checkpoint.
+      restored_params = flax.core.unfreeze(restored_state.optimizer.target)
+    else:
+      restored_params = flax.core.unfreeze(restored_state.params)
+    initialize_one_view_from_mvit_parameters(config, params,
+                                             restored_configs[view_idx],
+                                             restored_params, view_idx)
+
+    # We might have inadvertedly introduced new params that we need to remove
+    # (specifically MultiviewEncoder/view0_encoder_norm/scale)
+    if f'view{view_idx}_encoder_norm' not in train_state.optimizer.target[
+        'MultiviewEncoder']:
+      logging.info("removing 'view{view_idx}_encoder_norm")
+      del params['MultiviewEncoder'][f'view{view_idx}_encoder_norm']
 
   return train_state.replace(
       optimizer=train_state.optimizer.replace(target=flax.core.freeze(params)))
+
+
+def initialize_one_view_from_mvit_parameters(
+    config: ml_collections.ConfigDict,
+    params: Dict[str, Any],
+    restored_config: ml_collections.ConfigDict,
+    restored_params: Dict[str, Any],
+    view_idx: int,
+    transformer_key: str = 'MultiviewEncoder'):
+  """Initialize one view of MTV from an MViT model.
+
+  Args:
+    config: Configuration for the model being updated.
+    params: The parameters of the model.
+    restored_config: Configuration of the model from which the
+      restored_train_state come from. Usually used for some asserts.
+    restored_params: Restored parameters from the given pretrained checkpoint.
+    view_idx: The index of the view for which we restore the model.
+    transformer_key: The key of transformer whose weights are being updated.
+  """
+
+  print('restoring view', view_idx)
+  for pname, pvalue in restored_params.items():
+    if pname == 'Add1DPositionEmbedding_0' and pname in params:
+      new_pname = f'Add1DPositionEmbedding_{view_idx}'
+      new_subkey_name = f'view{view_idx}_posemb_kernel'
+      rescaled_posemb = mvit.maybe_rescale_position_embedding(
+          restored_params[pname]['posemb_kernel'],
+          params[pname][new_subkey_name],
+          restored_config.model.patch_stride,
+          config.model.view_configs[view_idx].patch_stride,
+          restored_config.dataset_configs.get('num_frames', 1),
+          config.dataset_configs.get('num_frames', 1),)
+      new_pname = f'Add1DPositionEmbedding_{view_idx}'
+      params[new_pname][new_subkey_name] = rescaled_posemb
+    elif pname == 'Transformer':
+      for sub_key, sub_value in pvalue.items():
+        print('setting ', transformer_key, f'view{view_idx}_{sub_key}')
+        params[transformer_key][f'view{view_idx}_{sub_key}'] = sub_value
+    elif pname == 'embedding':
+      old_shape = params[f'view{view_idx}_embedding']['kernel'].shape
+      new_shape = pvalue['kernel'].shape
+      if old_shape == new_shape:
+        params[f'view{view_idx}_embedding'] = pvalue
+      else:
+        if old_shape[-4:] == new_shape:
+          name = f'view{view_idx}_embedding'
+          patch_size = config.model.view_configs[view_idx].patch_size
+          central_frame_init_embedding(params, pvalue, name, patch_size)
+        else:
+          # A single MViT-B loses ~1% of downstream accuracy when re-training
+          # the embedding from scratch.
+          logging.info('Not restoring %s due to shape difference: %s <> %s',
+                       f'view{view_idx}_embedding', old_shape, new_shape)
+    else:
+      logging.info('Skipping `%s`, in restored model but not in target', pname)

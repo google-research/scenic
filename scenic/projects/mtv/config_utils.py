@@ -3,6 +3,7 @@
 from typing import List
 
 import ml_collections
+from scenic.projects.mfp.configs import common_mvit
 
 MODEL_SIZE_ORDER = ['Ti', 'S', 'B', 'L', 'H']
 HIDDEN_SIZES = {'Ti': 192, 'S': 384, 'B': 768, 'L': 1024, 'H': 1280}
@@ -17,6 +18,26 @@ PATCH_SIZES = {
     'L': (16, 16),
     'H': (14, 14),
 }
+
+
+def _parse_vivit_view_config(version, shape, variant):
+  """Parses a ViViT view config."""
+  view_config = ml_collections.ConfigDict()
+  view_config.hidden_size = HIDDEN_SIZES[version]
+  view_config.patches = ml_collections.ConfigDict()
+  view_config.num_heads = NUM_HEADS[version]
+  view_config.mlp_dim = MLP_DIMS[version]
+  view_config.num_layers = NUM_LAYERS[version]
+  if len(shape) == 1:
+    num_frames = int(shape[0])
+    view_config.patches.size = PATCH_SIZES[version] + (num_frames,)
+  elif len(shape) == 2:
+    view_config.patches.size = (shape[0], shape[0], shape[1])
+  elif len(shape) == 3:
+    view_config.patches.size = (shape[0], shape[1], shape[2])
+  else:
+    raise ValueError(f'Model variant {variant} is invalid.')
+  return view_config
 
 
 def parse_view_configs(variant: str) -> List[ml_collections.ConfigDict]:
@@ -37,26 +58,23 @@ def parse_view_configs(variant: str) -> List[ml_collections.ConfigDict]:
   Returns:
     a list of per-view model configs.
   """
+  is_mvit = variant.lower().startswith('mvit_')
+  if is_mvit:
+    variant = variant[5:]
+
   view_configs = []
   views = variant.split('+')
   for view_variant in views:
     version, tubelet_size = view_variant.split('/')
-    shape = tubelet_size.split('x')
-    view_config = ml_collections.ConfigDict()
-    view_config.hidden_size = HIDDEN_SIZES[version]
-    view_config.patches = ml_collections.ConfigDict()
-    view_config.num_heads = NUM_HEADS[version]
-    view_config.mlp_dim = MLP_DIMS[version]
-    view_config.num_layers = NUM_LAYERS[version]
-    if len(shape) == 1:
-      num_frames = int(shape[0])
-      view_config.patches.size = PATCH_SIZES[version] + (num_frames,)
-    elif len(shape) == 2:
-      view_config.patches.size = (int(shape[0]), int(shape[0]), int(shape[1]))
-    elif len(shape) == 3:
-      view_config.patches.size = (int(shape[0]), int(shape[1]), int(shape[2]))
+    shape = tuple([int(x) for x in tubelet_size.split('x')])
+
+    if is_mvit:
+      view_config = common_mvit.get_model_config(version, use_2d_patches=True)
+      assert len(shape) == 1, f'Invalid shape for MViT: {variant}'
+      view_config.patch_size = [shape[0]] + list(view_config.patch_size)
+      view_config.patch_stride = [shape[0]] + list(view_config.patch_stride)
     else:
-      raise ValueError(f'Model variant {variant} is invalid.')
+      view_config = _parse_vivit_view_config(version, shape, view_variant)
 
     view_configs.append(view_config)
   return view_configs

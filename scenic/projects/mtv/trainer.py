@@ -14,6 +14,7 @@ import jax.numpy as jnp
 import jax.profiler
 import ml_collections
 import numpy as np
+from scenic.common_lib import debug_utils
 from scenic.dataset_lib import dataset_utils
 from scenic.projects.mtv import model as model_lib
 from scenic.projects.vivit import evaluation_lib
@@ -93,6 +94,22 @@ def init_from_vit_checkpoints(
                                           checkpoint_formats)
 
 
+def init_from_mvit_checkpoints(
+    config: ml_collections.ConfigDict,
+    model: model_lib.MTVClassificationModel,
+    train_state: train_utils.TrainState,
+) -> train_utils.TrainState:
+  """Initialize train state from ViT checkpoints."""
+  assert len(init_ckpt_paths) == len(config.model.view_configs)
+  restored_states = []
+  for path in init_ckpt_paths:
+    ts = pretrain_utils.restore_pretrained_checkpoint(path, train_state,
+                                                      assert_exist=True)
+    restored_states.append(ts)
+  return model.init_from_mvit_train_states(train_state, restored_states,
+                                           restored_configs)
+
+
 def train(
     *,
     rng: jnp.ndarray,
@@ -165,11 +182,15 @@ def train(
       train_state = init_from_mtv_checkpoint(config, model, train_state)
     elif model_type == 'vit':
       train_state = init_from_vit_checkpoints(config, model, train_state)
+    elif model_type == 'mvit':
+      train_state = init_from_mvit_checkpoints(config, model, train_state)
     else:
       raise ValueError(f'Unknown model type: {model_type}.')
   elif start_step == 0:
     logging.info('Training completely from scratch.'
                  'Not restoring from any checkpoint.')
+    logging.info('Parameters after initialising (or loading) weights.')
+    debug_utils.log_param_shapes(train_state.optimizer.target)
 
   # Replicate the optimzier, state, and rng.
   train_state = jax_utils.replicate(train_state)
