@@ -16,6 +16,7 @@ segmentation_datasets: <br>
   - [ade20k](https://groups.csail.mit.edu/vision/datasets/ADE20K/). <br>
   - ade20k_ind, the ade20k dataset with 3 classes dropped. <br>
   - ade20k_ood, the ade20k with only 3 classes for OOD detection. <br>
+  -[street_hazards](https://arxiv.org/abs/1911.11132). <br>
 
 segmentation_variants: <br>
   - ade20k_corrupted, the corrupted version of the ade20k dataset. <br>
