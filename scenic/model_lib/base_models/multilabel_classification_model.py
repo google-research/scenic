@@ -19,6 +19,7 @@ from typing import Dict, Optional, Tuple, Union
 
 from flax.training import common_utils
 from immutabledict import immutabledict
+import jax
 import jax.numpy as jnp
 from scenic.model_lib.base_models import base_model
 from scenic.model_lib.base_models import model_utils
@@ -39,7 +40,7 @@ def multilabel_classification_metrics_function(
     target_is_multihot: bool = False,
     metrics: base_model
     .MetricNormalizerFnDict = _MULTI_LABEL_CLASSIFICATION_METRICS,
-    axis_name: Union[str, Tuple[str, ...]] = 'batch',
+    axis_name: Union[None, str, Tuple[str, ...]] = 'batch',
 ) -> Dict[str, Tuple[float, int]]:
   """Calculates metrics for the multi-label classification task.
 
@@ -77,12 +78,18 @@ def multilabel_classification_metrics_function(
   # by summing across the devices dimension. The outer sum then sums across the
   # batch dim. The result is then we have summed across all samples in the
   # sharded batch.
+
+  if axis_name is None:
+    normalizer = functools.partial(jax.tree_util.tree_map, jnp.sum)
+  else:
+    normalizer = functools.partial(model_utils.psum_metric_normalizer,
+                                   axis_name=axis_name)
+
   evaluated_metrics = {}
   for key, val in metrics.items():
-    evaluated_metrics[key] = model_utils.psum_metric_normalizer(
-        (val[0](logits, multihot_target, weights), val[1](
-            logits, multihot_target, weights)),
-        axis_name=axis_name)
+    evaluated_metrics[key] = normalizer(
+        (val[0](logits, multihot_target, weights),
+         val[1](logits, multihot_target, weights)))
   return evaluated_metrics
 
 
