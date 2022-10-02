@@ -159,10 +159,16 @@ def initialize_bert_model(
     # Set bias in the head to low value, such that loss is small initially.
     if config.get('init_head_bias', None) is not None:
       init_params = flax.core.unfreeze(init_params)
-      init_params['output_projection'] = optimizers.tree_map_with_names(
+      potential_keys = {'classification_head',
+                        'regression_head', 'next_sentence_prediction_head'}
+      head_key = potential_keys & set(init_params.keys())
+      assert len(head_key) == 1
+      head_key = head_key.pop()
+      new_params = optimizers.tree_map_with_names(
           lambda p: jnp.full_like(p, config.init_head_bias),
-          init_params['output_projection'],
+          init_params[head_key]['output_projection'],
           match_name_fn=lambda name: 'bias' in name)
+      init_params[head_key]['output_projection'] = new_params
       init_params = flax.core.freeze(init_params)
     return init_params, init_model_state
 

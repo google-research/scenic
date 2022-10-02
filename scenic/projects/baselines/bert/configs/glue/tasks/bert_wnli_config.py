@@ -24,7 +24,7 @@ def get_config(variant=VARIANT, init_from=INIT_FROM):
   config.data_dtype_str = 'float32'
   config.batch_size = 32
   config.dataset_configs = ml_collections.ConfigDict()
-  config.dataset_configs.task = 'rte'
+  config.dataset_configs.task = 'wnli'
   config.dataset_configs.prefetch_to_device = 2
   task_path = glue_common.GLUE_TASK_PATH[config.dataset_configs.task]
   config.dataset_configs.input_meta_data_path = glue_common.INPUT_MEAT_DATA_PATH.format(

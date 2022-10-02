@@ -72,8 +72,8 @@ def get_config(variant=VARIANT, init_from=INIT_FROM):
   config.num_training_steps = 36813
   config.log_summary_steps = 1000
   config.log_eval_steps = 1000
-  # Eval data size is 9815 examples.
-  config.steps_per_eval = 307
+  # Eval data size is 9832 examples.
+  config.steps_per_eval = 308
   config.rng_seed = 42
 
   # Learning rate.
