@@ -182,8 +182,15 @@ def init_bert_from_train_state(
         for k, v in flax.traverse_util.flatten_dict(params).items()
     }
 
-  params = flax.core.unfreeze(train_state.optimizer.target)
-  restored_params = flax.core.unfreeze(restored_train_state.optimizer.target)
+  if hasattr(train_state, 'optimizer'):
+    # TODO(dehghani): Remove support for flax optim.
+    params = flax.core.unfreeze(train_state.optimizer.target)
+    restored_params = flax.core.unfreeze(
+        restored_train_state.optimizer.target)
+  else:
+    params = flax.core.unfreeze(train_state.params)
+    restored_params = flax.core.unfreeze(restored_train_state.params)
+
   params_dict = _get_param_dict(params)
   # Fix some names:
   restored_params_dict = dict()
@@ -193,7 +200,6 @@ def init_bert_from_train_state(
       name = name.replace('next_sentence_prediction_head',
                           'classification_head')
     restored_params_dict[name] = value
-
   # Copy parameters over:
   for pname, pvalue in restored_params_dict.items():
     if 'masked_language_model_head' in pname:
@@ -221,5 +227,11 @@ def init_bert_from_train_state(
   params = flax.traverse_util.unflatten_dict(splitkeys)
   logging.info('Parameter summary after initialising from train state:')
   debug_utils.log_param_shapes(params)
-  return train_state.replace(
-      optimizer=train_state.optimizer.replace(target=flax.core.freeze(params)))
+  if hasattr(train_state, 'optimizer'):
+    # TODO(dehghani): Remove support for flax optim.
+    return train_state.replace(
+        optimizer=train_state.optimizer.replace(
+            target=flax.core.freeze(params)))
+  else:
+    return train_state.replace(params=flax.core.freeze(params))
+
