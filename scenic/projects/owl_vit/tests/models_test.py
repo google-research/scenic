@@ -1,4 +1,4 @@
-"""Tests vit_plus_v2 models."""
+"""Tests OWL-ViT models."""
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax

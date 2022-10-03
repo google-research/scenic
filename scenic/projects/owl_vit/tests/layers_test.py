@@ -1,4 +1,4 @@
-"""Tests vit_plus_v2 layers."""
+"""Tests OWL-ViT layers."""
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax
