@@ -79,8 +79,8 @@ def get_config(runlocal=''):
   config.ncr.number_neighbours = 10
   config.ncr.smoothing_gamma = 1
   config.ncr.temperature = 2.0
-  config.ncr.loss_weight = 0.9
-  config.ncr.starting_epoch = 50
+  config.ncr.loss_weight = 0.3
+  config.ncr.starting_epoch = 10
 
   # Mixup.
   config.mixup = ml_collections.ConfigDict()

@@ -143,6 +143,8 @@ class NCRModel(base_model.BaseModel):
         one_hot_targets,
         weights,
         label_smoothing=self.config.get('label_smoothing'))
+
+    softmax_ce_loss = (1.0 - ncr_loss_weight) * softmax_ce_loss
     loss_metrics['softmax_cross_entropy'] = softmax_ce_loss
     if self.config.get('l2_decay_factor') is None:
       total_loss = softmax_ce_loss
