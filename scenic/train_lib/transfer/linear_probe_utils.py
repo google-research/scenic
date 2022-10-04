@@ -362,10 +362,10 @@ class LinearEvaluator:
     linear_probe_head = self.linear_probe_cls(
         num_classes=dataset.meta_data['num_classes'],
         **self.linear_probe_init_kwargs)
-    logging.info('[linear_eval]: Training linear probe for datast %s', ds_name)
+    logging.info('[linear_eval]: Training linear probe for dataset %s', ds_name)
     train_state = self._train(representation_fn, linear_probe_head, dataset,
                               train_rng, config, ds_name, writer, repr_step)
-    logging.info('[linear_eval]: Evaluating linear probe for datast %s',
+    logging.info('[linear_eval]: Evaluating linear probe for dataset %s',
                  ds_name)
     eval_metrics = self._eval(representation_fn, linear_probe_head, dataset,
                               train_state, config, ds_name, writer, repr_step)
