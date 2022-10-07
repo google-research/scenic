@@ -9,7 +9,7 @@ import ml_collections
 import numpy as np
 from scenic.projects.vivit import model_utils as vivit_utils
 from scenic.train_lib_deprecated import train_utils
-import scipy
+import scipy.ndimage
 
 _POSITIONAL_EMBEDDING_KEY = 'posembed_input_view'
 _BOTTLENECK_KEY = 'bottleneck'

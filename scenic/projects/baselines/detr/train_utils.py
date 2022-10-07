@@ -21,7 +21,7 @@ from scenic.dataset_lib.coco_dataset import coco_eval
 from scenic.model_lib.base_models import box_utils
 from scenic.train_lib_deprecated import optimizers as scenic_optimizers
 from scenic.train_lib_deprecated import train_utils
-import scipy
+import scipy.special
 import tensorflow as tf
 
 
