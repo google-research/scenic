@@ -629,7 +629,8 @@ def normalize_metrics_summary(metrics_summary: Dict[str, Tuple[float, int]],
   for key, val in metrics_summary.items():
     normalized_metrics_summary[key] = val[0] / (val[1] + 1e-9)
     if np.isnan(normalized_metrics_summary[key]):
-      raise TrainingDivergedError('NaN detected in {}'.format(f'{split}_{key}'))
+      raise TrainingDivergedError(
+          f'NaN detected in {split}_{key} (Unnormalized values: {val})')
 
   return normalized_metrics_summary
 
