@@ -10,18 +10,32 @@ OWL-ViT is an **open-vocabulary object detector**. Given an image and a free-tex
 [[Minimal Colab]](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb)
 [[Playground Colab]](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_inference_playground.ipynb)
 
+**Update (2022-10-14):** Added [training](#training) and [evaluation](#evaluation) code.
+<br>
 **Update (2022-07-06):** Extended TensorFlow-conversion [Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_Export_JAX_model_to_TensorFlow_SavedModel.ipynb) with examples for conversion to TFLite.
 <br>
 **Update (2022-06-22):** Added [Playground Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_inference_playground.ipynb) for interactive exploration of the model, including image-conditioned detection.
 <br>
 **Update (2022-05-31):** Added [Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_Export_JAX_model_to_TensorFlow_SavedModel.ipynb) showing how to export models to TensorFlow.
 
-## Getting Started
-We currently provide code for running inference with pre-trained checkpoints. Training code will follow soon.
+## Contents
+Below, we provide pretrained checkpoints, example Colabs, training code and evaluation code.
 
-The [minimal example Colab notebook](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb) shows all steps necessary for running inference, including installing Scenic, instantiating a model, loading a checkpoint, preprocessing input images, getting predictions, and visualizing them.
+To get started, check out the [minimal example Colab notebook](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb), which shows all steps necessary for running inference, including installing Scenic, instantiating a model, loading a checkpoint, preprocessing input images, getting predictions, and visualizing them.
 
-## Model Variants
+Table of contents:
+
+* [Pretrained checkpoints](#pretrained-checkpoints)
+* [Colabs](#colabs)
+  * [Minimal example](#minimal-example)
+  * [Inference playground](#inference-playground)
+  * [Conversion to TensorFlow](#conversion-to-tensorflow)
+* [Installation](#installation)
+* [Training](#training)
+* [Evaluation](#evaluation)
+* [Reference](#reference)
+
+## Pretrained checkpoints
 
 OWL-ViT models and their pre-trained checkpoints are specified in [configuration files](configs). Checkpoint files are compatible with [Flax](https://github.com/google/flax). We provide the following variants:
 
@@ -45,6 +59,63 @@ The [Playground Colab](https://colab.research.google.com/github/google-research/
 ### Conversion to TensorFlow
 OWL-ViT models can be converted to TensorFlow using the [`tf.saved_model`](https://www.tensorflow.org/guide/saved_model) API. The [Export Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_Export_JAX_model_to_TensorFlow_SavedModel.ipynb) shows how to do this.
 
+## Installation
+
+The code has been tested on Debian 4.19 and Python 3.7. For information on how to install JAX with GPU support, see [here](https://github.com/google/jax#installation).
+
+```shell
+git clone https://github.com/google-research/scenic.git
+cd ~/scenic
+python -m pip install -vq .
+python -m pip install -r scenic/projects/owl_vit/requirements.txt
+
+# For GPU support:
+pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+```
+
+## Training
+
+### Detection training
+To train an OWL-ViT model with a CLIP-initialized backbone on detection, use:
+
+```shell
+python -m scenic.projects.owl_vit.main \
+  --alsologtostderr=true \
+  --workdir=/tmp/training \
+  --config=scenic/projects/owl_vit/configs/clip_b32.py
+```
+
+Local TFDS data dirs can be specified like this:
+
+```shell
+python -m scenic.projects.owl_vit.main \
+  --alsologtostderr=true \
+  --workdir=/tmp/training \
+  --config=scenic/projects/owl_vit/configs/clip_b32.py \
+  --config.dataset_configs.train.decoder_kwarg_list='({"tfds_data_dir": "//your/data/dir"},)' \
+  --config.dataset_configs.eval.decoder_kwarg_list='({"tfds_data_dir": "//your/data/dir"},)'
+```
+
+### Fine-tuning
+To fine-tune a previously trained OWL-ViT model on your dataset of interest, use:
+TODO
+
+## Evaluation
+Since LVIS evaluation is slow, it is not included in the training loop. Model checkpoints can be evaluated as needed using a separate command.
+
+For example, to evaluate the public B/32 checkpoint on LVIS, run:
+
+```
+python -m scenic.projects.owl_vit.evaluator \
+  --alsologtostderr=true \
+  --platform=gpu \
+  --config=scenic/projects/owl_vit/configs/clip_b32.py \
+  --checkpoint_path=gs://scenic-bucket/owl_vit/checkpoints/clip_vit_b32_b0203fc \
+  --annotations_path=${HOME}/annotations/lvis_v1_val.json \
+  --tfds_data_dir=//your/data/dir \
+  --output_dir=/tmp/evaluator
+```
+
 ## Reference
 
 If you use OWL-ViT, please cite the [paper](https://arxiv.org/abs/2205.06230):
@@ -53,7 +124,7 @@ If you use OWL-ViT, please cite the [paper](https://arxiv.org/abs/2205.06230):
 @article{minderer2022simple,
   title={Simple Open-Vocabulary Object Detection with Vision Transformers},
   author={Matthias Minderer, Alexey Gritsenko, Austin Stone, Maxim Neumann, Dirk Weissenborn, Alexey Dosovitskiy, Aravindh Mahendran, Anurag Arnab, Mostafa Dehghani, Zhuoran Shen, Xiao Wang, Xiaohua Zhai, Thomas Kipf, Neil Houlsby},
-  journal={arXiv preprint arXiv:2205.06230},
+  journal={ECCV},
   year={2022},
 }
 ```

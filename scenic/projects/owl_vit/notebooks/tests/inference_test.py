@@ -20,7 +20,7 @@ def _mock_tokenize(text, max_len):
 class InferenceTest(absltest.TestCase):
 
   def setUp(self):
-    config = clip_b32.get_config()
+    config = clip_b32.get_config(init_mode='canonical_checkpoint')
     config.dataset_configs.input_size = 128
     module = models.TextZeroShotDetectionModule(
         body_configs=config.model.body,
