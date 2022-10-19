@@ -98,7 +98,17 @@ python -m scenic.projects.owl_vit.main \
 
 ### Fine-tuning
 To fine-tune a previously trained OWL-ViT model on your dataset of interest, use:
-TODO
+
+```shell
+python -m scenic.projects.owl_vit.main \
+  --alsologtostderr=true \
+  --workdir=/tmp/training \
+  --config=scenic/projects/owl_vit/configs/clip_b32_finetune.py
+```
+
+> NOTE: This config is just a starting point. Hyperparameters (especially learning rate and number of training steps, but also preprocessing, mosaics, and others) need to be tuned for each target dataset.
+
+Adjust `config.dataset_configs.train.tfds_names` and related settings to your dataset of interest. You may have to write decoding ops similar to [`DecodeLvis`](https://github.com/google-research/scenic/blob/93fd069d969b3a3820b3b0b63f73fcff32dda093/scenic/projects/owl_vit/preprocessing/label_ops.py#L453) for your dataset. [`DecodeCocoExample`](https://github.com/google-research/scenic/blob/93fd069d969b3a3820b3b0b63f73fcff32dda093/scenic/projects/owl_vit/preprocessing/image_ops.py#L647) may be a good starting point. Make sure to handle negative examples correctly, e.g. by adding all classes that have no boxes in an image to the `MODALITIES.negative_text_labels` key of the feature dict for that image. (for non-federated datasets such as COCO).
 
 ## Evaluation
 Since LVIS evaluation is slow, it is not included in the training loop. Model checkpoints can be evaluated as needed using a separate command.

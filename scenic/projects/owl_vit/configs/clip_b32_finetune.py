@@ -1,16 +1,23 @@
 # pylint: disable=line-too-long
-r"""CLIP zero-shot text conditional detection training config.
+r"""CLIP zero-shot text conditional detection fine-tuning config.
+
+This config fine-tunes an existing OWL-ViT checkpoint to a new datasets. The
+main difference to the training config (clip_b32.py) is that
+config.init_from.checkpoint_path is set to a previously trained OWL-ViT
+checkpoint. In addition, the preprocessing here does not include the
+`remove_forbidden_labels` op, which is only needed when measuring zero-shot
+performance on LVIS.
+
+NOTE:
+This config is just a starting point. Hyperparameters (especially learning rate
+and number of training steps) need to be tuned for each target dataset.
 
 Run training:
 python -m scenic.projects.owl_vit.main \
   --alsologtostderr=true \
   --workdir=/tmp/training \
-  --config=scenic/projects/owl_vit/configs/clip_b32.py
+  --config=scenic/projects/owl_vit/configs/clip_b32_finetune.py
 
-
-Expected performance:
-LVIS AP:  20.9%
-LVIS APr: 16.9%
 """
 import ml_collections
 
@@ -37,7 +44,6 @@ def get_train_preproc_spec(
       f'|resize_with_pad(size={input_size})'
       f'|add_random_negative_labels(total_num_negatives=50)'
       f'|canonicalize_text_labels'
-      f'|remove_forbidden_labels'
       f'|crop_or_pad({input_size}, {num_instances})'
       f'|crop_or_pad_meta_data({num_instances}, {num_instances})'
       f'|add_random_prompts'
@@ -69,7 +75,7 @@ def get_eval_preproc_spec(
       f'|clip_tokenize_queries(max_token_len={max_query_length})')
 
 
-def get_config(init_mode='train'):
+def get_config():
   """Returns the configuration for text-query-based detection using OWL-ViT."""
   config = ml_collections.ConfigDict()
   config.experiment_name = 'owl_vit_detection'
@@ -148,7 +154,7 @@ def get_config(init_mode='train'):
   config.normalization = 'per_example'  # 'per_example' or 'global'.
 
   # Training.
-  config.num_training_steps = 140_000
+  config.num_training_steps = 16_000
   config.batch_size = 256
   config.rng_seed = 0
 
@@ -206,12 +212,7 @@ def get_config(init_mode='train'):
 
   # Init.
   config.init_from = ml_collections.ConfigDict()
-  if init_mode == 'train':
-    config.init_from.codebase = 'clip'
-  elif init_mode == 'canonical_checkpoint':
-    config.init_from.checkpoint_path = CANONICAL_CHECKPOINT
-  else:
-    raise ValueError('Unknown init_mode: {}'.format(init_mode))
+  config.init_from.checkpoint_path = CANONICAL_CHECKPOINT
 
   # Logging.
   config.xprof = True  # Profile using xprof.

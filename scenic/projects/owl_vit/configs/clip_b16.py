@@ -146,7 +146,7 @@ def get_config(init_mode='train'):
   # Training.
   config.trainer_name = 'text_zero_shot_detection'
   config.num_training_steps = 140_000
-  config.batch_size = 8
+  config.batch_size = 256
   config.rng_seed = 0
 
   # Image backbone + head training configuration.
@@ -218,7 +218,6 @@ def get_config(init_mode='train'):
   config.debug_train = False  # Debug mode during training.
   config.debug_eval = False  # Debug mode during eval.
   config.log_eval_steps = 4000
-
 
   return config
 
