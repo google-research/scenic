@@ -238,7 +238,7 @@ def make(config: ml_collections.ConfigDict,
         zip(mults, decay_masks), zip(masks, schedule_base_lr)):
       weight_decay_txs.append(
           optax.add_decayed_weights(
-              mult / base_lr,  # Decouple WD from LR.
+              mult / base_lr if base_lr else 0.0,  # Decouple WD from LR.
               jax.tree_map(lambda a, b: a and b, decay_mask, mask)))
   else:
     weight_decay_txs = []
