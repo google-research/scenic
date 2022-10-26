@@ -782,10 +782,11 @@ def focal_sigmoid_cross_entropy(
     multi_hot_targets = apply_label_smoothing(multi_hot_targets,
                                               label_smoothing)
   if logits_normalized:
-    log_p, prob = logits, jnp.exp(logits)
-    log_not_p = jnp.log((1 + 1e-6) - prob)
+    prob = jnp.exp(logits)
   else:
-    log_p, log_not_p = jax.nn.log_sigmoid(logits), jax.nn.log_sigmoid(-logits)
+    prob = jax.nn.sigmoid(logits)
+  eps = 1e-6
+  log_p, log_not_p = jnp.log(prob + eps), jnp.log(1 - prob + eps)
 
   loss = -(multi_hot_targets * log_p + (1. - multi_hot_targets) * log_not_p)
 
