@@ -852,7 +852,7 @@ class Chrono:
   """
 
   def __init__(self, example_type: str = 'img', warmup: int = 2):
-    self.program_start_time = time.time()
+    self.program_start_time = time.monotonic()
     self.train_start_time = None
     self.train_start_step = None  # When we started timing (after warmup)
 
@@ -893,7 +893,8 @@ class Chrono:
       h, m = divmod(m, 60)
       return f'{h:.0f}h{m:.0f}m'  # Seconds intentionally omitted.
 
-    now = time.time()
+    now = time.monotonic()
+    summary.update({'uptime': now - self.program_start_time})
     # We always count examples, regardless of the timing-related warmup that
     # happens a few lines below.
     ds = step - self.prev_step  # Steps between ticks
@@ -949,7 +950,7 @@ class Chrono:
     steps_todo = self.total_steps - step
     self.note = f'Steps:{step}/{self.total_steps} [{step/self.total_steps:.1%}]'
     self.note += f'\nWalltime:{hms(self.accum_program_time)}'
-    self.note += f' ({hms(self.accum_pause_time)} eval)'
+    self.note += f' ({hms(self.accum_pause_time)} Not-train)'
     self.note += f'\nETA:{hms(dt / steps_timed * steps_todo)}'
     self.note += f'\nTotal train time:{hms(dt / steps_timed * self.total_steps)}'
     write_note(self.note)
@@ -960,11 +961,11 @@ class Chrono:
   def pause(self, wait_for=()):
     assert self.pause_start is None, "Don't pause twice."
     jax.block_until_ready(wait_for)
-    self.pause_start = time.time()
+    self.pause_start = time.monotonic()
 
   def resume(self):
     assert self.pause_start is not None, 'Cannot resume without pausing first.'
-    self.paused_time += time.time() - self.pause_start
+    self.paused_time += time.monotonic() - self.pause_start
     self.pause_start = None
 
   def save(self):
