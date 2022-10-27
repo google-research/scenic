@@ -563,7 +563,9 @@ def train(
 
   report_progress = periodic_actions.ReportProgress(
       num_train_steps=total_steps, writer=writer)
-  hooks = [report_progress]
+  hooks = []
+  if lead_host:
+    hooks.append(report_progress)
   if config.get('xprof', True) and lead_host:
     hooks.append(periodic_actions.Profile(num_profile_steps=5, logdir=workdir))
 

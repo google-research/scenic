@@ -415,7 +415,7 @@ def train(
     train_state, start_step = train_utils.restore_checkpoint(
         workdir, train_state)
   chrono.load(train_state.metadata['chrono'])
-  del train_state.metadata['chrono']
+  train_state = train_state.replace(metadata={})
 
   if (start_step == 0  # Which means "no" checkpoint is restored!
       and config.get('init_from') is not None):
@@ -535,7 +535,9 @@ def train(
     if lead_host:
       platform.work_unit().set_notes(note)
 
-  hooks = [report_progress]
+  hooks = []
+  if lead_host:
+    hooks.append(report_progress)
   if config.get('xprof', True) and lead_host:
     hooks.append(periodic_actions.Profile(num_profile_steps=5, logdir=workdir))
 
