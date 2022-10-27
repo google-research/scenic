@@ -20,9 +20,9 @@ from scenic.dataset_lib import dataset_utils
 from scenic.model_lib.base_models import base_model
 from scenic.projects.svvit import classification_trainer as trainer
 from scenic.projects.svvit import metrics as sv_metric
-from scenic.train_lib_deprecated import optimizers
-from scenic.train_lib_deprecated import pretrain_utils
-from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib import optimizers
+from scenic.train_lib import pretrain_utils
+from scenic.train_lib import train_utils
 import tensorflow as tf
 
 
@@ -49,19 +49,23 @@ def restore_train_state(
       config=config,
       rngs=init_rng)
   # Create optimizer.
-  # We jit this, such that the arrays that are created are created on the same
-  # device as the input is, in this case the CPU. Else they'd be on device[0].
-  optimizer = jax.jit(
-      optimizers.get_optimizer(config).create, backend='cpu')(
-          params)
-  del params  # Do not keep a copy of the initial params.
+  optimizer_config = optimizers.get_optax_optimizer_config(config)
+  # If the config is already an optax-compatible config, better call directly:
+  #   optimizers.get_optimizer(config.optimizer_configs, lr_fn)
+  tx = optimizers.get_optimizer(optimizer_config, 0, params=params)
+  # We jit this, such that the arrays that are created on the same device as the
+  # input is, in this case the CPU. Else they'd be on device[0].
+  opt_state = jax.jit(tx.init, backend='cpu')(params)
+
   rng, train_rng = jax.random.split(rng)
   train_state = train_utils.TrainState(
       global_step=0,
-      optimizer=optimizer,
+      opt_state=opt_state,
+      tx=tx,
+      params=params,
       model_state=model_state,
       rng=train_rng,
-      accum_train_time=0)
+      metadata={})
   init_checkpoint_path = config.init_from.get('checkpoint_path')
   restored_train_state = pretrain_utils.restore_pretrained_checkpoint(
       init_checkpoint_path, train_state, assert_exist=True)
@@ -69,7 +73,7 @@ def restore_train_state(
   logging.info(
       'Parameter summary after initialising from restored train state '
       'at step %d:', current_step)
-  debug_utils.log_param_shapes(restored_train_state.optimizer.target)
+  debug_utils.log_param_shapes(restored_train_state.params)
   return restored_train_state, current_step
 
 
@@ -81,10 +85,7 @@ def inference_step(
     debug: Optional[bool] = False
 ):
   """Runs a single step of training."""
-  variables = {
-      'params': train_state.optimizer.target,
-      **train_state.model_state
-  }
+  variables = {'params': train_state.params, **train_state.model_state}
   capture_intermediates = lambda mdl, _: mdl.name == 'pre_logits'
   logits, intermediate = flax_model.apply(
       variables,
