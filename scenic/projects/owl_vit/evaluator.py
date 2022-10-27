@@ -237,7 +237,8 @@ def get_predict_fn(
     query_embeddings_ensemble = jnp.stack(query_embeddings, axis=0)
     outputs_ensemble = jax.vmap(class_predictor)(
         query_embeddings=query_embeddings_ensemble[:, jnp.newaxis, ...])
-    outputs = jax.tree_map(lambda x: jnp.mean(x, axis=0), outputs_ensemble)
+    outputs = jax.tree_util.tree_map(lambda x: jnp.mean(x, axis=0),
+                                     outputs_ensemble)
 
     # Add box predictions:
     outputs.update(

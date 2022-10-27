@@ -194,7 +194,7 @@ def tree_map_with_names(
     f: Callable[[jnp.ndarray], jnp.ndarray],
     param_tree: PyTree,
     match_name_fn: Callable[[str], bool] = lambda name: True) -> PyTree:
-  """Like jax.tree_map but with a filter on the leaf path name.
+  """Like jax.tree_util.tree_map but with a filter on the leaf path name.
 
   Args:
     f: The function to be applied to each parameter in `param_tree`. Takes value

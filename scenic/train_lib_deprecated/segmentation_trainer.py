@@ -439,10 +439,10 @@ def train(
 
       train_summary = train_utils.log_train_summary(
           step=step,
-          train_metrics=jax.tree_map(train_utils.unreplicate_and_get,
-                                     train_metrics),
-          extra_training_logs=jax.tree_map(train_utils.unreplicate_and_get,
-                                           extra_training_logs),
+          train_metrics=jax.tree_util.tree_map(train_utils.unreplicate_and_get,
+                                               train_metrics),
+          extra_training_logs=jax.tree_util.tree_map(
+              train_utils.unreplicate_and_get, extra_training_logs),
           writer=writer)
       # Reset metric accumulation for next evaluation cycle.
       train_metrics, extra_training_logs = [], []

@@ -125,15 +125,16 @@ def train_step(
       """Returns the solution of max_x y^T x s.t. ||x||_2 <= 1."""
       gradient_norm = jnp.sqrt(sum(
           [jnp.sum(jnp.square(e)) for e in jax.tree_util.tree_leaves(y)]))
-      normalized_gradient = jax.tree_map(
+      normalized_gradient = jax.tree_util.tree_map(
           lambda x: x / (gradient_norm + 1e-7), y)
       return normalized_gradient
 
     g_sam, _ = jax.grad(training_loss_fn, has_aux=True)(
         train_state.optimizer.target)
     g_sam = dual_vector(g_sam)
-    target_sam = jax.tree_map(lambda a, b: a + config.get('sam_rho') * b,
-                              train_state.optimizer.target, g_sam)
+    target_sam = jax.tree_util.tree_map(
+        lambda a, b: a + config.get('sam_rho') * b,
+        train_state.optimizer.target, g_sam)
     (train_cost,
      (new_model_state,
       logits)), grad = compute_gradient_fn(target_sam)

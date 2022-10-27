@@ -109,7 +109,7 @@ def get_train_step(flax_model,
       new_rng, model_rng = rngs[0], rngs[1:]
       # We add an additional dimension which wil serve as the batch dimension
       # for single examples when applying scan or vmap.
-      batch = jax.tree_map(lambda x: x[:, jnp.newaxis], batch)
+      batch = jax.tree_util.tree_map(lambda x: x[:, jnp.newaxis], batch)
       inp = {'batch': batch, 'rng': model_rng}
       grad, metrics = jax.vmap(grad_fn, 0)(inp)
     else:
@@ -413,9 +413,9 @@ def train(*, rng: jnp.ndarray, config: ml_collections.ConfigDict,
       # Write summary:
       train_summary = train_utils.log_train_summary(
           step=step,
-          train_metrics=jax.tree_map(train_utils.unreplicate_and_get,
-                                     train_metrics),
-          extra_training_logs=cpu_training_logs + jax.tree_map(
+          train_metrics=jax.tree_util.tree_map(train_utils.unreplicate_and_get,
+                                               train_metrics),
+          extra_training_logs=cpu_training_logs + jax.tree_util.tree_map(
               train_utils.unreplicate_and_get, extra_training_logs),
           writer=writer,
           metrics_normalizer_fn=metrics_normalizer_fn)

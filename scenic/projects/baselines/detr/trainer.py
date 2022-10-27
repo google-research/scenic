@@ -375,11 +375,11 @@ def train_and_evaluate(
         # Collect preds and labels to be sent for computing global metrics.
         predictions = detr_train_utils.process_and_fetch_to_host(
             eval_predictions_all_hosts, eval_batch_all_hosts['batch_mask'])
-        predictions = jax.tree_map(np.asarray, predictions)
+        predictions = jax.tree_util.tree_map(np.asarray, predictions)
 
         labels = detr_train_utils.process_and_fetch_to_host(
             eval_batch_all_hosts['label'], eval_batch_all_hosts['batch_mask'])
-        labels = jax.tree_map(np.asarray, labels)
+        labels = jax.tree_util.tree_map(np.asarray, labels)
 
         if eval_step == 0:
           logging.info('Pred keys: %s', list(predictions[0].keys()))
@@ -496,10 +496,10 @@ def train_and_evaluate(
       # Write summary:
       train_summary = train_utils.log_train_summary(
           step=step,
-          train_metrics=jax.tree_map(train_utils.unreplicate_and_get,
-                                     train_metrics),
-          extra_training_logs=jax.tree_map(train_utils.unreplicate_and_get,
-                                           extra_training_logs),
+          train_metrics=jax.tree_util.tree_map(train_utils.unreplicate_and_get,
+                                               train_metrics),
+          extra_training_logs=jax.tree_util.tree_map(
+              train_utils.unreplicate_and_get, extra_training_logs),
           writer=writer,
           metrics_normalizer_fn=metrics_normalizer_fn)
       # Reset metric accumulation for next evaluation cycle.

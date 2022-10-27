@@ -37,7 +37,8 @@ def log_train_summary(step: int,
   if train_images is not None:
     train_images = train_utils.stack_forest(
         train_images)  # key -> list(ndarray)
-    train_images = jax.tree_map(lambda x: jnp.concatenate(x)[:4], train_images)
+    train_images = jax.tree_util.tree_map(lambda x: jnp.concatenate(x)[:4],
+                                          train_images)
     new_train_images = {}
     for key, value in train_images.items():
       for (batch_idx, image) in enumerate(value):
@@ -51,7 +52,8 @@ def log_train_summary(step: int,
   # Get metrics from devices:
   train_metrics = train_utils.stack_forest(train_metrics)
   # Compute the sum over all examples in all batches:
-  train_metrics_summary = jax.tree_map(lambda x: x.sum(), train_metrics)
+  train_metrics_summary = jax.tree_util.tree_map(lambda x: x.sum(),
+                                                 train_metrics)
   # Normalize metrics by the total number of exampels:
   metrics_normalizer_fn = metrics_normalizer_fn or train_utils.normalize_metrics_summary
   train_metrics_summary = metrics_normalizer_fn(train_metrics_summary, 'train')

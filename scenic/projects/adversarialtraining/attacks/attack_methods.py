@@ -27,11 +27,8 @@ def project_perturbation_pyramid_inf(aug_params, epsilon, input_image,
 
   # The idea is to ensure that the sum of the perturbations over the pyramid
   # levels can't be more than epsilon.
-  clipped_perturbation_pyramid = jax.tree_map(
-      functools.partial(
-          jnp.clip,
-          a_min=-epsilon,
-          a_max=epsilon), aug_params)
+  clipped_perturbation_pyramid = jax.tree_util.tree_map(
+      functools.partial(jnp.clip, a_min=-epsilon, a_max=epsilon), aug_params)
 
   return clipped_perturbation_pyramid
 
@@ -48,7 +45,7 @@ def project_perturbation_pyramid_l2(aug_params, epsilon, input_image,
 
   # The idea is to ensure that the sum of the perturbations over the pyramid
   # levels can't be more than epsilon.
-  clipped_perturbation_pyramid = jax.tree_map(
+  clipped_perturbation_pyramid = jax.tree_util.tree_map(
       functools.partial(
           jnp.clip,
           a_min=-epsilon / pyramid_levels,
@@ -89,7 +86,7 @@ def pgd_attack_transform(
     loss_breakdown_list.append(loss_breakdown)
     logits_list.append(logits)
 
-    edit_grad = jax.tree_map(jnp.sign, grad)
+    edit_grad = jax.tree_util.tree_map(jnp.sign, grad)
     updates, opt_state = tx.update(edit_grad, opt_state, train_params)
     new_train_params = optax.apply_updates(params=train_params, updates=updates)
 

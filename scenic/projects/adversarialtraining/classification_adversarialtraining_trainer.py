@@ -436,9 +436,10 @@ def train(
       # So we do unreplicate and fetch them to host using `unreplicate_and_get`.
       train_summary = adv_train_utils.log_train_summary(
           step=step,
-          train_metrics=jax.tree_map(jax.device_get, train_metrics),
-          train_images=jax.tree_map(jax.device_get, train_images),
-          extra_training_logs=jax.tree_map(jax.device_get, extra_training_logs),
+          train_metrics=jax.tree_util.tree_map(jax.device_get, train_metrics),
+          train_images=jax.tree_util.tree_map(jax.device_get, train_images),
+          extra_training_logs=jax.tree_util.tree_map(jax.device_get,
+                                                     extra_training_logs),
           writer=writer)
       # Reset metric accumulation for next evaluation cycle.
       train_metrics, train_images, extra_training_logs = [], [], []
