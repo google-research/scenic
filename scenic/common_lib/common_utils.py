@@ -18,6 +18,8 @@ import importlib
 import types
 
 from absl import logging
+import jax
+import ml_collections
 
 
 def recursive_reload(module: types.ModuleType, package_restrict: str):
@@ -55,3 +57,36 @@ def recursive_reload(module: types.ModuleType, package_restrict: str):
     return importlib.reload(m)
 
   return reload(module)
+
+
+def to_config_dict_heuristic(
+    config: ml_collections.ConfigDict) -> ml_collections.ConfigDict:
+  """Heuristically converts dicts inside a ConfigDict into ConfigDicts.
+
+  This function detects lists and tuples with dicts and converts those dicts
+  into ConfigDicts. This will address most failure cases, but the function will
+  not be able resolve nested cases (e.g. list(dict(list(....)))).
+
+  Arguments:
+    config: Config to attempt fixing.
+
+  Returns:
+    Probably fixed config.
+  """
+  def maybe_config_dict(x):
+    if isinstance(x, dict):
+      return ml_collections.ConfigDict(x)
+    return x
+
+  def maybe_config_dict_in_list(x):
+    if isinstance(x, (list, tuple)):
+      return jax.tree_map(
+          maybe_config_dict, x, is_leaf=lambda y: isinstance(y, dict))
+    return x
+
+  config = jax.tree_map(
+      maybe_config_dict_in_list,
+      config.to_dict(),
+      is_leaf=lambda x: isinstance(x, list)
+  )
+  return ml_collections.ConfigDict(config)
