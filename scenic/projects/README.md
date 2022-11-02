@@ -18,6 +18,11 @@
     > classification that achieved state-of-the-art results.
     > Details can be found in the [paper](https://arxiv.org/abs/2103.15691).
 
+*   [Tasseo](tasseo)
+
+    > Tasseo is a project that uses transformer based models for aberration
+    > detection from chromosome karyotype images.
+
 *   [TokenLearner](token_learner)
 
     > TokenLearner proposes dynamic tokenization of images and videos for faster
