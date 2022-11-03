@@ -120,6 +120,7 @@ class ResNet(nn.Module):
             x)
     x = nn_layers.IdentityLayer(name='init_relu')(nn.relu(x))
     x = nn.max_pool(x, (3, 3), strides=(2, 2), padding=[(1, 1), (1, 1)])
+    x = nn_layers.IdentityLayer(name='stem_pool')(x)
 
     residual_block = functools.partial(
         ResidualBlock, dtype=self.dtype, bottleneck=bottleneck)

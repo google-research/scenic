@@ -198,6 +198,14 @@ def get_optax_optimizer_config(
 
     if config.optimizer == 'momentum':
       optimizer_config.optimizer = 'sgd'
+      if 'momentum' not in optimizer_config:
+        # flax.optim had a default momentum value of 0.9.
+        # optax.sgd has a default momentum of 0.
+        logging.warning(
+            'flax.optim had a default momentum value of 0.9. optax has a '
+            'default value of 0. As a momentum value was not specified, '
+            'adding momentum=0.9 to optimizer config.')
+        optimizer_config.momentum = 0.9
 
     if config.optimizer == 'nesterov':
       optimizer_config.optimizer = 'sgd'

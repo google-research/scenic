@@ -1,9 +1,48 @@
 """Model utils functions."""
-from typing import Optional
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, Union
 
+from absl import logging
+from clu import preprocess_spec
+from flax import core as flax_core
 import jax
 import jax.numpy as jnp
 import numpy as np
+from scenic.train_lib import train_utils
+import scipy
+
+
+def resize_posemb(posemb, target_size):
+  """Resizes position embeddings to new resolution."""
+  if target_size == posemb.shape[-2]:
+    return posemb
+  posemb = jax.device_get(posemb)
+  ndim = posemb.ndim
+  if ndim == 3:
+    posemb = posemb[0]
+
+  gs_old = int(np.sqrt(posemb.shape[0]))
+  gs_new = int(np.sqrt(target_size))
+
+  posemb_tok = None
+  if gs_old**2 == posemb.shape[0]:  # No CLS token.
+    posemb_grid = posemb
+  elif gs_old**2 == posemb.shape[0] - 1:  # Prepended CLS token.
+    posemb_tok, posemb_grid = posemb[:1], posemb[1:]
+  else:
+    raise ValueError(
+        'Posemb shape must be a perfect square (maybe with CLS token), but '
+        f'got posemb of shape {posemb.shape}.')
+
+  logging.info('Posemb: grid-size from %s to %s', gs_old, gs_new)
+  posemb_grid = posemb_grid.reshape(gs_old, gs_old, -1)
+
+  zoom = (gs_new / gs_old, gs_new / gs_old, 1)
+  posemb_grid = scipy.ndimage.zoom(posemb_grid, zoom, order=1)
+  posemb = posemb_grid.reshape(gs_new * gs_new, -1)
+  if posemb_tok is not None:
+    posemb = np.concatenate([posemb_tok, posemb], axis=0)
+
+  return jnp.array(posemb[np.newaxis] if ndim == 3 else posemb)
 
 
 def seq2img(original_img: jnp.ndarray, features: jnp.ndarray) -> jnp.ndarray:
@@ -84,3 +123,67 @@ def l2_norm(tree):
   """Computes the l2 norm of a pytree of arrays."""
   leaves = jax.tree_leaves(tree)
   return jnp.sqrt(sum(jnp.vdot(x, x) for x in leaves))
+
+
+def _sorted_items(x):
+  """Returns items of a dict ordered by keys."""
+  return sorted(x.items())
+
+
+def _get_params_dict(inputs):
+  if isinstance(inputs, (dict, flax_core.FrozenDict)):
+    return flax_core.unfreeze(inputs)
+  else:
+    raise ValueError(
+        'Can only traverse a flax Model instance or a nested dict, not '
+        f'{type(inputs)}')
+
+
+def find_op(
+    ops: Sequence[preprocess_spec.PreprocessOp],
+    target_op_class: Union[Type[preprocess_spec.PreprocessOp],
+                           Tuple[Type[preprocess_spec.PreprocessOp], ...]]
+) -> preprocess_spec.PreprocessOp:
+  """Find an op of the target class in a sequence of op instances."""
+  result = [op for op in ops if isinstance(op, target_op_class)]
+  if len(result) == 1:
+    return result[0]
+  elif len(result) > 1:
+    raise ValueError(
+        f'Found multiple candidate ops, please disambiguate: {result}')
+  else:
+    raise ValueError(f'Op not found: {target_op_class}')
+
+
+def normalize_metrics_summary(metrics_summary: Dict[str, Any], split: str,
+                              object_detection_loss_keys: List[str]):
+  """Normalizes the metrics in the given metrics summary.
+
+  Note that currently we only support metrics of the form 1/N sum f(x_i).
+
+  Args:
+    metrics_summary: Each value is a sum of a calculated metric over all
+      examples.
+    split: Split for which we normalize the metrics. Used for logging.
+    object_detection_loss_keys: A loss key used for computing the object
+      detection loss.
+
+  Returns:
+    Normalized metrics summary.
+
+  Raises:
+    TrainingDivergedError: Due to observing a NaN in the metrics.
+  """
+  for key, val in metrics_summary.items():
+    metrics_summary[key] = val[0] / val[1]
+    if np.isnan(metrics_summary[key]):
+      raise train_utils.TrainingDivergedError(
+          'NaN detected in {}'.format(f'{split}_{key}'))
+
+  # Compute and add object_detection_loss using globally normalize terms:
+  object_detection_loss = 0
+  for loss_term_key in object_detection_loss_keys:
+    object_detection_loss += metrics_summary[loss_term_key]
+  metrics_summary['object_detection_loss'] = object_detection_loss
+
+  return metrics_summary

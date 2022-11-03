@@ -57,6 +57,7 @@ def get_config(variant=VARIANT, init_from=INIT_FROM):
 
   # Pre-training.
   config.init_from = init_from
+  config.init_from.unlock()
   config.init_from.restore_next_sentence_prediction_head_params = True
 
   # Training.
@@ -72,8 +73,8 @@ def get_config(variant=VARIANT, init_from=INIT_FROM):
   config.num_training_steps = 36813
   config.log_summary_steps = 1000
   config.log_eval_steps = 1000
-  # Eval data size is 9832 examples.
-  config.steps_per_eval = 308
+  # Eval data size is 9815 examples.
+  config.steps_per_eval = 307
   config.rng_seed = 42
 
   # Learning rate.

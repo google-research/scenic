@@ -46,7 +46,7 @@ import numpy as np
 import jax
 
 clip = torch.load('/path/to/clip.pt')
-params = jax.tree_map(lambda p: p.cpu().numpy(), clip.state_dict())
+params = jax.tree_util.tree_map(lambda p: p.cpu().numpy(), clip.state_dict())
 with open('/path/to/clip.npy', 'wb') as f:
   np.save(f, params)
 ```

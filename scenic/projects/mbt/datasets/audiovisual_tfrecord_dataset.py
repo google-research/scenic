@@ -50,7 +50,7 @@ def maybe_pad_batch(batch, train, batch_size, return_as_dict):
     pad_with = [(0, batch_pad)] + [(0, 0)] * (array.ndim - 1)
     return np.pad(array, pad_with, mode='constant')
 
-  padded_batch = jax.tree_map(zero_pad, batch)
+  padded_batch = jax.tree_util.tree_map(zero_pad, batch)
   padded_batch_mask = zero_pad(np.ones(unpadded_mask_shape, dtype=np.float32))
   padded_batch['batch_mask'] = padded_batch_mask
   return padded_batch

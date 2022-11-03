@@ -5,11 +5,23 @@
 
 ## List of projects hosted in Scenic
 
+*   [AdversarialTraining](adversarialtraining)
+
+    > Adversarial training is an implementation of modern forms of adversarial
+    > training that achieved state-of-the-art robustness results on image
+    > classifications. This includes [AdvProp](https://arxiv.org/abs/1911.09665)
+    > and (Pyramid Adversarial Training Improves ViT Performance)[https://arxiv.org/abs/2111.15121].
+
 *   [ViViT](vivit)
 
     > ViViT is a family of pure-transformer based models for video
     > classification that achieved state-of-the-art results.
     > Details can be found in the [paper](https://arxiv.org/abs/2103.15691).
+
+*   [Tasseo](tasseo)
+
+    > Tasseo is a project that uses transformer based models for aberration
+    > detection from chromosome karyotype images.
 
 *   [TokenLearner](token_learner)
 

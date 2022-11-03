@@ -138,7 +138,8 @@ class BaseModelWithMatching(base_model.BaseModel):  # pytype: disable=ignored-ab
       self.loss_terms_weights = {'loss_class': config.class_loss_coef}
     super().__init__(config, dataset_meta_data)
 
-  @abc.abstractproperty
+  @property
+  @abc.abstractmethod
   def loss_and_metrics_map(
       self) -> Dict[str, Callable[..., Tuple[ArrayDict, MetricsDict]]]:
     """Returns a dict that lists all losses for this model."""

@@ -145,7 +145,7 @@ def load_model_vars(
        logging.error('Could not import torch for CLIP checkpoint conversion')
      params = torch.jit.load(
          checkpoint_path_torch, map_location='cpu').state_dict()
-     params = jax.tree_map(lambda p: p.cpu().numpy(), params)
+     params = jax.tree_util.tree_map(lambda p: p.cpu().numpy(), params)
 
      # Save converted checkpoint
      with gfile.GFile(checkpoint_path, 'wb') as f:

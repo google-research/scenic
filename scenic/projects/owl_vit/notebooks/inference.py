@@ -87,7 +87,7 @@ class Model:
     """
     image = self.preprocess_image(image)
     out = self._embed_image_jitted(image[None, ...])
-    return jax.tree_map(lambda x: np.array(x[0]), out)
+    return jax.tree_util.tree_map(lambda x: np.array(x[0]), out)
 
   @numpy_cache.lru_cache(maxsize=1000)
   def embed_text_queries(self, queries: Tuple[str, ...]) -> np.ndarray:

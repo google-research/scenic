@@ -6,6 +6,7 @@ from typing import Any, Callable, Dict, Iterator, Tuple, Optional, Type
 from absl import logging
 from clu import metric_writers
 from clu import periodic_actions
+from clu import platform
 from flax import jax_utils
 import flax.linen as nn
 import jax
@@ -14,22 +15,21 @@ import jax.numpy as jnp
 import jax.profiler
 import ml_collections
 import numpy as np
-from scenic.common_lib import video_utils
+import optax
 from scenic.dataset_lib import dataset_utils
 from scenic.model_lib.base_models import base_model
 from scenic.projects.svvit import metrics as sv_metric
-from scenic.train_lib_deprecated import lr_schedules
-from scenic.train_lib_deprecated import optimizers
-from scenic.train_lib_deprecated import pretrain_utils
-from scenic.train_lib_deprecated import train_utils
-from scenic.train_lib_deprecated.google.transfer import fewshot_utils
-from scenic.train_lib_deprecated.google.transfer import linear_probe_utils
+from scenic.train_lib import lr_schedules
+from scenic.train_lib import optimizers
+from scenic.train_lib import pretrain_utils
+from scenic.train_lib import train_utils
 
 # Aliases for custom types:
 Batch = Dict[str, jnp.ndarray]
 MetricFn = Callable[[jnp.ndarray, Dict[str, jnp.ndarray]],
                     Dict[str, Tuple[float, int]]]
 LossFn = Callable[[jnp.ndarray, Batch, Optional[jnp.ndarray]], float]
+LrFn = Callable[[jnp.ndarray], jnp.ndarray]
 
 
 def train_step(
@@ -37,12 +37,13 @@ def train_step(
     batch: Batch,
     *,
     flax_model: nn.Module,
-    learning_rate_fn: Callable[[int], float],
     loss_fn: LossFn,
+    lr_fn: LrFn,
     metrics_fn: MetricFn,
     config: ml_collections.ConfigDict,
     debug: Optional[bool] = False
-) -> Tuple[train_utils.TrainState, Dict[str, Tuple[float, int]], float]:
+) -> Tuple[train_utils.TrainState, Dict[str, Tuple[float, int]], Dict[str,
+                                                                      Any]]:
   """Runs a single step of training.
 
   Given the state of the training and a batch of data, computes
@@ -53,15 +54,14 @@ def train_step(
 
   Args:
     train_state: The state of training including the current global_step,
-      model_state, rng, and optimizer. The buffer of this argument can be
-      donated to the computation.
+      model_state, rng, params, and optimizer. The buffer of this argument can
+      be donated to the computation.
     batch: A single batch of data. The buffer of this argument can be donated to
       the computation.
     flax_model: A Flax model.
-    learning_rate_fn: Learning rate scheduler which given the global_step
-      generates the learning rate.
     loss_fn: A loss function that given logits, a batch, and parameters of the
       model calculates the loss.
+    lr_fn: The learning rate fn used for the logging the learning rate.
     metrics_fn: A metrics function that given logits and batch of data,
       calculates the metrics as well as the loss.
     config: Configurations of the experiment.
@@ -70,8 +70,9 @@ def train_step(
       jax.host_callback.
 
   Returns:
-    Updated state of training, computed metrics, and learning rate for logging.
+    Updated state of training and computed metrics for logging.
   """
+  training_logs = {}
   new_rng, rng = jax.random.split(train_state.rng)
 
   if config.get('mixup') and config.mixup.alpha:
@@ -86,11 +87,11 @@ def train_step(
         config.mixup.get('image_format', 'NHWC'),
         rng=mixup_rng)
 
-  # Bind the dropout rng to the host/device we are on.
+  # Bind the rng to the host/device we are on.
   dropout_rng = train_utils.bind_rng_to_host_device(
       rng, axis_name='batch', bind_to='device')
 
-  def training_loss_fn(params, batch, dropout_rng):
+  def training_loss_fn(params):
     variables = {'params': params, **train_state.model_state}
     logits, new_model_state = flax_model.apply(
         variables,
@@ -103,37 +104,38 @@ def train_step(
     return loss, (new_model_state, logits)
 
   compute_gradient_fn = jax.value_and_grad(training_loss_fn, has_aux=True)
-  new_model_state, metrics, grad = train_utils.accumulate_grads_microbatched(
-      compute_gradient_fn, metrics_fn, train_state, batch, dropout_rng,
-      config.get('grad_accum_steps'))
+  (train_cost, (new_model_state,
+                logits)), grad = compute_gradient_fn(train_state.params)
 
-  step = train_state.global_step
-  lr = learning_rate_fn(step)
+  del train_cost
   # Re-use same axis_name as in the call to `pmap(...train_step...)` below.
   grad = jax.lax.pmean(grad, axis_name='batch')
 
-  if config.get('max_grad_norm', None) is not None:
+  if config.get('max_grad_norm') is not None:
     grad = clip_grads(grad, config.max_grad_norm)
 
-  new_optimizer = train_state.optimizer.apply_gradient(grad, learning_rate=lr)
+  updates, new_opt_state = train_state.tx.update(grad, train_state.opt_state,
+                                                 train_state.params)
+  new_params = optax.apply_updates(train_state.params, updates)
 
-  # Explicit weight decay, if necessary.
-  if config.get('explicit_weight_decay', None) is not None:
-    new_optimizer = new_optimizer.replace(
-        target=optimizers.tree_map_with_names(
-            functools.partial(
-                optimizers.decay_weight_fn,
-                lr=lr,
-                decay=config.explicit_weight_decay),
-            new_optimizer.target,
-            match_name_fn=lambda name: 'kernel' in name))
+  training_logs['l2_grads'] = jnp.sqrt(
+      sum([jnp.vdot(g, g) for g in jax.tree_leaves(grad)]))
+  ps = jax.tree_leaves(new_params)
+  training_logs['l2_params'] = jnp.sqrt(sum([jnp.vdot(p, p) for p in ps]))
+  us = jax.tree_leaves(updates)
+  training_logs['l2_updates'] = jnp.sqrt(sum([jnp.vdot(u, u) for u in us]))
+  # TODO(dehghani): Can we get this from the optimizer instead?
+  training_logs['learning_rate'] = lr_fn(train_state.global_step)
 
+  metrics = metrics_fn(logits, batch)
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=step + 1,
-      optimizer=new_optimizer,
+      global_step=train_state.global_step + 1,
+      opt_state=new_opt_state,
+      params=new_params,
       model_state=new_model_state,
       rng=new_rng)
-  return new_train_state, metrics, lr
+
+  return new_train_state, metrics, training_logs
 
 
 def eval_step(
@@ -162,8 +164,8 @@ def eval_step(
 
   Args:
     train_state: TrainState, the state of training including the current
-      global_step, model_state, rng, and optimizer. The buffer of this argument
-      can be donated to the computation.
+      global_step, model_state, rng, params and optimizer state. The buffer of
+      this argument can be donated to the computation.
     batch: A single batch of data. a metrics function, that given logits and
       batch of data, calculates the metrics as well as the loss.
     flax_model: A Flax model.
@@ -179,10 +181,7 @@ def eval_step(
   Returns:
     Calculated metrics and optionally output, and batch after all_gather.
   """
-  variables = {
-      'params': train_state.optimizer.target,
-      **train_state.model_state
-  }
+  variables = {'params': train_state.params, **train_state.model_state}
   logits = flax_model.apply(
       variables, batch['inputs'], train=False, mutable=False, debug=debug)
   metrics = metrics_fn(logits, batch)
@@ -219,10 +218,7 @@ def representation_fn(
     Representation learned by the model for the given inputs and the labels and
     masks. If `gather_to_host` is True, these are collected from all hosts.
   """
-  variables = {
-      'params': train_state.optimizer.target,
-      **train_state.model_state
-  }
+  variables = {'params': train_state.params, **train_state.model_state}
 
   representation_layer_parts = representation_layer.split('/')
   filter_rep = lambda mdl, _: mdl.name == representation_layer_parts[-1]
@@ -248,94 +244,6 @@ def representation_fn(
   return representation, batch['label'], batch['batch_mask']
 
 
-def representation_fn_video(
-    train_state: train_utils.TrainState,
-    batch: Batch,
-    *,
-    flax_model: nn.Module,
-    config: ml_collections.ConfigDict,
-    gather_to_host: bool = True,
-) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
-  """Feeds the video inputs to the model and returns their representations.
-
-  Video representations are obtained by temporally average-pooling per-frame
-  representations from the input video clip.
-
-  Args:
-    train_state: TrainState, the state of training including the current
-      global_step, model_state, rng, and optimizer. The buffer of this argument
-      can be donated to the computation.
-    batch: A single batch of data from the video dataset.
-    flax_model: A Flax model.
-    config: Configurations of the experiment.
-    gather_to_host: Whether to gather results from all devices to the host,
-      rather than leaving them distributed.
-
-  Returns:
-    Representation learned by the model for the given inputs and the labels and
-    masks. If `gather_to_host` is True, these are collected from all hosts.
-    The shape of the returned tensors when  `gather_to_host` is False are:
-    representation: `[num_devices, global_batch, features]`.
-    labels: `[num_devices, global_batch]`.
-    mask: `[num_devices, global_batch]`.
-    If `gather_to_host` is True then each shape is prepended with
-    `[num_hosts,]`
-  """
-  variables = {
-      'params': train_state.optimizer.target,
-      **train_state.model_state
-  }
-
-  representation_layer = config.video_fewshot.representation_layer.split('/')
-  filter_rep = lambda mdl, _: mdl.name == representation_layer[-1]
-
-  def get_representation(inputs, variables, training, capture_intermediates,
-                         mutable, debug):
-    _, model_state = flax_model.apply(
-        variables,
-        inputs,
-        train=training,
-        capture_intermediates=capture_intermediates,
-        mutable=mutable,
-        debug=debug)
-    if 'intermediates' not in model_state:
-      raise ValueError(
-          f'Layer with name "{config.video_fewshot.representation_layer}"'
-          ' does not exist in your model.')
-
-    representation = model_state['intermediates']
-    for rep_layer in representation_layer:
-      if rep_layer:
-        representation = representation[rep_layer]
-    representation = representation['__call__'][0]
-    return representation
-
-  # Get representations for each frame in the video sample.
-  if config.video_fewshot.get('n_sampled_frames'):
-    inputs = video_utils.sample_frames_uniformly(
-        batch['inputs'], config.video_fewshot.n_sampled_frames)
-  else:
-    inputs = batch['inputs']
-  representation = jax.vmap(
-      functools.partial(
-          get_representation,
-          variables=variables,
-          training=False,
-          capture_intermediates=filter_rep,
-          mutable=['intermediates'],
-          debug=False),
-      in_axes=1,
-      out_axes=1,
-      axis_name='time')(
-          inputs)
-  # Average pooling of representations over time axis.
-  representation = jnp.mean(representation, axis=1)
-  if gather_to_host:
-    representation = jax.lax.all_gather(representation, 'batch')
-    batch = jax.lax.all_gather(batch, 'batch')
-  return representation, batch['label'], batch['batch_mask']
-
-
 def init_state(
     rng: jnp.ndarray,
     config: ml_collections.ConfigDict,
@@ -354,24 +262,34 @@ def init_state(
        rngs=init_rng)
 
   # Create optimizer.
+  lr_fn = lr_schedules.get_learning_rate_fn(config)
+  optimizer_config = optimizers.get_optax_optimizer_config(config)
+  # If the config is already an optax-compatible config, better call directly:
+  #   optimizers.get_optimizer(config.optimizer_configs, lr_fn)
+  tx = optimizers.get_optimizer(optimizer_config, lr_fn, params=params)
   # We jit this, such that the arrays that are created are created on the same
   # device as the input is, in this case the CPU. Else they'd be on device[0].
-  optimizer = jax.jit(
-      optimizers.get_optimizer(config).create, backend='cpu')(
-          params)
-  del params  # Do not keep a copy of the initial params.
+  opt_state = jax.jit(tx.init, backend='cpu')(params)
+
   rng, train_rng = jax.random.split(rng)
+
+  # Create chrono class to track and store training statistics and metadata:
+  chrono = train_utils.Chrono()
+
   train_state = train_utils.TrainState(
       global_step=0,
-      optimizer=optimizer,
+      opt_state=opt_state,
+      tx=tx,
+      params=params,
       model_state=model_state,
       rng=train_rng,
-      accum_train_time=0)
+      metadata={'chrono': chrono.save()})
   start_step = train_state.global_step
   if config.checkpoint:
     train_state, start_step = train_utils.restore_checkpoint(
         workdir, train_state)
-
+  chrono.load(train_state.metadata['chrono'])
+  train_state = train_state.replace(metadata={})
   if (start_step == 0  # Which means "no" checkpoint is restored!
       and config.get('init_from') is not None):
     restored_model_cfg = config.init_from.get('model_config')
@@ -386,7 +304,7 @@ def init_state(
   elif start_step == 0:
     logging.info('Training completely from scratch.'
                  'Not restoring from any checkpoint.')
-  return train_state, start_step, num_trainable_params, gflops
+  return train_state, chrono, lr_fn, start_step, num_trainable_params, gflops
 
 
 def train(
@@ -424,8 +342,8 @@ def train(
   model = model_cls(config, dataset.meta_data)
 
   # Initialize model.
-  train_state, start_step, num_trainable_params, gflops = init_state(
-      rng, config, model, dataset, workdir)
+  (train_state, chrono, lr_fn, start_step, num_trainable_params,
+   gflops) = init_state(rng, config, model, dataset, workdir)
 
   # Replicate the optimzier, state, and rng.
   train_state = jax_utils.replicate(train_state)
@@ -433,15 +351,13 @@ def train(
   # Calculate the total number of training steps.
   total_steps, steps_per_epoch = train_utils.get_num_training_steps(
       config, dataset.meta_data)
-  # Get learning rate scheduler.
-  learning_rate_fn = lr_schedules.get_learning_rate_fn(config)
 
   train_step_pmapped = jax.pmap(
       functools.partial(
           train_step,
           flax_model=model.flax_model,
-          learning_rate_fn=learning_rate_fn,
           loss_fn=model.loss_function,
+          lr_fn=lr_fn,
           metrics_fn=model.get_metrics_fn('train'),
           config=config,
           debug=config.debug_train),
@@ -460,32 +376,6 @@ def train(
       # We can donate the eval_batch's buffer.
       donate_argnums=(1,),
   )
-  if 'fewshot' in config:
-    representation_fn_fewshot = functools.partial(
-        representation_fn,
-        flax_model=model.flax_model,
-        representation_layer=config.fewshot.representation_layer)
-    fewshotter = fewshot_utils.FewShotEvaluator(representation_fn_fewshot,
-                                                config.fewshot)
-
-  if 'video_fewshot' in config:
-    representation_fn_video_fewshot = functools.partial(
-        representation_fn_video, flax_model=model.flax_model, config=config)
-    video_fewshotter = fewshot_utils.FewShotEvaluatorVideo(
-        representation_fn_video_fewshot, config.video_fewshot)
-
-  if 'linear_probe' in config:
-    representation_fn_linear_probe = functools.partial(
-        representation_fn,
-        flax_model=model.flax_model,
-        representation_layer=config.linear_probe.representation_layer,
-        gather_to_host=False)
-    rng, linear_probe_rng = jax.random.split(rng)
-    linear_probe = linear_probe_utils.LinearEvaluator(
-        representation_fn=representation_fn_linear_probe,
-        rng=linear_probe_rng,
-        linear_eval_config=config.linear_probe)
-
   log_eval_steps = config.get('log_eval_steps') or steps_per_epoch
   if not log_eval_steps:
     raise ValueError("'log_eval_steps' should be specified in the config.")
@@ -552,18 +442,18 @@ def train(
   train_metrics, extra_training_logs = [], []
   train_summary, eval_summary = None, None
 
-  chrono = train_utils.Chrono(
-      first_step=start_step,
-      total_steps=total_steps,
-      steps_per_epoch=steps_per_epoch,
-      global_bs=config.batch_size,
-      accum_train_time=int(jax_utils.unreplicate(train_state.accum_train_time)))
-
-  logging.info('Starting training loop at step %d.', start_step)
-
+  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
+  logging.info('Starting training loop at step %d.', start_step + 1)
   report_progress = periodic_actions.ReportProgress(
       num_train_steps=total_steps, writer=writer)
-  hooks = [report_progress]
+
+  def write_note(note):
+    if lead_host:
+      platform.work_unit().set_notes(note)
+
+  hooks = []
+  if lead_host:
+    hooks.append(report_progress)
   if config.get('xprof', True) and lead_host:
     hooks.append(periodic_actions.Profile(num_profile_steps=5, logdir=workdir))
 
@@ -573,10 +463,12 @@ def train(
       step0_log['gflops'] = gflops
     writer.write_scalars(1, step0_log)
 
+  write_note(f'First step compilations...\n{chrono.note}')
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
       train_batch = next(dataset.train_iter)
-      train_state, t_metrics, lr = train_step_pmapped(train_state, train_batch)
+      train_state, t_metrics, t_logs = train_step_pmapped(
+          train_state, train_batch)
       # This will accumulate metrics in TPU memory up to the point that we log
       # them. This is no problem for small metrics but may be a problem for
       # large (e.g. segmentation) metrics. An alternative is to set
@@ -586,33 +478,36 @@ def train(
       # tpu and host, which might slow down the training.
       train_metrics.append(t_metrics)
       # Additional training logs: learning rate:
-      extra_training_logs.append({'learning_rate': lr})
+      t_logs = jax.tree_util.tree_map(jax_utils.unreplicate, t_logs)
+      extra_training_logs.append(t_logs)
 
     # Quick indication that training is happening.
     logging.log_first_n(logging.INFO, 'Finished training step %d.', 5, step)
     for h in hooks:
       h(step)
 
-    chrono.pause()  # Below are once-in-a-while ops -> pause.
     ############### LOG TRAIN SUMMARY ###############
-    if (step % log_summary_steps == 1) or (step == total_steps):
+    if ((step % log_summary_steps == 1) or (step == total_steps) or
+        (lead_host and chrono.warmup)):
+      chrono.pause()
       if lead_host:
-        chrono.tick(step, writer=writer)
+        chrono.tick(step, writer, write_note)
       train_summary = train_utils.log_train_summary(
           step=step,
-          train_metrics=jax.tree_map(train_utils.unreplicate_and_get,
-                                     train_metrics),
-          extra_training_logs=jax.tree_map(train_utils.unreplicate_and_get,
-                                           extra_training_logs),
+          train_metrics=jax.tree_util.tree_map(train_utils.unreplicate_and_get,
+                                               train_metrics),
+          extra_training_logs=jax.tree_util.tree_map(jax.device_get,
+                                                     extra_training_logs),
           writer=writer)
       # Reset metric accumulation for next evaluation cycle.
       train_metrics, extra_training_logs = [], []
-
+      chrono.resume()
     ################### EVALUATION #######################
     if (step % log_eval_steps == 1) or (step == total_steps):
-      # Sync model state across replicas.
-      train_state = train_utils.sync_model_state_across_replicas(train_state)
+      chrono.pause(wait_for=(train_state.params))
       with report_progress.timed('eval'):
+        # Sync model state across replicas.
+        train_state = train_utils.sync_model_state_across_replicas(train_state)
         eval_summary = evaluate(train_state, step, dataset.valid_iter,
                                 dataset.meta_data['num_eval_examples'],
                                 dataset.meta_data['eval_name'])
@@ -621,58 +516,23 @@ def train(
           eval_summary = evaluate(train_state, step, dataset.test_iter,
                                   dataset.meta_data['num_test_examples'],
                                   dataset.meta_data['test_name'])
+      chrono.resume()
     ##################### CHECKPOINTING ############################
     if ((step % checkpoint_steps == 1 and step > 1) or
         (step == total_steps)) and config.checkpoint:
+      chrono.pause(wait_for=(train_state.params, train_state.opt_state))
       with report_progress.timed('checkpoint'):
         # Sync model state across replicas.
         train_state = train_utils.sync_model_state_across_replicas(train_state)
         if lead_host:
-          train_state.replace(  # pytype: disable=attribute-error
-              accum_train_time=chrono.accum_train_time)
-          train_utils.save_checkpoint(workdir, train_state, max_to_keep=20)
-
-    ##################### FEWSHOT EVALUATION ############################
-    if 'fewshot' in config:
-      # Compute few-shot on-the-fly evaluation.
-      if (step % config.fewshot.log_eval_steps == 1) or (step == total_steps):
-        with report_progress.timed('fewshot'):
-          results = fewshotter.run_all(train_state, config.fewshot.datasets)
-          fewshotter.log_fewshot_summary(
-              writer=writer, step=step, results=results)
-          del results
-          writer.write_scalars(step, {'zz/epoch': step / steps_per_epoch})
-        writer.flush()
-
-    ########### FEWSHOT EVALUATION USING VIDEO DATASETS ###############
-
-    if 'video_fewshot' in config:
-      # Compute few-shot on-the-fly evaluation using video dataset.
-      if ((step % config.video_fewshot.log_eval_steps == 1) or
-          step == total_steps):
-        with report_progress.timed('video_fewshot'):
-          results = video_fewshotter.run_all(train_state,
-                                             config.video_fewshot.datasets)
-          video_fewshotter.log_fewshot_summary(
-              writer=writer, step=step, results=results)
-          del results
-          writer.write_scalars(step, {'zz/epoch': step / steps_per_epoch})
-        writer.flush()
-
-    ##################### LINEAR-PROBE EVALUATION ##########################
-    if 'linear_probe' in config:
-      if (config.linear_probe.log_eval_steps > 0 and
-          step % config.linear_probe.log_eval_steps == 1) or (step
-                                                              == total_steps):
-        with report_progress.timed('linear_probe'):
-          linear_probe.run_all(
-              train_state,
-              config.linear_probe.datasets,
-              writer=writer,
-              repr_step=step)
-        writer.flush()
-
-    chrono.resume()  # Un-pause now.
+          # Take the first replica.
+          unrep_train_state = jax_utils.unreplicate(train_state)
+          metadata = unrep_train_state.metadata
+          metadata['chrono'] = chrono.save()
+          unrep_train_state.replace(metadata=metadata)  # pytype: disable=attribute-error
+          train_utils.save_checkpoint(workdir, unrep_train_state)
+          del unrep_train_state
+      chrono.resume()  # Un-pause now.
 
   # Wait until computations are done before exiting.
   jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()

@@ -21,7 +21,7 @@ from scenic.dataset_lib.coco_dataset import coco_eval
 from scenic.model_lib.base_models import box_utils
 from scenic.train_lib_deprecated import optimizers as scenic_optimizers
 from scenic.train_lib_deprecated import train_utils
-import scipy
+import scipy.special
 import tensorflow as tf
 
 
@@ -215,7 +215,7 @@ def process_and_fetch_to_host(pred_or_tgt, batch_mask):
     # Split minibatch of examples into a list of examples.
     x_list = np.split(x, x.shape[0], axis=0)
     # Squeeze out the dummy dimension.
-    return jax.tree_map(lambda x: np.squeeze(x, axis=0), x_list)
+    return jax.tree_util.tree_map(lambda x: np.squeeze(x, axis=0), x_list)
 
   leaves, treedef = jax.tree_flatten(pred_or_tgt)
 
@@ -372,4 +372,4 @@ def clip_grads(grad_tree, max_norm):
   norm = experimental_optimizers.l2_norm(grad_tree)
   clip_coef = max_norm / (norm + 1e-6)
   normalize = lambda g: jnp.where(clip_coef < 1., g * clip_coef, g)
-  return jax.tree_map(normalize, grad_tree)
+  return jax.tree_util.tree_map(normalize, grad_tree)

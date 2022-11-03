@@ -30,7 +30,6 @@ import jax.profiler
 import ml_collections
 import numpy as np
 import optax
-from scenic.common_lib import video_utils
 from scenic.dataset_lib import dataset_utils
 from scenic.model_lib.base_models import base_model
 from scenic.train_lib import lr_schedules
@@ -249,91 +248,6 @@ def representation_fn(
   return representation, batch['label'], batch['batch_mask']
 
 
-def representation_fn_video(
-    train_state: train_utils.TrainState,
-    batch: Batch,
-    *,
-    flax_model: nn.Module,
-    config: ml_collections.ConfigDict,
-    gather_to_host: bool = True,
-) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
-  """Feeds the video inputs to the model and returns their representations.
-
-  Video representations are obtained by temporally average-pooling per-frame
-  representations from the input video clip.
-
-  Args:
-    train_state: TrainState, the state of training including the current
-      global_step, model_state, rng, params, and optimizer. The buffer of this
-      argument can be donated to the computation.
-    batch: A single batch of data from the video dataset.
-    flax_model: A Flax model.
-    config: Configurations of the experiment.
-    gather_to_host: Whether to gather results from all devices to the host,
-      rather than leaving them distributed.
-
-  Returns:
-    Representation learned by the model for the given inputs and the labels and
-    masks. If `gather_to_host` is True, these are collected from all hosts.
-    The shape of the returned tensors when  `gather_to_host` is False are:
-    representation: `[num_devices, global_batch, features]`.
-    labels: `[num_devices, global_batch]`.
-    mask: `[num_devices, global_batch]`.
-    If `gather_to_host` is True then each shape is prepended with
-    `[num_hosts,]`
-  """
-  variables = {'params': train_state.params, **train_state.model_state}
-
-  representation_layer = config.video_fewshot.representation_layer.split('/')
-  filter_rep = lambda mdl, _: mdl.name == representation_layer[-1]
-
-  def get_representation(inputs, variables, training, capture_intermediates,
-                         mutable, debug):
-    _, model_state = flax_model.apply(
-        variables,
-        inputs,
-        train=training,
-        capture_intermediates=capture_intermediates,
-        mutable=mutable,
-        debug=debug)
-    if 'intermediates' not in model_state:
-      raise ValueError(
-          f'Layer with name "{config.video_fewshot.representation_layer}"'
-          ' does not exist in your model.')
-
-    representation = model_state['intermediates']
-    for rep_layer in representation_layer:
-      if rep_layer:
-        representation = representation[rep_layer]
-    representation = representation['__call__'][0]
-    return representation
-
-  # Get representations for each frame in the video sample.
-  if config.video_fewshot.get('n_sampled_frames'):
-    inputs = video_utils.sample_frames_uniformly(
-        batch['inputs'], config.video_fewshot.n_sampled_frames)
-  else:
-    inputs = batch['inputs']
-  representation = jax.vmap(
-      functools.partial(
-          get_representation,
-          variables=variables,
-          training=False,
-          capture_intermediates=filter_rep,
-          mutable=['intermediates'],
-          debug=False),
-      in_axes=1,
-      out_axes=1,
-      axis_name='time')(
-          inputs)
-  # Average pooling of representations over time axis.
-  representation = jnp.mean(representation, axis=1)
-  if gather_to_host:
-    representation = jax.lax.all_gather(representation, 'batch')
-    batch = jax.lax.all_gather(batch, 'batch')
-  return representation, batch['label'], batch['batch_mask']
-
-
 def train(
     *,
     rng: jnp.ndarray,
@@ -406,7 +320,7 @@ def train(
     train_state, start_step = train_utils.restore_checkpoint(
         workdir, train_state)
   chrono.load(train_state.metadata['chrono'])
-  del train_state.metadata['chrono']
+  train_state = train_state.replace(metadata={})
   if (start_step == 0  # Which means "no" checkpoint is restored!
       and config.get('init_from') is not None):
     restored_model_cfg = config.init_from.get('model_config')
@@ -457,12 +371,6 @@ def train(
         representation_layer=config.fewshot.representation_layer)
     fewshotter = fewshot_utils.FewShotEvaluator(representation_fn_fewshot,
                                                 config.fewshot)
-
-  if 'video_fewshot' in config:
-    representation_fn_video_fewshot = functools.partial(
-        representation_fn_video, flax_model=model.flax_model, config=config)
-    video_fewshotter = fewshot_utils.FewShotEvaluatorVideo(
-        representation_fn_video_fewshot, config.video_fewshot)
 
   if 'linear_probe' in config:
     representation_fn_linear_probe = functools.partial(
@@ -525,7 +433,9 @@ def train(
     if lead_host:
       platform.work_unit().set_notes(note)
 
-  hooks = [report_progress]
+  hooks = []
+  if lead_host:
+    hooks.append(report_progress)
   if config.get('xprof', True) and lead_host:
     hooks.append(periodic_actions.Profile(num_profile_steps=5, logdir=workdir))
 
@@ -608,23 +518,6 @@ def train(
         with report_progress.timed('fewshot'):
           results = fewshotter.run_all(train_state, config.fewshot.datasets)
           fewshotter.log_fewshot_summary(
-              writer=writer, step=step, results=results)
-          del results
-          writer.write_scalars(step, {'zz/epoch': step / steps_per_epoch})
-        writer.flush()
-        chrono.resume()  # Un-pause now.
-
-    ########### FEWSHOT EVALUATION USING VIDEO DATASETS ###############
-
-    if 'video_fewshot' in config:
-      # Compute few-shot on-the-fly evaluation using video dataset.
-      if ((step % config.video_fewshot.log_eval_steps == 1) or
-          step == total_steps):
-        chrono.pause(wait_for=(train_state.params))
-        with report_progress.timed('video_fewshot'):
-          results = video_fewshotter.run_all(train_state,
-                                             config.video_fewshot.datasets)
-          video_fewshotter.log_fewshot_summary(
               writer=writer, step=step, results=results)
           del results
           writer.write_scalars(step, {'zz/epoch': step / steps_per_epoch})

@@ -23,7 +23,9 @@ https://github.com/google-research/simclr/blob/master/tf2/data_util.py
 """
 
 import functools
+import math
 from typing import Optional
+
 
 from absl import logging
 from dmvr import builders
@@ -33,13 +35,201 @@ import tensorflow as tf
 from official.vision.image_classification import augment
 
 
+def _fill_rectangle_video(image,
+                          center_width,
+                          center_height,
+                          half_width,
+                          half_height,
+                          replace=None):
+  """Fills blank area for video."""
+  image_time = tf.shape(image)[0]
+  image_height = tf.shape(image)[1]
+  image_width = tf.shape(image)[2]
+
+  lower_pad = tf.maximum(0, center_height - half_height)
+  upper_pad = tf.maximum(0, image_height - center_height - half_height)
+  left_pad = tf.maximum(0, center_width - half_width)
+  right_pad = tf.maximum(0, image_width - center_width - half_width)
+
+  cutout_shape = [
+      image_time, image_height - (lower_pad + upper_pad),
+      image_width - (left_pad + right_pad)
+  ]
+  padding_dims = [[0, 0], [lower_pad, upper_pad], [left_pad, right_pad]]
+  mask = tf.pad(
+      tf.zeros(cutout_shape, dtype=image.dtype),
+      padding_dims,
+      constant_values=1)
+  mask = tf.expand_dims(mask, -1)
+  mask = tf.tile(mask, [1, 1, 1, 3])
+
+  if replace is None:
+    fill = tf.random.normal(tf.shape(image), dtype=image.dtype)
+  elif isinstance(replace, tf.Tensor):
+    fill = replace
+  else:
+    fill = tf.ones_like(image, dtype=image.dtype) * replace
+  image = tf.where(tf.equal(mask, 0), fill, image)
+
+  return image
+
+
+class RandomErasing:
+  """Applies RandomErasing to a video.
+
+
+  Reference: https://arxiv.org/abs/1708.04896
+  """
+
+  def __init__(self,
+               probability: float = 0.25,
+               min_area: float = 0.02,
+               max_area: float = 1 / 3,
+               min_aspect: float = 0.3,
+               max_aspect: Optional[float] = None,
+               min_count=1,
+               max_count=1,
+               trials=10):
+    """Applies RandomErasing to a video.
+
+    Args:
+      probability: Probability of augmenting the image. Defaults to `0.25`.
+      min_area: Minimum area of the random erasing rectangle. Defaults to
+        `0.02`.
+      max_area: Maximum area of the random erasing rectangle. Defaults to `1/3`.
+      min_aspect: Minimum aspect rate of the random erasing rectangle. Defaults
+        to `0.3`.
+      max_aspect: Maximum aspect rate of the random erasing rectangle. Defaults
+        to `None`.
+      min_count: Minimum number of erased rectangles. Defaults to `1`.
+      max_count: Maximum number of erased rectangles. Defaults to `1`.
+      trials: Maximum number of trials to randomly sample a rectangle that
+        fulfills constraint. Defaults to `10`.
+    """
+    self._probability = probability
+    self._min_area = float(min_area)
+    self._max_area = float(max_area)
+    self._min_log_aspect = math.log(min_aspect)
+    self._max_log_aspect = math.log(max_aspect or 1 / min_aspect)
+    self._min_count = min_count
+    self._max_count = max_count
+    self._trials = trials
+
+  def distort(self, video: tf.Tensor) -> tf.Tensor:
+    """Applies RandomErasing to video.
+
+    Args:
+      video (tf.Tensor): Of shape [temporal, height, width, 3] representing a
+      video.
+
+    Returns:
+      tf.Tensor: The augmented version of video.
+    """
+    uniform_random = tf.random.uniform(shape=[], minval=0., maxval=1.0)
+    mirror_cond = tf.less(uniform_random, self._probability)
+    video = tf.cond(mirror_cond, lambda: self._erase(video), lambda: video)
+    return video
+
+  @tf.function
+  def _erase(self, video: tf.Tensor) -> tf.Tensor:
+    """Erase an area."""
+    if self._min_count == self._max_count:
+      count = self._min_count
+    else:
+      count = tf.random.uniform(
+          shape=[],
+          minval=int(self._min_count),
+          maxval=int(self._max_count - self._min_count + 1),
+          dtype=tf.int32)
+
+    image_height = tf.shape(video)[1]
+    image_width = tf.shape(video)[2]
+    area = tf.cast(image_width * image_height, tf.float32)
+
+    for _ in range(count):
+      # Work around since break is not supported in tf.function
+      is_trial_successfull = False
+      for _ in range(self._trials):
+        if not is_trial_successfull:
+          erase_area = tf.random.uniform(
+              shape=[],
+              minval=area * self._min_area,
+              maxval=area * self._max_area)
+          aspect_ratio = tf.math.exp(
+              tf.random.uniform(
+                  shape=[],
+                  minval=self._min_log_aspect,
+                  maxval=self._max_log_aspect))
+
+          half_height = tf.cast(
+              tf.math.round(tf.math.sqrt(erase_area * aspect_ratio) / 2),
+              dtype=tf.int32)
+          half_width = tf.cast(
+              tf.math.round(tf.math.sqrt(erase_area / aspect_ratio) / 2),
+              dtype=tf.int32)
+
+          if 2 * half_height < image_height and 2 * half_width < image_width:
+            center_height = tf.random.uniform(
+                shape=[],
+                minval=0,
+                maxval=int(image_height - 2 * half_height),
+                dtype=tf.int32)
+            center_width = tf.random.uniform(
+                shape=[],
+                minval=0,
+                maxval=int(image_width - 2 * half_width),
+                dtype=tf.int32)
+
+            video = _fill_rectangle_video(
+                video,
+                center_width,
+                center_height,
+                half_width,
+                half_height,
+                replace=None)
+
+            is_trial_successfull = True
+    return video
+
+
+def random_erasing(frames: tf.Tensor,
+                   probability: float = 0.25, min_area: float = 0.02,
+                   max_area: float = 1 / 3, min_aspect: float = 0.3,
+                   max_aspect: Optional[float] = None, min_count=1,
+                   max_count=1, trials=10):
+
+  """Applies RandomErasing to a video.
+
+  Args:
+    frames: A Tensor of dimension [timesteps, input_h, input_w, channels].
+    probability: Probability of augmenting the image. Defaults to `0.25`.
+    min_area: Minimum area of the random erasing rectangle. Defaults to
+      `0.02`.
+    max_area: Maximum area of the random erasing rectangle. Defaults to `1/3`.
+    min_aspect: Minimum aspect rate of the random erasing rectangle. Defaults
+      to `0.3`.
+    max_aspect: Maximum aspect rate of the random erasing rectangle. Defaults
+      to `None`.
+    min_count: Minimum number of erased rectangles. Defaults to `1`.
+    max_count: Maximum number of erased rectangles. Defaults to `1`.
+    trials: Maximum number of trials to randomly sample a rectangle that
+      fulfills constraint. Defaults to `10`.
+  Returns:
+    tf.Tensor: The augmented version of video.
+  """
+  random_eraser = RandomErasing(probability, min_area, max_area, min_aspect,
+                                max_aspect, min_count, max_count, trials)
+  return random_eraser.distort(frames)
+
+
 def crop_resize(frames: tf.Tensor,
                 output_h: int,
                 output_w: int,
                 num_frames: int,
                 num_channels: int,
                 area_range=(0.3, 1),
-                unused_state=None) -> tf.Tensor:
+                unused_state=None,
+                aspect_ratio=(0.5, 2.0)) -> tf.Tensor:
   """First crop clip with jittering and then resizes to (output_h, output_w).
 
   Args:
@@ -49,19 +239,21 @@ def crop_resize(frames: tf.Tensor,
     num_frames: Number of input frames per clip.
     num_channels: Number of channels of the clip.
     area_range: Random crop will preserve this proportion of the area of the
-      original frame.
+    original frame.
     unused_state: Argument included to be compatible with DeepMind Video Reader
-      preprocessing pipeline functions which pass in a state variable.
+    preprocessing pipeline functions which pass in a state variable.
+    aspect_ratio: Aspect ratio range of area based random resizing.
 
   Returns:
     A Tensor of shape [timesteps, output_h, output_w, channels] of type
       frames.dtype.
   """
+
   shape = tf.shape(frames)
   seq_len, channels = int(shape[0]), int(shape[3])
   bbox = tf.constant([0.0, 0.0, 1.0, 1.0], dtype=tf.float32, shape=[1, 1, 4])
   factor = output_w / output_h
-  aspect_ratio = (3. / 6. * factor, 6. / 3. * factor)
+  aspect_ratio = (aspect_ratio[0] * factor, aspect_ratio[1] * factor)
 
   sample_distorted_bbox = tf.image.sample_distorted_bounding_box(
       shape[1:],
@@ -273,6 +465,7 @@ def additional_augmentations(ds_factory, augmentation_params, crop_size,
   do_rand_augment = augmentation_params.get('do_rand_augment', False)
   do_color_augment = augmentation_params.get('do_color_augment', False)
   do_jitter_scale = augmentation_params.get('do_jitter_scale', False)
+  do_random_erasing = augmentation_params.get('do_random_erasing', False)
 
   if do_simclr_crop_resize and do_jitter_scale:
     logging.warning('Only doing simclr_crop_resize.'
@@ -280,6 +473,7 @@ def additional_augmentations(ds_factory, augmentation_params, crop_size,
 
   if do_simclr_crop_resize:
     area_range = (augmentation_params.get('simclr_area_lower_bound', 0.5), 1)
+    aspect_ratio = augmentation_params.get('aspect_ratio_crop', (0.5, 2.0))
 
     # Remove resize_smallest and Replace random_crop with crop_resize
     ds_factory.preprocessor_builder.remove_fn(
@@ -301,7 +495,9 @@ def additional_augmentations(ds_factory, augmentation_params, crop_size,
             output_h=crop_size,
             output_w=crop_size,
             num_channels=3,
-            area_range=area_range),
+            area_range=area_range,
+            aspect_ratio=aspect_ratio,
+            ),
         feature_name=rgb_feature_name,
         fn_name=f'{rgb_feature_name}_crop_resize',
         add_before_fn_name=next_fn_name)
@@ -355,6 +551,13 @@ def additional_augmentations(ds_factory, augmentation_params, crop_size,
             zero_centering_image=zero_centering,
             prob_color_augment=augmentation_params.prob_color_augment,
             prob_color_drop=augmentation_params.prob_color_drop),
+        rgb_feature_name)
+
+  if do_random_erasing:
+    logging.info('Adding random erasing')
+    random_erasing_prob = augmentation_params.get('random_erasing_prob', 0.25)
+    ds_factory.preprocessor_builder.add_fn(
+        functools.partial(random_erasing, probability=random_erasing_prob),
         rgb_feature_name)
 
   return ds_factory

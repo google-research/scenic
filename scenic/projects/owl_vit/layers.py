@@ -1,17 +1,24 @@
-"""Modules and functions used for zero-shot model."""
+"""Layers / Flax modules for OWL-ViT."""
 
-from typing import Callable, Dict, Optional, Tuple
+import abc
+from typing import Any, Callable, Dict, Optional, Tuple
 
+from absl import logging
+import flax
 import flax.linen as nn
+import jax
 import jax.numpy as jnp
 import ml_collections
 import numpy as np
+from scenic.projects.owl_vit import utils
 from scenic.projects.owl_vit.clip import layers as clip_layers
 from scenic.projects.owl_vit.clip import model as clip_model
 
+Params = Dict[Any, Any]
+
 
 class PredictorMLP(nn.Module):
-  """FFN block for predicting bounding box coordinates.
+  """FFN block for predicting continuous outputs, e.g. bounding box coordinates.
 
   Attributes:
     out_dim: Size of output of this mlp.
@@ -45,7 +52,7 @@ class PredictorMLP(nn.Module):
 
 
 class ClassPredictor(nn.Module):
-  """Zero-shot instance class predictor."""
+  """Open-vocabulary instance class predictor."""
   normalize: bool = False
   out_dim: Optional[int] = None
 
@@ -57,6 +64,8 @@ class ClassPredictor(nn.Module):
       query_mask: Optional[jnp.ndarray] = None,
   ) -> Dict[str, jnp.ndarray]:
     """Computes class prediction logits.
+
+    Query embeddings from a text encoder define the classification label space.
 
     Args:
       x: Image features [batch_size, num_patches, emb_dim].
@@ -107,8 +116,30 @@ class ClassPredictor(nn.Module):
     return {'pred_logits': pred_logits, 'class_embeddings': image_class_emb}
 
 
-class ImageTextEmbedder(nn.Module):
-  """Embeds images and texts using selected backbone."""
+class ImageTextEmbedderBase(nn.Module, metaclass=abc.ABCMeta):
+  """Embeds images and texts into a shared space."""
+  embed_configs: ml_collections.ConfigDict
+
+  @nn.compact
+  @abc.abstractmethod
+  def __call__(
+      self,
+      *,
+      images: Optional[jnp.ndarray] = None,
+      texts: Optional[jnp.ndarray] = None,
+      train: bool = False
+  ) -> Tuple[Optional[jnp.ndarray], Optional[jnp.ndarray]]:
+    pass
+
+  @abc.abstractmethod
+  def load_backbone(self, params: Params,
+                    backbone_checkpoint_path: Optional[str]) -> Params:
+    """Loads backbone parameters for this model from a checkpoint."""
+    pass
+
+
+class ClipImageTextEmbedder(ImageTextEmbedderBase):
+  """Embeds images and texts using the CLIP image-text model."""
   embed_configs: ml_collections.ConfigDict
 
   @nn.compact
@@ -119,53 +150,80 @@ class ImageTextEmbedder(nn.Module):
       texts: Optional[jnp.ndarray] = None,
       train: bool = False
   ) -> Tuple[Optional[jnp.ndarray], Optional[jnp.ndarray]]:
-    """Embeds text using selected backbone and configuration."""
+    """Embeds images and texts using the CLIP image-text model."""
     texts_shape = None
     if texts is not None:
       texts_shape = texts.shape
       if len(texts_shape) > 2:
         texts = texts.reshape(-1, texts_shape[-1])
 
-    emb_type = self.embed_configs.get('type')
-    if emb_type == 'clip':
-      model_config = clip_model.CONFIGS[self.embed_configs['variant']]
-      model_config['vision_return_map'] = True
-      # Copy over additional CLIP config settings.
-      for name in [
-          'text_stochastic_droplayer_rate', 'vision_stochastic_droplayer_rate']:
-        if self.embed_configs.get(name) is not None:
-          model_config[name] = self.embed_configs[name]
-      model = clip_layers.CLIP(**model_config, name='clip')
-      # Input images should have range (0.0, 1.0). Shift them to CLIP range:
-      if images is not None:
-        images = clip_model.normalize_image(images)
-      # Don't normalize image and text embeddings:
-      img_emb, txt_emb = model(
-          images, texts, normalize=False, deterministic=not train)
-      # Drop or merge class embedding token.
-      # TODO(mnn): Remove after the preferred class token merging scheme is
-      # determined.
-      if img_emb is not None:
-        merge_class_token = self.embed_configs.get('merge_class_token', 'sum')
-        if merge_class_token == 'drop':
-          img_emb = img_emb[:, 1:, :]   # [B, P, emb_dim]
-        else:
-          class_token_out = jnp.broadcast_to(
-              img_emb[:, :1, :],
-              np.array(img_emb.shape) - (0, 1, 0))
-          if merge_class_token == 'sum':
-            img_emb = img_emb[:, 1:, :] + class_token_out   # [B, P, emb_dim]
-          elif merge_class_token == 'mul':
-            img_emb = img_emb[:, 1:, :] * class_token_out   # [B, P, emb_dim]
-          elif merge_class_token == 'sum-ln':
-            img_emb = img_emb[:, 1:, :] + class_token_out   # [B, P, emb_dim]
-            img_emb = nn.LayerNorm(name='merged_class_token')(img_emb)
-          elif merge_class_token == 'mul-ln':
-            img_emb = img_emb[:, 1:, :] * class_token_out   # [B, P, emb_dim]
-            img_emb = nn.LayerNorm(name='merged_class_token')(img_emb)
-    else:
-      raise NotImplementedError(f'Unknown embedding type {emb_type}.')
+    model_config = clip_model.CONFIGS[self.embed_configs['variant']]
+    model_config['vision_return_map'] = True
+    # Copy over additional CLIP config settings.
+    for name in [
+        'text_stochastic_droplayer_rate', 'vision_stochastic_droplayer_rate']:
+      if self.embed_configs.get(name) is not None:
+        model_config[name] = self.embed_configs[name]
+    model = clip_layers.CLIP(**model_config, name='clip')
+    # Input images should have range (0.0, 1.0). Shift them to CLIP range:
+    if images is not None:
+      images = clip_model.normalize_image(images)
+    # Don't normalize image and text embeddings.
+    img_emb, txt_emb = model(
+        images, texts, normalize=False, deterministic=not train)
+    # Drop or merge class embedding token.
+    if img_emb is not None:
+      merge_class_token = self.embed_configs.get('merge_class_token', 'drop')
+      if merge_class_token == 'drop':
+        img_emb = img_emb[:, 1:, :]   # [B, P, emb_dim]
+      elif merge_class_token == 'mul-ln':
+        class_token_out = jnp.broadcast_to(
+            img_emb[:, :1, :],
+            np.array(img_emb.shape) - (0, 1, 0))
+        img_emb = img_emb[:, 1:, :] * class_token_out   # [B, P, emb_dim]
+        img_emb = nn.LayerNorm(name='merged_class_token')(img_emb)
+      else:
+        raise ValueError(f'Unknown merge_class_token: {merge_class_token}')
 
     if txt_emb is not None and len(texts_shape) > 2:
       txt_emb = txt_emb.reshape(texts_shape[:-1] + (-1,))
     return img_emb, txt_emb
+
+  def load_backbone(self, params: Params,
+                    backbone_checkpoint_path: Optional[str]) -> Params:
+    """Loads backbone parameters for this model from a checkpoint."""
+    del backbone_checkpoint_path  #  Redundant since we use the model variant.
+
+    # This loads only the CLIP-backbone parameters, not the additional
+    # parameters added by the LayerNorm above. This function is only intended
+    # for initialization from pretrained CLIP checkpoints, not for loading the
+    # whole model, which can be done easily in the trainer.
+    loaded = clip_model.load_model_vars(self.embed_configs.variant)['params']
+    loaded = flax.core.unfreeze(loaded)
+
+    # Remove unused parameters:
+    del loaded['visual']['proj']
+
+    # Resize positional embeddings if necessary for visual tower.
+    target_size = params['clip']['visual']['positional_embedding'].shape[0]
+    loaded_size = loaded['visual']['positional_embedding'].shape[0]
+    if target_size != loaded_size:
+      loaded['visual']['positional_embedding'] = utils.resize_posemb(
+          loaded['visual']['positional_embedding'], target_size)
+
+    # Truncate positional embeddings if necessary for text tower.
+    target_size = params['clip']['text']['positional_embedding'].shape[0]
+    loaded_size = loaded['text']['positional_embedding'].shape[0]
+    if target_size != loaded_size:
+      logging.info('Truncating text positional embeddigns from %s to %s',
+                   loaded_size, target_size)
+      loaded['text']['positional_embedding'] = (
+          loaded['text']['positional_embedding'][:target_size])
+
+    # Cast to float32:
+    loaded = jax.tree_util.tree_map(
+        lambda x: x.astype(jnp.float32) if x.dtype == jnp.float16 else x,
+        loaded)
+
+    params['clip'] = loaded
+    return params

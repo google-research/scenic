@@ -23,7 +23,7 @@ def get_config():
   """Returns configuration for BERT."""
   config = ml_collections.ConfigDict()
   config.rng_seed = 42
-  config.glue_task = None
+  config.glue_task = ''
   config.variant = VARIANT
   config.init_from = INIT_FROM
   return config

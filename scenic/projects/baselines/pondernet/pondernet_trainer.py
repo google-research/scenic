@@ -543,7 +543,9 @@ def train(
     if lead_host:
       platform.work_unit().set_notes(note)
 
-  hooks = [report_progress]
+  hooks = []
+  if lead_host:
+    hooks.append(report_progress)
   if config.get('xprof', True) and lead_host:
     hooks.append(periodic_actions.Profile(num_profile_steps=5, logdir=workdir))
 

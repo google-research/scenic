@@ -1,4 +1,4 @@
-"""Tests vit_plus_v2 layers."""
+"""Tests OWL-ViT layers."""
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax
@@ -54,7 +54,7 @@ class LayersTest(parameterized.TestCase):
     texts = jnp.ones((batch_size, num_queries, seq_len), dtype=jnp.int32)
     rng = jax.random.PRNGKey(0)
 
-    embedder = layers.ImageTextEmbedder(embed_configs)
+    embedder = layers.ClipImageTextEmbedder(embed_configs)
 
     with self.subTest(name='images_and_text'):
       (img, txt), _ = embedder.init_with_output(rng, images=images, texts=texts)

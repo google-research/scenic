@@ -219,7 +219,7 @@ def log_eval_summary(step: int,
   eval_metrics = train_utils.stack_forest(eval_metrics)
 
   # Compute the sum over all examples in all batches.
-  eval_metrics_summary = jax.tree_map(lambda x: x.sum(), eval_metrics)
+  eval_metrics_summary = jax.tree_util.tree_map(lambda x: x.sum(), eval_metrics)
   # Normalize metrics by the total number of exampels.
   metrics_normalizer_fn = (
       metrics_normalizer_fn or train_utils.normalize_metrics_summary)
