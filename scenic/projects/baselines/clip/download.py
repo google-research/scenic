@@ -70,6 +70,9 @@ def download(
     raise RuntimeError(
         'Model has been downloaded but the SHA256 checksum does not not match')
 
-  gfile.rename(temp_file, download_target, overwrite=True)
+  try:
+    gfile.rename(temp_file, download_target, overwrite=True)
+  except:
+    gfile.copy(temp_file, download_target, overwrite=True)
 
   return download_target
