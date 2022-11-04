@@ -125,9 +125,6 @@ def modelnet40_load_split(batch_size,
   ds = ds.map(decode_example, num_parallel_calls=tf.data.experimental.AUTOTUNE)
   ds = ds.batch(batch_size, drop_remainder=train)
 
-  if not train:
-    ds = ds.repeat()
-
   ds = ds.prefetch(prefetch_buffer_size)
   return ds
 
