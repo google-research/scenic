@@ -118,6 +118,20 @@ def get_decode(channels=3):
   return _decode
 
 
+@Registry.register("preprocess_ops.decode_grayscale", "function")
+@utils.InKeyOutKey()
+def get_decode_grayscale(channels=1):
+  """Decode an encoded image string, see tf.io.decode_image."""
+
+  def _decode_gray(image):  # pylint: disable=missing-docstring
+    # tf.io.decode_image does not set the shape correctly, so we use
+    # tf.io.deocde_jpeg, which also works for png, see
+    # https://github.com/tensorflow/tensorflow/issues/8551
+    return tf.io.decode_jpeg(image, channels=channels)
+
+  return _decode_gray
+
+
 @Registry.register("preprocess_ops.pad", "function")
 @utils.InKeyOutKey()
 @utils.BatchedImagePreprocessing()
