@@ -691,8 +691,11 @@ def focal_softmax_cross_entropy(
     gamma: Optional[float] = 2.0) -> jnp.ndarray:
   """Computes focal softmax cross-entropy given logits and targets.
 
-  This computes focal loss: (1-p_t)**gamma -log p_t, where p_t is the softmax
-  probability of the target.
+  Focal loss as defined in https://arxiv.org/abs/1708.02002. Assuming y is the
+  target vector and p is the predicted probability for the class, then:
+
+  p_t = p if y == 1 and 1-p otherwise
+  Focal loss = -(1-p_t)**gamma * log(p_t)
 
   NOTE: this is weighted unnormalized computation of loss that returns the loss
   of examples in the batch. If you are using it as a loss function, you can
@@ -741,10 +744,13 @@ def focal_sigmoid_cross_entropy(
     gamma: Optional[float] = 2.0) -> jnp.ndarray:
   """Computes focal softmax cross-entropy given logits and targets.
 
-  Focal loss assuming y is the binary target vector:
-  alpha * (1-p_t)**gamma -log p_t, if y_t = 1, and
-  (1.-alpha) * p_t**gamma -log (1 - p_t), if y_t = 0,
-  and p_t is the sigmoid probability at index t.
+  Focal loss as defined in https://arxiv.org/abs/1708.02002. Assuming y is the
+  target vector and p is the predicted probability for the class, then:
+
+  p_t = p if y == 1 and 1-p otherwise
+  alpha_t = alpha if y == 1 and 1-alpha otherwise
+
+  Focal loss = -alpha_t * (1-p_t)**gamma * log(p_t)
 
   NOTE: this is weighted unnormalized computation of loss that returns the loss
   of examples in the batch. If you are using it as a loss function, you can
