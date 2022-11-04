@@ -62,7 +62,6 @@ class StreetHazards(tfds.core.GeneratorBasedBuilder):
     )
 
   def _split_generators(self, dl_manager):
-    import pdb; pdb.set_trace()
     dl_paths = {}
     dl_paths['images'] = os.path.join(dl_manager._extract_dir, 'street_hazards/train')
     dl_paths['annotations'] = os.path.join(dl_manager._extract_dir, 'street_hazards/train')
