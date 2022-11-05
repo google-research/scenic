@@ -23,6 +23,7 @@ from typing import Any, Optional, Sequence, Tuple, Union, Callable, List
 
 from absl import logging
 import jax
+import jax.numpy as jnp
 import ml_collections
 import numpy as np
 import optax
@@ -206,7 +207,7 @@ def make(config: ml_collections.ConfigDict,
     grad_clip_norm_tx = []
 
   # Optimizer updates.
-  tx_func = getattr(optax, config.optax_name)
+  tx_func = operator.attrgetter(config.optax_name)(optax)
   opt_txs = [optax.masked(
       tx_func(**config.get('optax_configs', {})), not_frozen_mask)]
 
@@ -269,3 +270,17 @@ def aggregate_gradients_pmean(
     return jax.lax.pmean(updates, axis_name=axis_name), None
 
   return optax.GradientTransformation(init_fn, update_fn)
+
+################# Scenic optimizers ##############################
+# This is following the BV codebase pattern for defining a custom optimizer.
+# A dummy object to allow for foo.bar access syntax, see
+# https://stackoverflow.com/a/19476841/2366315
+optax.scenic = type('', (), {})()
+
+
+def momentum_hp(momentum=0.9, dtype=jnp.bfloat16, nesterov=False):
+  """SGD-Momentum with half-precision accumulator."""
+  return optax.trace(decay=momentum, accumulator_dtype=dtype, nesterov=nesterov)
+
+
+optax.scenic.momentum_hp = momentum_hp  # pytype: disable=module-attr
