@@ -4,10 +4,6 @@ Edited from
 https://github.com/hermannsblum/bdl-benchmark/blob/master/bdlb/fishyscapes/fishyscapes_tfds.py
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf
 from itertools import chain
 from os import path
