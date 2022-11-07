@@ -120,8 +120,8 @@ def replace_frozen(schedule, pytree, replacement, log: Optional[str] = None):
 def make_schedule(
     schedule: Optional[ml_collections.ConfigDict] = None,
     get_learning_rate_fn: Callable[
-        [ml_collections.ConfigDict], optax.ScalarOrSchedule
-        ] = lr_schedules.get_learning_rate_fn,
+        [ml_collections.ConfigDict],
+        optax.ScalarOrSchedule] = lr_schedules.get_learning_rate_fn,
 ) -> List[Tuple[str, str, Tuple[optax.ScalarOrSchedule, float]]]:
   """Creates a schedule dictionary compatible with the `make` function."""
   # Global schedule. No schedule means frozen.
@@ -134,12 +134,12 @@ def make_schedule(
   def create_schedule(lr_configs):
     fn = get_learning_rate_fn(
         ml_collections.ConfigDict({'lr_configs': lr_configs}))
-
     # Base LR is used for decoupling WD from LR schedules.
     base_lr = 1.0
     if lr_configs is not None:
       base_lr = lr_configs.get('base_learning_rate', 1.0)
     return fn, base_lr
+
   schedule = [(re, name, create_schedule(lr_configs))
               for re, name, lr_configs in schedule]
   return schedule
@@ -161,15 +161,10 @@ def make(config: ml_collections.ConfigDict,
   masks, scheds = _make_mask_trees(params, schedule, log='schedule')
   frozen_mask, masks, scheds = _split_frozen(masks, scheds)
   not_frozen_mask = jax.tree_util.tree_map(operator.not_, frozen_mask)
-  acc_steps = config.get('accumulate_steps', 1)
   schedule_fns, schedule_base_lr = zip(
       *[fn_base for _, fn_base in (scheds or [])])
-  def wrap_schedule(fn):
-    def wrapper(step):
-      return fn(step * acc_steps)
-    return wrapper
   schedule_txs = [
-      optax.masked(optax.scale_by_schedule(wrap_schedule(schedule_fn)), mask)
+      optax.masked(optax.scale_by_schedule(schedule_fn), mask)
       for schedule_fn, mask in zip(schedule_fns, masks)
   ] + [
       # Removes weight decay updates. Note that weight decay already has an
@@ -250,8 +245,6 @@ def make(config: ml_collections.ConfigDict,
       *weight_decay_txs,
       *schedule_txs,
       optax.scale(-1.0))
-  if acc_steps > 1:
-    opt = optax.MultiSteps(opt, acc_steps, use_grad_mean=False)
   return opt, schedule_fns
 
 
