@@ -206,18 +206,18 @@ class UTEncoder(nn.Module):
               name='encoderblock_' + str(i),
               dtype=dtype)(
                   x)
-        else:
-          encoder_block = Encoder1DBlock(
-              mlp_dim=self.mlp_dim,
-              num_heads=self.num_heads,
-              dropout_rate=self.dropout_rate,
-              attention_dropout_rate=self.attention_dropout_rate,
-              stochastic_depth=self.stochastic_depth,
-              deterministic=not train,
-              name='encoderblock',
-              dtype=dtype)
-          for i in range(self.num_layers):
-            x = encoder_block(x)
+      else:
+        encoder_block = Encoder1DBlock(
+            mlp_dim=self.mlp_dim,
+            num_heads=self.num_heads,
+            dropout_rate=self.dropout_rate,
+            attention_dropout_rate=self.attention_dropout_rate,
+            stochastic_depth=self.stochastic_depth,
+            deterministic=not train,
+            name='encoderblock',
+            dtype=dtype)
+        for i in range(self.num_layers):
+          x = encoder_block(x)
       auxiliary_outputs = None
     else:
       encoder_block = Encoder1DBlock(
