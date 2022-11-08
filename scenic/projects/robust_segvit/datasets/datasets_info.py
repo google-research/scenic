@@ -414,16 +414,19 @@ FishyscapesClass = collections.namedtuple(
     'FishyscapesClass', ['name', 'id', 'train_id', 'ignore_in_eval', 'color'])
 
 # Classes defined as Background/InD/OOD sets.
-c255 = FishyscapesClass('background', 0, 255, True, [0, 0, 0])
-c0 = FishyscapesClass('ind', 1, 0, False, [0, 0, 1])
-c1 = FishyscapesClass('ood', 2, 1, False, [1, 0, 0])
+c255 = FishyscapesClass('background', 255, 255, True, [0, 0, 0])
+c0 = FishyscapesClass('ind', 0, 0, False, [0, 0, 1])
+c1 = FishyscapesClass('ood', 1, 1, False, [1, 0, 0])
 FISHYSCAPES_3CLASSES = [c255, c0, c1]
+# the original dataset has classes [0, 1, 255] so we can define classes [2-255] as background.
+FISHYSCAPES_CLASSES = [c0, c1] + [c255] * 254
 
 FISHYSCAPES_STATIC = DatasetInfo(
     tfds_name='fishyscapes/Static',
     image_key='image_left',
     label_key='mask',
     classes=FISHYSCAPES_3CLASSES,
+    ood_classes=FISHYSCAPES_CLASSES,
     pixels_per_class=None,
     data_dir=FISHYSCAPES_DIR)
 
