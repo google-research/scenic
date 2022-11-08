@@ -5,6 +5,10 @@
 
 ## List of projects hosted in Scenic
 
+*   [AdaTape](adatape)
+
+    > AdaTape is an adaptive computation transformer with elastic input sequence.
+
 *   [AdversarialTraining](adversarialtraining)
 
     > Adversarial training is an implementation of modern forms of adversarial
