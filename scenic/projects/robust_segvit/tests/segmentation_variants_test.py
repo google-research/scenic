@@ -8,6 +8,10 @@ from scenic.projects.robust_segvit.datasets import segmentation_variants
 
 EXPECTED_DATASETS = [
     ('ade20k_ind_c', 'ade20k_ind_c', 'gaussian_noise', 1, 'validation[:32]'),
+    ('ade20k_ood_open', 'ade20k_ood_open', None, None, 'validation[:32]'),
+    ('street_hazards_open', 'street_hazards_open', None, None, 'validation[:32]'),
+    ('cityscapes_c', 'cityscapes_c', 'gaussian_noise', 1, 'validation[:32]'),
+    ('fishyscapes/Static', 'fishyscapes/Static', None, None, 'validation[:30]'),
 ]
 
 
@@ -31,7 +35,7 @@ class SegmentationVariantsTest(parameterized.TestCase):
       config.dataset_configs.name = name
     config.dataset_configs.denoise = None
     config.dataset_configs.use_timestep = 0
-    config.dataset_configs.val_split = val_split
+    config.dataset_configs.validation_split = val_split
     _, dataset, _, _ = segmentation_variants.get_dataset(**config)
     batch = next(dataset)
     self.assertEqual(

@@ -30,7 +30,7 @@ class SegmentationVariantsTest(parameterized.TestCase):
     config.dataset_configs.name = name
     config.dataset_configs.denoise = None
     config.dataset_configs.use_timestep = 0
-    config.dataset_configs.val_split = val_split
+    config.dataset_configs.validation_split = val_split
     _, dataset, _, _ = segmentation_datasets.get_dataset(**config)
     batch = next(dataset)
     self.assertEqual(
