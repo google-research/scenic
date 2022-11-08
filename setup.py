@@ -81,8 +81,6 @@ install_requires_core = [
     "clu>=0.0.6",
     "tensorflow-datasets",
     "optax @ git+https://github.com/deepmind/optax.git@master",
-    # Specifying the tf_nightly version avoids slow (hours) pip install:
-    "tf_nightly==2.9.0.dev20220401",
 ]
 
 tests_require = [
