@@ -88,8 +88,9 @@ def _run_main(argv, *, main):
   # (task 0 is not guaranteed to be the host 0)
   platform.work_unit().set_task_status(
       f'host_id: {jax.process_index()}, host_count: {jax.process_count()}')
-  platform.work_unit().create_artifact(platform.ArtifactType.DIRECTORY,
-                                       FLAGS.workdir, 'Workdir')
+  if jax.process_index() == 0:
+    platform.work_unit().create_artifact(platform.ArtifactType.DIRECTORY,
+                                         FLAGS.workdir, 'Workdir')
 
   rng = jax.random.PRNGKey(FLAGS.config.rng_seed)
   logging.info('RNG: %s', rng)
