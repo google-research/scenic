@@ -43,6 +43,9 @@ _TRAIN_URL = {
 
 _CORRUPTIONS = [
     'gaussian_noise',
+    'brightness',
+    'contrast',
+    'fog',
 ]
 
 class ADE20kCorruptedConfig(tfds.core.BuilderConfig):

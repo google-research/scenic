@@ -30,12 +30,18 @@ STREETHAZARDS_DIR = 'gs://ub-ekb/tensorflow_datasets/street_hazards/tfrecords/v.
 ADE20K_C_SEVERITIES = range(1, 6)
 ADE20K_C_CORRUPTIONS = [
     'gaussian_noise',
+    'brightness',
+    'contrast',
+    'fog',
 ]
 
 # CITYSCAPES_C
 CITYSCAPES_C_SEVERITIES = range(1, 6)
 CITYSCAPES_C_CORRUPTIONS = [
     'gaussian_noise',
+    'brightness',
+    'contrast',
+    'fog',
 ]
 
 @dataclasses.dataclass(frozen=True)

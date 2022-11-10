@@ -7,10 +7,14 @@ import ml_collections
 from scenic.projects.robust_segvit.datasets import segmentation_variants
 
 EXPECTED_DATASETS = [
-    ('ade20k_ind_c', 'ade20k_ind_c', 'gaussian_noise', 1, 'validation[:32]'),
+    ('ade20k_ind_c1', 'ade20k_ind_c', 'gaussian_noise', 1, 'validation[:32]'),
+    ('ade20k_ind_c2', 'ade20k_ind_c', 'brightness', 1, 'validation[:32]'),
+    ('ade20k_ind_c3', 'ade20k_ind_c', 'contrast', 1, 'validation[:32]'),
     ('ade20k_ood_open', 'ade20k_ood_open', None, None, 'validation[:32]'),
     ('street_hazards_open', 'street_hazards_open', None, None, 'validation[:32]'),
-    ('cityscapes_c', 'cityscapes_c', 'gaussian_noise', 1, 'validation[:32]'),
+    ('cityscapes_c1', 'cityscapes_c', 'gaussian_noise', 1, 'validation[:32]'),
+    ('cityscapes_c2', 'cityscapes_c', 'brightness', 1, 'validation[:32]'),
+    ('cityscapes_c3', 'cityscapes_c', 'contrast', 1, 'validation[:32]'),
     ('fishyscapes/Static', 'fishyscapes/Static', None, None, 'validation[:30]'),
 ]
 
