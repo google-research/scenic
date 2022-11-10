@@ -44,6 +44,10 @@ CITYSCAPES_C_CORRUPTIONS = [
     'fog',
 ]
 
+# FISHYSCAPES
+FISHYSCAPES_CORRUPTIONS = ['Static']
+
+
 @dataclasses.dataclass(frozen=True)
 class DatasetInfo:
   tfds_name: str
