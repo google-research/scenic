@@ -24,6 +24,8 @@ CITYSCAPES_DIR = 'gs://ub-ekb/tensorflow_datasets/cityscapes/tfrecords/v.0.0'
 CITYSCAPES_CORRUPTED_DIR = 'gs://ub-ekb/tensorflow_datasets/cityscapes_corrupted/tfrecords/v.0.0'
 FISHYSCAPES_DIR = 'gs://ub-ekb/tensorflow_datasets/fishyscapes/tfrecords/v.0.0'
 STREETHAZARDS_DIR = 'gs://ub-ekb/tensorflow_datasets/street_hazards/tfrecords/v.0.0'
+STREETHAZARDS_CORRUPTED_DIR = 'gs://ub-ekb/tensorflow_datasets/street_hazards_corrupted/tfrecords/v.0.0'
+
 # pylint: enable=line-too-long
 
 # ADE20K-C
@@ -47,6 +49,15 @@ CITYSCAPES_C_CORRUPTIONS = [
 # FISHYSCAPES
 FISHYSCAPES_CORRUPTIONS = ['Static']
 
+
+# STREET_HAZARDS_C
+STREETHAZARDS_C_SEVERITIES = range(1, 6)
+STREETHAZARDS_C_CORRUPTIONS = [
+    'gaussian_noise',
+    'brightness',
+    'contrast',
+    'fog',
+]
 
 @dataclasses.dataclass(frozen=True)
 class DatasetInfo:
@@ -519,7 +530,24 @@ def build_datasets():
           data_dir=ADE20K_CORRUPTED_DIR,
       )
 
+  # ------------------------------------
+  # Construct street_hazards_c dataset:
+  # ------------------------------------
+  for severity in STREETHAZARDS_C_SEVERITIES:
+    for corruption in STREETHAZARDS_C_CORRUPTIONS:
+      tfds_dataset_name = f'street_hazards_corrupted/street_hazards_{corruption}_{severity}'
+      temp_dataset_name = f'street_hazards_c_{corruption}_{severity}'
+      local_dataset[temp_dataset_name] = DatasetInfo(
+        tfds_name=tfds_dataset_name,
+        image_key='image',
+        label_key='annotations',
+        classes=STREETHAZARDS_CLASSES,
+        pixels_per_class=None,
+        data_dir=STREETHAZARDS_CORRUPTED_DIR,
+      )
+
   return local_dataset
+
 
 # ------------------
 # BUILD all datasets

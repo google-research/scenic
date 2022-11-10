@@ -16,6 +16,9 @@ EXPECTED_DATASETS = [
     ('cityscapes_c2', 'cityscapes_c', 'brightness', 1, 'validation[:32]'),
     ('cityscapes_c3', 'cityscapes_c', 'contrast', 1, 'validation[:32]'),
     ('fishyscapes/Static', 'fishyscapes/Static', None, None, 'validation[:30]'),
+    ('street_hazards_c1', 'street_hazards_c', 'gaussian_noise', 1, 'validation[:32]'),
+    ('street_hazards_c2', 'street_hazards_c', 'brightness', 1, 'validation[:32]'),
+    ('street_hazards_c3', 'street_hazards_c', 'contrast', 1, 'validation[:32]'),
 ]
 
 
