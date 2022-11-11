@@ -301,8 +301,6 @@ def train_and_evaluate(
   # The pool is used to perform misc operations such as logging in async way.
   pool = futures.ThreadPoolExecutor(max_workers=2)
 
-  # TODO(tonysherbondy): Do I need to create two different models just because
-  # I'm changing the input shape?
   input_spec = [(dataset.meta_data['input_shape'],
                  dataset.meta_data.get('input_dtype', jnp.float32))]
   (model, tx, train_state, num_trainable_params, gflops,

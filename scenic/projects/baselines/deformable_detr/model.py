@@ -59,11 +59,6 @@ def compute_cost(
   Returns:
     All pairs cost matrix [bs, nout, ntargets].
   """
-  # tgt_labels = batch['label']['labels']
-  # tgt_bbox = batch['label']['boxes']
-  # out_prob = nn.sigmoid(outputs['pred_logits'])
-  # out_bbox = outputs['pred_boxes']
-
   # Calculate cost using pred_prob [bs, npreds].
   logfn = lambda x: jnp.log(jnp.clip(x, a_min=1e-8))
   neg_cost_class = (1 - alpha) * (out_prob**gamma) * (-logfn(1 - out_prob))
@@ -163,7 +158,6 @@ def loss_boxes(*,
   Returns:
     `loss_class`: Classification loss with coefficient applied.
   """
-  # TODO(tonysherbondy): Need to consider batch_mask weights.
   src_indices = indices[..., 0, :]
   tgt_indices = indices[..., 1, :]
 
@@ -195,8 +189,6 @@ def loss_boxes(*,
   return losses
 
 
-# TODO(tonysherbondy): Why is one_hot so complicated? Should just concat row of
-# zeros?
 def _targets_from_batch(
     batch: ArrayDict,
     target_is_onehot: bool = False) -> Tuple[jnp.ndarray, jnp.ndarray]:
