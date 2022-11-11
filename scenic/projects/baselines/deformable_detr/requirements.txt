@@ -1,0 +1,12 @@
+absl-py
+clu
+sklearn
+flax==0.5.3
+ott-jax
+ipdb
+jax==0.3.17
+--find-links https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+jaxlib==0.3.15+cuda11.cudnn82  # Make sure CUDA version matches the base image.
+numpy
+tensorflow
+tensorflow-datasets

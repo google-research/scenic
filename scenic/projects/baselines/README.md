@@ -6,6 +6,7 @@ They include:
 
  * [Vision Transformer](https://arxiv.org/abs/2010.11929) (ViT) for image classification. [[Official Implementation](https://github.com/google-research/vision_transformer#vision-transformer)]
  * [Detection Transformer](https://arxiv.org/abs/2005.12872) (DETR) for object detection. [[Official PyTorch Implementation](https://github.com/facebookresearch/detr)]
+ * [Deformable Detection Transformer](https://arxiv.org/abs/2010.04159) (Deformable DETR) for object detection. [[Official PyTorch Implementation](https://github.com/fundamentalvision/Deformable-DETR)]
  * [MLP-Mixer](https://arxiv.org/abs/2105.01601) an all-MLP model for image classification. [[Official Implementation](https://github.com/google-research/vision_transformer#mlp-mixer)]
  * [CLIP](https://arxiv.org/abs/2103.00020) for learning visual concepts from natural language supervision [[Official Implementation](https://github.com/openai/CLIP/tree/main/clip)]
  * [BERT](https://arxiv.org/abs/1810.04805) for language understanding. [[Official TF Implementation](https://github.com/google-research/bert)]
@@ -75,6 +76,10 @@ We share checkpoints of models from the following papers, trained on ImageNet:
 Please check [DETR directory](detr) for more information and link to download
 pretrained checkpoints.
 
+### Deformable DETR
+
+Please check [Deformable DETR directory](deformable_detr) for more information
+and link to download pretrained checkpoints.
 
 ### CLIP
 Please check [CLIP directory](clip) for more information and link to download

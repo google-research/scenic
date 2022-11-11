@@ -39,7 +39,7 @@ def slicer(cost, n_present_col, matching_fn):
     raise ValueError(
         f'Slicer requires that n_row ({n_row}) >= n_col ({n_col}).')
 
-  eye = np.eye(n_row, dtype=np.bool)
+  eye = np.eye(n_row, dtype=bool)
   matches = []
   for i in range(batch):
     present_col = max(n_present_col[i], 1)  # One col even if all are padded.

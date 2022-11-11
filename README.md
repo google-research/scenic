@@ -65,6 +65,7 @@ Baselines that were reproduced in Scenic:
 
 * [(ViT) An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929)
 * [(DETR) End-to-End Object Detection with Transformers](https://arxiv.org/abs/2005.12872)
+* [Deformable DETR: Deformable Transformers for End-to-End Object Detection](https://arxiv.org/abs/2010.04159)
 * [(CLIP) Learning Transferable Visual Models From Natural Language Supervision](https://arxiv.org/abs/2103.00020)
 * [MLP-Mixer: An all-MLP Architecture for Vision](https://arxiv.org/abs/2105.01601)
 * [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805)
