@@ -2,7 +2,6 @@
 
 from absl.testing import parameterized
 
-import flax.linen as nn
 from jax import random
 import jax.numpy as jnp
 import ml_collections
@@ -46,26 +45,6 @@ class ModelTest(tf.test.TestCase, parameterized.TestCase):
         'hidden_size': 16,
         'merge_axis': 'channel',
     })
-
-  @parameterized.parameters(
-      (8, True),
-      (16, False),
-  )
-  def test_multihead_dot_product_attention(self, out_dim, zero_init_out_kernel):
-    query = jnp.ones((4, 8, 8))
-    key_value = jnp.ones((4, 8, 16))
-    rngs = {'params': random.PRNGKey(0), 'dropout': random.PRNGKey(1)}
-    output, vars_dict = model.MultiHeadDotProductAttention(
-        num_heads=2,
-        out_features=out_dim,
-        out_kernel_init=nn.initializers.zeros if zero_init_out_kernel else
-        nn.initializers.xavier_uniform()).init_with_output(
-            rngs, query, key_value)
-    self.assertEqual(output.shape, (4, 8, out_dim))
-    if zero_init_out_kernel:
-      self.assertAllClose(output, jnp.zeros((4, 8, out_dim)))
-    self.assertSetEqual(
-        set(vars_dict['params'].keys()), {'query', 'value', 'key', 'out'})
 
   def test_cross_view_attention_encoder_block_same_layers(self):
     self.cross_view_fusion = ml_collections.ConfigDict({

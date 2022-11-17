@@ -265,6 +265,8 @@ class MultiHeadAttention(nn.Module):
     broadcast_dropout: Use a broadcasted dropout along batch dims.
     kernel_init: Initializer for the kernel of the Dense layers.
     bias_init: Initializer for the bias of the Dense layers.
+    out_kernel_init: Initializer for the kernel of the output Dense layers. If
+      None, kernel_init will be used.
     use_bias: Whether pointwise QKV dense transforms use bias.
     precision: Numerical precision of the computation see `jax.lax.Precision`
       for details.
@@ -281,6 +283,7 @@ class MultiHeadAttention(nn.Module):
   broadcast_dropout: bool = False
   kernel_init: Initializer = nn.linear.default_kernel_init
   bias_init: Initializer = nn.initializers.zeros
+  out_kernel_init: Optional[Initializer] = None
   use_bias: bool = True
   attention_fn: Callable[..., jnp.ndarray] = dot_product_attention
   precision: Optional[jax.lax.Precision] = None
@@ -378,10 +381,12 @@ class MultiHeadAttention(nn.Module):
     # pylint: enable=too-many-function-args
 
     # Back to the original inputs dimensions.
+    out_kernel_init = (self.out_kernel_init if self.out_kernel_init is not None
+                       else self.kernel_init)
     out = nn.DenseGeneral(
         features=features,
         axis=(-2, -1),
-        kernel_init=self.kernel_init,
+        kernel_init=out_kernel_init,
         bias_init=self.bias_init,
         use_bias=True,
         dtype=self.dtype,

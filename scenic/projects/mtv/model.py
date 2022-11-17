@@ -1,6 +1,6 @@
 """Implements the MTV model."""
 import functools
-from typing import Any, Callable, List, Iterable, Optional, Union, Sequence, Tuple
+from typing import Any, List, Union, Sequence, Tuple
 
 import flax.linen as nn
 import jax
@@ -58,137 +58,6 @@ def get_model_cls(model_name):
     raise ValueError('Unrecognized model: {}'.format(model_name))
 
 
-class MultiHeadDotProductAttention(nn.Module):
-  """Multi-head dot-product attention.
-
-    This class is branched from
-    https://github.com/google/flax/blob/main/flax/linen/attention.py.
-    The difference is that we added an option to zero-initialize the output
-    projection layer. We use this trick to insert cross attention layers inside
-    a MTV model without disturbing the pretrained weights. Note that if we
-    simply initialize all Query, Key, Value, and Out matrices to zeros, their
-    weights will not be updated during training.
-
-    Attributes:
-      num_heads: number of attention heads. Features (i.e. inputs_q.shape[-1])
-        should be divisible by the number of heads.
-      dtype: the dtype of the computation (default: float32)
-      param_dtype: the dtype passed to parameter initializers (default:
-        float32).
-      qkv_features: dimension of the key, query, and value.
-      out_features: dimension of the last projection
-      broadcast_dropout: bool: use a broadcasted dropout along batch dims.
-      dropout_rate: dropout rate
-      deterministic: if false, the attention weight is masked randomly using
-        dropout, whereas if true, the attention weights are deterministic.
-      precision: numerical precision of the computation see `jax.lax.Precision`
-        for details.
-      qkv_kernel_init: initializer for the kernel of the Dense layers.
-      out_kernel_init: initializer for the kernel of the output projection
-        layers.
-      qkv_bias_init: initializer for the bias of the Dense layers.
-      out_bias_init: initializer for the bias of the output projection.
-      use_bias: bool: whether pointwise QKVO dense transforms use bias.
-  """
-  num_heads: int
-  dtype: Any = jnp.float32
-  param_dtype: Any = jnp.float32
-  qkv_features: Optional[int] = None
-  out_features: Optional[int] = None
-  broadcast_dropout: bool = True
-  dropout_rate: float = 0.
-  deterministic: Optional[bool] = None
-  precision: Any = None
-  qkv_kernel_init: Callable[[Any, Iterable[int], Any],
-                            jnp.ndarray] = nn.initializers.xavier_uniform()
-  out_kernel_init: Callable[[Any, Iterable[int], Any],
-                            jnp.ndarray] = nn.initializers.xavier_uniform()
-  qkv_bias_init: Callable[[Any, Iterable[int], Any],
-                          jnp.ndarray] = nn.initializers.zeros
-  out_bias_init: Callable[[Any, Iterable[int], Any],
-                          jnp.ndarray] = nn.initializers.zeros
-  use_bias: bool = True
-
-  @nn.compact
-  def __call__(self,
-               inputs_q: jnp.ndarray,
-               inputs_kv: jnp.ndarray,
-               mask: Optional[jnp.ndarray] = None,
-               deterministic: Optional[bool] = None):
-    """Applies multi-head dot product attention on the input data.
-
-    Projects the inputs into multi-headed query, key, and value vectors,
-    applies dot-product attention and project the results to an output vector.
-
-    Args:
-      inputs_q: input queries of shape `[batch_sizes..., length, features]`.
-      inputs_kv: key/values of shape `[batch_sizes..., length, features]`.
-      mask: attention mask of shape `[batch_sizes..., num_heads, query_length,
-        key/value_length]`. Attention weights are masked out if their
-        corresponding mask value is `False`.
-      deterministic: if false, the attention weight is masked randomly using
-        dropout, whereas if true, the attention weights are deterministic.
-
-    Returns:
-      output of shape `[batch_sizes..., length, features]`.
-    """
-    if self.dropout_rate > 0.:  # Require `deterministic` only if using dropout.
-      deterministic = nn.merge_param('deterministic', self.deterministic,
-                                     deterministic)
-    features = self.out_features or inputs_q.shape[-1]
-    qkv_features = self.qkv_features or inputs_q.shape[-1]
-    assert qkv_features % self.num_heads == 0, (
-        'Memory dimension must be divisible by number of heads.')
-    head_dim = qkv_features // self.num_heads
-
-    dense = functools.partial(
-        nn.DenseGeneral,
-        axis=-1,
-        dtype=self.dtype,
-        param_dtype=self.param_dtype,
-        features=(self.num_heads, head_dim),
-        kernel_init=self.qkv_kernel_init,
-        bias_init=self.qkv_bias_init,
-        use_bias=self.use_bias,
-        precision=self.precision)
-    # project inputs_q to multi-headed q/k/v
-    # dimensions are then [batch..., length, n_heads, n_features_per_head]
-    query, key, value = (dense(name='query')(inputs_q),
-                         dense(name='key')(inputs_kv),
-                         dense(name='value')(inputs_kv))
-
-    dropout_rng = None
-    if not deterministic and self.dropout_rate > 0.:
-      dropout_rng = self.make_rng('dropout')
-
-    # apply attention
-    x = nn.dot_product_attention(
-        query,
-        key,
-        value,
-        mask=mask,
-        dropout_rng=dropout_rng,
-        dropout_rate=self.dropout_rate,
-        broadcast_dropout=self.broadcast_dropout,
-        deterministic=deterministic,
-        dtype=self.dtype,
-        precision=self.precision)
-    # back to the original inputs dimensions
-    out = nn.DenseGeneral(
-        features=features,
-        axis=(-2, -1),
-        batch_dims=(),
-        kernel_init=self.out_kernel_init,
-        bias_init=self.out_bias_init,
-        use_bias=self.use_bias,
-        dtype=self.dtype,
-        param_dtype=self.param_dtype,
-        precision=self.precision,
-        name='out')(
-            x)
-    return out
-
-
 class CrossViewAttentionEncoderBlock(nn.Module):
   """Crossview Transformer encoder layer.
 
@@ -229,27 +98,10 @@ class CrossViewAttentionEncoderBlock(nn.Module):
   attention_dropout_rate: float = 0.0
   stochastic_depth: float = 0.0
 
-  def get_stochastic_depth_mask(self, lyr: int, num_layers: int, x: jnp.ndarray,
-                                deterministic: bool) -> jnp.ndarray:
-    """Generate the stochastic depth mask in order to apply layer-drop.
-
-    Args:
-      lyr: The current layer.
-      num_layers: Number of layers in total.
-      x: Input tensor.
-      deterministic: Weather we are in the deterministic mode (e.g inference
-        time) or not.
-
-    Returns:
-      Stochastic depth mask.
-    """
-    stochastic_depth = (lyr / max(num_layers - 1, 1)) * self.stochastic_depth
-    if not deterministic and stochastic_depth:
-      shape = (x.shape[0],) + (1,) * (x.ndim - 1)
-      return jax.random.bernoulli(
-          self.make_rng('dropout'), stochastic_depth, shape)
-    else:
-      return 0.0
+  def _get_stochastic_depth_rate(self, cur_layer, view_idx):
+    """Returns the stochastic depth rate for the current layer and view."""
+    max_layer = max(self.view_configs[view_idx]['num_layers'] - 1, 1)
+    return (cur_layer / max_layer) * self.stochastic_depth
 
   def _apply_self_attentions(self, tokens: List[jnp.ndarray], cur_layer: int,
                              deterministic: bool) -> List[jnp.ndarray]:
@@ -267,9 +119,8 @@ class CrossViewAttentionEncoderBlock(nn.Module):
           dropout_rate=self.attention_dropout_rate,
           name=f'msa_view{view_idx}')(y, y)
       y = nn.Dropout(rate=self.dropout_rate)(y, deterministic)
-      tokens[view_idx] += y * (1.0 - self.get_stochastic_depth_mask(
-          cur_layer, self.view_configs[view_idx]['num_layers'], y,
-          deterministic))
+      r = self._get_stochastic_depth_rate(cur_layer, view_idx)
+      tokens[view_idx] += nn_layers.StochasticDepth(r)(y, deterministic)
     return tokens
 
   def _apply_cross_attention(
@@ -301,22 +152,18 @@ class CrossViewAttentionEncoderBlock(nn.Module):
           query.shape[-1]
           if self.cross_view_fusion.use_query_config else key_value.shape[-1])
 
-      y = MultiHeadDotProductAttention(
+      y = attention_layers.MultiHeadAttention(
           num_heads=num_heads,
           dtype=self.dtype,
           qkv_features=qkv_features,
-          qkv_kernel_init=nn.initializers.xavier_uniform(),
           out_kernel_init=nn.initializers.zeros,
-          broadcast_dropout=False,
-          deterministic=deterministic,
           dropout_rate=self.attention_dropout_rate,
           name=f'cross_attention_view{query_view_index}_{key_value_view_index}'
-      )(query, key_value)
+      )(query, key_value, deterministic=deterministic)
       y = nn.Dropout(rate=self.dropout_rate)(y, deterministic)
-      tokens[query_view_index] += (
-          y * (1.0 - self.get_stochastic_depth_mask(
-              cur_layer, self.view_configs[query_view_index]['num_layers'], y,
-              deterministic)))
+      r = self._get_stochastic_depth_rate(cur_layer, view_index)
+      tokens[query_view_index] += nn_layers.StochasticDepth(r)(y, deterministic)
+
     return tokens
 
   def _apply_mlp(self, tokens: List[jnp.ndarray], cur_layer: int,
@@ -335,10 +182,8 @@ class CrossViewAttentionEncoderBlock(nn.Module):
           bias_init=nn.initializers.normal(stddev=1e-6),
           name=f'mlp_view{view_idx}')(
               y, deterministic=deterministic)
-      tokens[view_idx] += (
-          y * (1.0 - self.get_stochastic_depth_mask(
-              cur_layer, self.view_configs[view_idx]['num_layers'], y,
-              deterministic)))
+      r = self._get_stochastic_depth_rate(cur_layer, view_idx)
+      tokens[view_idx] += nn_layers.StochasticDepth(r)(y, deterministic)
     return tokens
 
   @nn.compact
