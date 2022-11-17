@@ -18,6 +18,7 @@ import numpy as np
 from scenic.dataset_lib import dataset_utils
 from scenic.projects.mbt import train_utils as mbt_train_utils
 from scenic.projects.vivit import evaluation_lib
+from scenic.projects.vivit import train_utils as vivit_train_utils
 from scenic.train_lib_deprecated import lr_schedules
 from scenic.train_lib_deprecated import optimizers
 from scenic.train_lib_deprecated import pretrain_utils
@@ -288,7 +289,9 @@ def eval_step(
 
   metrics = metrics_fn(logits, batch)
   if return_logits_and_labels:
-    return metrics, logits, batch['label']
+    logits = jax.lax.all_gather(logits, 'batch')
+    labels = jax.lax.all_gather(batch['label'], 'batch')
+    return metrics, logits, labels
   return metrics
 
 
@@ -366,7 +369,9 @@ def test_step(
   batch['batch_mask'] = jnp.expand_dims(batch['batch_mask'][0], axis=0)
   metrics = metrics_fn(all_logits, batch)
   if return_logits_and_labels:
-    return metrics, all_logits, batch['label']
+    all_logits = jax.lax.all_gather(all_logits, 'batch')
+    labels = jax.lax.all_gather(batch['label'], 'batch')
+    return metrics, all_logits, labels
   return metrics
 
 
@@ -621,19 +626,11 @@ def train(
           e_metrics = eval_step_pmapped(train_state, eval_batch)
           if is_multilabel_model:
             e_metrics, logits_batch, labels_batch = e_metrics
-            eval_logits.append(
-                jax.device_get(
-                    logits_batch.reshape(  # pytype: disable=attribute-error
-                        [-1, n_classes])))
-            eval_labels.append(
-                jax.device_get(
-                    labels_batch.reshape(  # pytype: disable=attribute-error
-                        [-1, n_classes])))
+            eval_logits.append(vivit_train_utils.to_cpu(logits_batch))
+            eval_labels.append(vivit_train_utils.to_cpu(labels_batch))
           # Fetch e_metrics to host and store.
           eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
         if is_multilabel_model:
-          # Note that this is the Mean AP computed from the examples processed
-          # by a single host.
           additional_summary = evaluation_lib.compute_mean_average_precision(
               np.concatenate(eval_logits, axis=0),
               np.concatenate(eval_labels, axis=0),
@@ -681,14 +678,8 @@ def train(
           t_metrics = test_step_pmapped(train_state, test_batch)
           if is_multilabel_model:
             t_metrics, logits_batch, labels_batch = t_metrics
-            test_logits.append(
-                jax.device_get(
-                    logits_batch.reshape(  # pytype: disable=attribute-error
-                        [-1, n_classes])))
-            test_labels.append(
-                jax.device_get(
-                    labels_batch.reshape(  # pytype: disable=attribute-error
-                        [-1, n_classes])))
+            test_logits.append(vivit_train_utils.to_cpu(logits_batch))
+            test_labels.append(vivit_train_utils.to_cpu(labels_batch))
           # Fetch t_metrics to host and store.
           test_metrics.append(train_utils.unreplicate_and_get(t_metrics))
         if is_multilabel_model:
