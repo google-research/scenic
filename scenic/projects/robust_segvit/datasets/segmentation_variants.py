@@ -145,7 +145,9 @@ def get_dataset(
       eval_batch_size,
       split=validation_split,
       preprocess_example=preprocess_ex_eval,
-      data_dir=dataset_info.data_dir)
+      data_dir=dataset_info.data_dir,
+      shuffle_buffer_size=dataset_configs.get('shuffle_buffer_size', None),
+      cache=False)
 
   maybe_pad_batches_eval = functools.partial(
       dataset_utils.maybe_pad_batch, train=False, batch_size=eval_batch_size,

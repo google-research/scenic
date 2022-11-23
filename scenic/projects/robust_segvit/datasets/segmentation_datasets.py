@@ -277,7 +277,9 @@ def get_dataset(
       preprocess_example=preprocess_ex_train,
       augment_train_example=augment_ex,
       shuffle_seed=shuffle_seed,
-      data_dir=dataset_info.data_dir)
+      data_dir=dataset_info.data_dir,
+      shuffle_buffer_size=dataset_configs.get('shuffle_buffer_size', None),
+      cache=False)
 
   if dataset_service_address:
     if shuffle_seed is not None:
@@ -304,7 +306,9 @@ def get_dataset(
       eval_batch_size,
       split=validation_split,
       preprocess_example=preprocess_ex_eval,
-      data_dir=dataset_info.data_dir)
+      data_dir=dataset_info.data_dir,
+      shuffle_buffer_size=dataset_configs.get('shuffle_buffer_size', None),
+      cache=False)
 
   maybe_pad_batches_train = functools.partial(
       dataset_utils.maybe_pad_batch, train=True, batch_size=batch_size,
