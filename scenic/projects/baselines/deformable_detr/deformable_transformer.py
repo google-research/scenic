@@ -12,6 +12,7 @@ from typing import Sequence, Tuple
 import flax.linen as nn
 import jax
 import jax.numpy as jnp
+import ml_collections
 import numpy as np
 from scenic.projects.baselines.deformable_detr.attention import MultiScaleDeformableAttention
 from scenic.projects.baselines.detr.model import MultiHeadDotProductAttention
@@ -86,6 +87,7 @@ class DeformableDETREncoderLayer(nn.Module):
   num_reference_points: int
   ffn_dim: int
   dropout: float
+  compiler_config: ml_collections.ConfigDict
   dtype: jnp.dtype = jnp.float32
 
   @nn.compact
@@ -120,6 +122,8 @@ class DeformableDETREncoderLayer(nn.Module):
         num_heads=self.num_heads,
         num_levels=self.num_levels,
         num_points=self.num_reference_points,
+        compiler_config=self.compiler_config,
+        dtype=self.dtype,
         name='self_attn')(query, ref_points, src, pad_mask, train)
 
     x = nn.Dropout(rate=self.dropout)(x, deterministic=not train)
@@ -164,6 +168,7 @@ class DeformableDETREncoder(nn.Module):
   num_reference_points: int
   ffn_dim: int
   dropout: float
+  compiler_config: ml_collections.ConfigDict
   dtype: jnp.dtype = jnp.float32
 
   @nn.compact
@@ -203,6 +208,7 @@ class DeformableDETREncoder(nn.Module):
           num_reference_points=self.num_reference_points,
           ffn_dim=self.ffn_dim,
           dropout=self.dropout,
+          compiler_config=self.compiler_config,
           dtype=self.dtype,
           name=f'layer{i}')(
               x, pos_embed, ref_points, pad_mask, train=train)
@@ -234,6 +240,7 @@ class DeformableDETRDecoderLayer(nn.Module):
   num_reference_points: int
   ffn_dim: int
   dropout: float
+  compiler_config: ml_collections.ConfigDict
   dtype: jnp.dtype = jnp.float32
 
   @nn.compact
@@ -284,6 +291,8 @@ class DeformableDETRDecoderLayer(nn.Module):
         num_heads=self.num_heads,
         num_points=self.num_reference_points,
         embed_dim=self.embed_dim,
+        compiler_config=self.compiler_config,
+        dtype=self.dtype,
         name='cross_attn')(query + query_pos, ref_points, value, pad_mask,
                            train)
 
@@ -339,6 +348,7 @@ class DeformableDETRDecoder(nn.Module):
   ffn_dim: int
   bbox_embeds: Sequence[nn.Module]
   dropout: float
+  compiler_config: ml_collections.ConfigDict
   dtype: jnp.dtype = jnp.float32
 
   @nn.compact
@@ -392,6 +402,7 @@ class DeformableDETRDecoder(nn.Module):
           num_reference_points=self.num_reference_points,
           ffn_dim=self.ffn_dim,
           dropout=self.dropout,
+          compiler_config=self.compiler_config,
           dtype=self.dtype,
           name=f'layer{i}')(
               query=output,
@@ -511,6 +522,7 @@ class DeformableDETRTransformer(nn.Module):
     num_dec_points: Number of decoder points in deformable attention.
     ffn_dim: Size of feed-forward network embedding.
     dropout: Dropout rate.
+    compiler_config: Compiler configuration.
     dtype: Data type of the computation (default: float32).
   """
 
@@ -525,6 +537,7 @@ class DeformableDETRTransformer(nn.Module):
   bbox_embeds: Sequence[nn.Module]
   ffn_dim: int
   dropout: float
+  compiler_config: ml_collections.ConfigDict
   dtype: jnp.dtype = jnp.float32
 
   @nn.compact
@@ -560,6 +573,7 @@ class DeformableDETRTransformer(nn.Module):
         ffn_dim=self.ffn_dim,
         num_reference_points=self.num_enc_points,
         dropout=self.dropout,
+        compiler_config=self.compiler_config,
         dtype=self.dtype,
         name='encoder')
 
@@ -603,6 +617,8 @@ class DeformableDETRTransformer(nn.Module):
         num_reference_points=self.num_dec_points,
         bbox_embeds=self.bbox_embeds,
         dropout=self.dropout,
+        compiler_config=self.compiler_config,
+        dtype=self.dtype,
         name='decoder')(
             value=x,
             query=query,

@@ -16,6 +16,11 @@ def get_coco_config():
   config = ml_collections.ConfigDict()
   config.experiment_name = 'coco_detection_deformable_detr'
 
+  # Compiler
+  config.compiler_config = ml_collections.ConfigDict()
+  config.compiler_config.train_remat = True
+  config.compiler_config.attention_batching_mode = 'auto'
+
   # Dataset.
   config.dataset_name = 'coco_deformable_detr_detection'
   config.dataset_configs = ml_collections.ConfigDict()

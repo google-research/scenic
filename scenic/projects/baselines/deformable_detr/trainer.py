@@ -347,8 +347,7 @@ def train_and_evaluate(
       loss_and_metrics_fn=model.loss_and_metrics_function,
       logits_to_probs_fn=model.logits_to_probs,
       debug=config.debug_eval)
-  eval_step_pmapped = jax.pmap(
-      eval_step, axis_name='batch', donate_argnums=(1,))
+  eval_step_pmapped = jax.pmap(eval_step, axis_name='batch')
 
   # Ceil rounding such that we include the last incomplete batch.
   eval_batch_size = config.get('eval_batch_size', config.batch_size)

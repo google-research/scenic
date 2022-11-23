@@ -6,6 +6,7 @@ import flax.linen as nn
 import jax
 from jax import random
 import jax.numpy as jnp
+import ml_collections
 import numpy as np
 from scenic.projects.baselines.deformable_detr.deformable_transformer import BBoxCoordPredictor
 from scenic.projects.baselines.deformable_detr.deformable_transformer import DeformableDETRDecoder
@@ -16,6 +17,13 @@ from scenic.projects.baselines.deformable_detr.deformable_transformer import Def
 from scenic.projects.baselines.deformable_detr.deformable_transformer import get_encoder_reference_points
 from scenic.projects.baselines.deformable_detr.deformable_transformer import get_mask_valid_ratio
 from scenic.projects.baselines.deformable_detr.deformable_transformer import inverse_sigmoid
+
+compiler_config = ml_collections.ConfigDict(
+    dict(
+        train_remat=True,
+        eval_remat=False,
+        attention_batching_mode='auto',
+    ))
 
 
 class DeformableDETREncoderLayerTest(parameterized.TestCase):
@@ -54,7 +62,9 @@ class DeformableDETREncoderLayerTest(parameterized.TestCase):
         num_levels=num_levels,
         num_reference_points=1,
         dropout=0.1,
-        ffn_dim=16)
+        ffn_dim=16,
+        compiler_config=compiler_config,
+    )
 
     out, init_params = model.init_with_output(rng, src, pos_embed, ref_points,
                                               pad_mask, False)
@@ -103,6 +113,7 @@ class DeformableDETREncoderTest(parameterized.TestCase):
         num_reference_points=1,
         ffn_dim=8,
         dropout=0.1,
+        compiler_config=compiler_config,
     )
 
     out, init_params = model.init_with_output(rng, src, pos_embed, ref_points,
@@ -149,6 +160,7 @@ class DeformableDETRDecoderLayerTest(parameterized.TestCase):
         num_reference_points=1,
         ffn_dim=32,
         dropout=0.1,
+        compiler_config=compiler_config,
     )
 
     params = model.init(rng, query, query_pos, ref_points, value, pad_mask,
@@ -205,7 +217,8 @@ class DeformableDETRDecoderTest(parameterized.TestCase):
         num_reference_points=1,
         bbox_embeds=bbox_embeds,
         ffn_dim=16,
-        dropout=0.1
+        dropout=0.1,
+        compiler_config=compiler_config,
     )
 
     dec_input = dict(
@@ -304,6 +317,7 @@ class DeformableDETRTransformerTest(parameterized.TestCase):
         num_enc_points=1,
         num_dec_points=2,
         dropout=0.1,
+        compiler_config=compiler_config,
     )
 
     (out, ref_boxes, init_ref_points), init_params = model.init_with_output(

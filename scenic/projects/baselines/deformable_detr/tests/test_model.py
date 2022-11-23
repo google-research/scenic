@@ -8,10 +8,9 @@ from flax import jax_utils
 import jax
 from jax import random
 import jax.numpy as jnp
-import ml_collections
 import numpy as np
+from scenic.projects.baselines.deformable_detr.configs import mini_config
 from scenic.projects.baselines.deformable_detr.model import compute_cost
-from scenic.projects.baselines.deformable_detr.model import DeformableDETR
 from scenic.projects.baselines.deformable_detr.model import DeformableDETRModel
 
 
@@ -31,35 +30,6 @@ def sample_cxcywh_bbox(key, batch_shape):
   return bbox
 
 
-class DeformableDETRTest(parameterized.TestCase):
-  """Tests for DeformableDETR model."""
-
-  def test_deformable_detr(self):
-    """Test DeformableDETR output shape."""
-    rng = random.PRNGKey(8877)
-    bs, nlevels, nqueries, nclasses = 2, 4, 10, 5
-    x = jnp.ones((bs, 300, 128, 3))
-    m = DeformableDETR(
-        num_classes=nclasses,
-        num_queries=nqueries,
-        num_feature_levels=nlevels,
-        embed_dim=32,
-        enc_embed_dim=32,
-        num_heads=2,
-        num_enc_layers=1,
-        num_dec_layers=1,
-        num_enc_points=1,
-        num_dec_points=1,
-        transformer_ffn_dim=32,
-        backbone_num_filters=16,
-        backbone_num_layers=18,
-        dropout=0.1)
-
-    out, _ = m.init_with_output(rng, x)
-    self.assertSequenceEqual(out['pred_logits'].shape, (bs, nqueries, nclasses))
-    self.assertSequenceEqual(out['pred_boxes'].shape, (bs, nqueries, 4))
-
-
 class DeformableDETRModelLossTest(parameterized.TestCase):
   """Test DeformableDETRModel loss test."""
 
@@ -69,31 +39,7 @@ class DeformableDETRModelLossTest(parameterized.TestCase):
     self.num_classes = 5
     self.input_shape = (3, 128, 128, 3)
     self.num_decoder_layers = 2
-    config = ml_collections.ConfigDict(
-        dict(
-            num_classes=self.num_classes,
-            embed_dim=32,
-            enc_embed_dim=32,
-            num_queries=12,
-            num_feature_levels=4,
-            num_heads=4,
-            num_encoder_layers=2,
-            num_decoder_layers=self.num_decoder_layers,
-            num_enc_points=1,
-            num_dec_points=1,
-            transformer_ffn_dim=256,
-            backbone_num_filters=16,
-            backbone_num_layers=18,
-            dropout_rate=0.,
-            attention_dropout_rate=0.1,
-            focal_loss_alpha=0.25,
-            focal_loss_gamma=2.0,
-            class_loss_coef=1.0,
-            bbox_loss_coef=1.0,
-            giou_loss_coef=1.0,
-            eos_coef=1.0,
-            aux_loss=True,
-        ))
+    config = mini_config.get_config()
 
     # Create and initialize the model.
     model_cls = DeformableDETRModel
