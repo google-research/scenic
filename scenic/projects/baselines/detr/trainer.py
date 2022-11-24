@@ -549,5 +549,5 @@ def train_and_evaluate(
         extra_eval_summary=last_eval_future.result(),
         writer=writer,
         metrics_normalizer_fn=metrics_normalizer_fn)
-  train_utils.barrier()
+  jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()
   return train_state, train_summary, eval_summary

@@ -407,6 +407,6 @@ def train(
   writer.flush()
 
   # Wait until computations are done before exiting.
-  jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()
+  train_utils.barrier_across_hosts()
 
   return train_summary, eval_summary

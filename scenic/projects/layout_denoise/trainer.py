@@ -19,7 +19,6 @@ import jax.profiler
 import ml_collections
 import numpy as np
 from scenic.dataset_lib import dataset_utils
-from scenic.google.xm import xm_utils
 from scenic.projects.baselines.detr import train_utils as detr_train_utils
 from scenic.projects.layout_denoise import train_utils as layout_train_utils
 from scenic.projects.layout_denoise.datasets import dataset
@@ -759,5 +758,5 @@ def train(
 
   pool.shutdown()
   # Wait until computations are done before exiting.
-  train_utils.barrier()
+  jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()
   return train_state, train_summary, eval_dict

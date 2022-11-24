@@ -443,6 +443,6 @@ def train(
           utils.save_checkpoint(workdir, train_state)
     chrono.resume()  # un-pause now
   # Wait until computations are done before exiting.
-  jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()
+  train_utils.barrier_across_hosts()
   # Return the train and eval summary after last step for regresesion testing.
   return train_state, train_summary, eval_summary

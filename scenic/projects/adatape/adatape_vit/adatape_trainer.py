@@ -648,6 +648,6 @@ def train(
         chrono.resume()  # Un-pause now.
 
   # Wait until computations are done before exiting.
-  jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()
+  train_utils.barrier_across_hosts()
   # Return the train and eval summary after last step for regression testing.
   return train_state, train_summary, eval_summary

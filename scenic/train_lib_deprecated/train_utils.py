@@ -1005,3 +1005,7 @@ class Chrono:
     if self.pause_start:
       self.paused_time += time.time() - self.pause_start
       self.pause_start = None
+
+
+def barrier_across_hosts():
+  jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()
