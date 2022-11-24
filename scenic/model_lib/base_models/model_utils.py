@@ -448,7 +448,7 @@ def l2_regularization(params: PyTree):
     L2 norm.
 
   """
-  weight_penalty_params = jax.tree_leaves(params)
+  weight_penalty_params = jax.tree_util.tree_leaves(params)
   return sum([jnp.sum(x**2) for x in weight_penalty_params if x.ndim > 1])
 
 

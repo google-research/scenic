@@ -486,7 +486,7 @@ def sync_model_state_across_replicas(train_state: TrainState) -> TrainState:
   """
   # TODO(dehghani): We simply do "mean" here and this doesn't work with
   #   statistics like variance. (check the discussion in Flax for fixing this).
-  if jax.tree_leaves(train_state.model_state):
+  if jax.tree_util.tree_leaves(train_state.model_state):
     # If the model_state is not empty.
     new_model_state = train_state.model_state.copy(
         {'batch_stats': pmap_mean(train_state.model_state['batch_stats'])})

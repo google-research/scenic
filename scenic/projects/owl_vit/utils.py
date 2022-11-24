@@ -121,7 +121,7 @@ def dot_product_similarity(x: jnp.ndarray,
 
 def l2_norm(tree):
   """Computes the l2 norm of a pytree of arrays."""
-  leaves = jax.tree_leaves(tree)
+  leaves = jax.tree_util.tree_leaves(tree)
   return jnp.sqrt(sum(jnp.vdot(x, x) for x in leaves))
 
 

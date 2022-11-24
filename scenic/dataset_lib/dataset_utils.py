@@ -111,7 +111,7 @@ def maybe_pad_batch(batch: Dict[str, PyTree],
   """
   assert batch_dim >= 0, f'batch_dim=={batch_dim} is expected to be >= 0'
   if inputs_key is None:
-    sample_tensor = jax.tree_leaves(batch)[0]
+    sample_tensor = jax.tree_util.tree_leaves(batch)[0]
   else:
     sample_tensor = batch[inputs_key]
   batch_pad = batch_size - sample_tensor.shape[batch_dim]

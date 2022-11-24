@@ -118,10 +118,10 @@ def train_step(
   new_params = optax.apply_updates(train_state.params, updates)
 
   training_logs['l2_grads'] = jnp.sqrt(
-      sum([jnp.vdot(g, g) for g in jax.tree_leaves(grad)]))
-  ps = jax.tree_leaves(new_params)
+      sum([jnp.vdot(g, g) for g in jax.tree_util.tree_leaves(grad)]))
+  ps = jax.tree_util.tree_leaves(new_params)
   training_logs['l2_params'] = jnp.sqrt(sum([jnp.vdot(p, p) for p in ps]))
-  us = jax.tree_leaves(updates)
+  us = jax.tree_util.tree_leaves(updates)
   training_logs['l2_updates'] = jnp.sqrt(sum([jnp.vdot(u, u) for u in us]))
   # TODO(dehghani): Can we get this from the optimizer instead?
   training_logs['learning_rate'] = lr_fn(train_state.global_step)
