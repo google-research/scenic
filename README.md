@@ -119,6 +119,7 @@ $ python scenic/main.py -- \
 
 Note that for specific projects and baselines, you might need to install extra
 packages that are mentioned in their `README.md` or `requirements.txt` files.
+For Google Gloud Platform users, we suggest to read the doc [here](https://github.com/google-research/scenic/usage/setup.md).
 
 [Here](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/common_lib/colabs/scenic_playground.ipynb)
 is also a minimal colab to train a simple feed-forward model using Scenic.
