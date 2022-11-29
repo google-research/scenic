@@ -192,6 +192,54 @@ def weighted_topk_correctly_classified(logits: jnp.ndarray,
   return correct.astype(jnp.int32)
 
 
+def weighted_precision_at_k(logits: jnp.ndarray,
+                            multi_hot_target: jnp.ndarray,
+                            weights: Optional[jnp.ndarray] = None,
+                            k: int = 5) -> jnp.ndarray:
+  """Computes fraction of correct predictions among the top k predictions.
+
+  This computes the weighted precision-at-k (i.e. the fraction of true positives
+  among the top k predicted classes) in a single, potentially padded minibatch.
+  If the minibatch/inputs is padded (i.e., it contains null examples/pad pixels)
+  it is assumed that weights is a binary mask where 0 indicates that the
+  example/pixel is null/padded. We assume the trainer will aggregate and divide
+  by number of samples.
+
+  Args:
+    logits: Output of model in shape [batch, ..., num_classes].
+    multi_hot_target: Multi hot vector of shape [batch, ..., num_classes].
+    weights: None or array of shape [batch, ...] (rank of one_hot_target -1).
+    k: Number of top predictions to consider.
+
+  Returns:
+    The precision for each example in the batch, given top k predictions.
+  """
+  if logits.ndim != multi_hot_target.ndim:
+    raise ValueError(
+        'Incorrect shapes. Got shape %s logits and %s one_hot_target' %
+        (str(logits.shape), str(multi_hot_target.shape)))
+  if k <= 0 or k > logits.shape[-1]:
+    raise ValueError('Incorrect k. k must be in [1,%s]' %
+                     str(logits.shape[-1]))
+
+  topk_pred = jax.lax.top_k(logits, k)[1]
+
+  num_classes = logits.shape[-1]
+  multi_hot_pred = jnp.sum(
+      jax.nn.one_hot(topk_pred, num_classes=num_classes), axis=-2)
+
+  true_positive = jnp.sum(
+      multi_hot_pred * multi_hot_target, axis=-1).astype(jnp.float32)
+  # Above, the model is forced to predict exactly k positive classes, so the sum
+  # of true and false positives is equal to k:
+  precision = true_positive / k
+
+  if weights is not None:
+    precision = apply_weights(precision, weights)
+
+  return precision
+
+
 def weighted_recall(logits: Array, multi_hot_target: Array,
                     weights: Optional[Array] = None) -> Array:
   """Computes weighted recall given the top k prediction.
