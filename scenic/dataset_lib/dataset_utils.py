@@ -521,7 +521,8 @@ def make_pipeline(data,
                   ignore_errors=False,
                   dataset_service_address=None):
   """Makes an input pipeline for `data`."""
-  assert cache in ('loaded', 'batched', False, None)
+  if cache not in ('loaded', 'batched', False, None):
+    raise ValueError(f'Unknown cache value {cache}')
 
   data = _add_tpu_host_options(data)
 

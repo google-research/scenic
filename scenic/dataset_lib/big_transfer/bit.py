@@ -48,7 +48,6 @@ def get_dataset(*,
                 batch_size,
                 eval_batch_size,
                 num_shards,
-                cache='loaded',
                 dtype_str='float32',
                 shuffle_seed=0,
                 rng=None,
@@ -60,8 +59,6 @@ def get_dataset(*,
     batch_size: int; Determines the train batch size.
     eval_batch_size: int; Determines the evaluation batch size.
     num_shards: int;  Number of shards --> batch shape: [num_shards, bs, ...].
-    cache: str; Whether to cache training data. None: no caching. 'loaded':
-      cache right after loading a datapoint. 'batched': cache whole batches.
     dtype_str: Data type of the image (e.g. 'float32').
     shuffle_seed: int; Seed for shuffling the training data. Not used.
     rng: JAX rng key, which can be used for augmentation, shuffling, etc.
@@ -89,6 +86,9 @@ def get_dataset(*,
   shuffle_buffer_size = (1000 if num_shards == 1 else
                          dataset_configs.shuffle_buffer_size)
 
+  # Whether to cache training data. None: no caching. 'loaded':
+  # cache right after loading a datapoint. 'batched': cache whole batches.
+  cache = dataset_configs.get('cache', 'loaded')
   train_ds = dataset_utils.get_data(
       dataset=dataset_configs.dataset,
       split=dataset_configs.train_split,
