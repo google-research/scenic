@@ -33,6 +33,11 @@
     > and more accurate video/image processing tasks. More can be found in
     > the [paper](https://arxiv.org/abs/2106.11297).
 
+*   [Token Turing Machines](token_turing)
+
+    > Token Turing Machines are a sequential, autoregressive transformer
+    > architecture with external memory. More can be found in the
+    > [paper](https://arxiv.org/abs/2106.11297).
 
 *   [FastViT](fast_vit)
 

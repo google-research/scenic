@@ -24,3 +24,16 @@ encoder applying a TTM to a fixed sized input, which essentially repeats
 ```TokenTuringMachineUnit```. The encoder implementation also has multiple
 memory modes and processing unit supports, which are specified in the code.
 
+
+## Reference
+
+If you use TTM, please use the following BibTeX entry.
+
+```
+@InProceedings{ryoo2022ttm,
+  title={Token Turing Machines},
+  author={Ryoo, Michael S and Gopalakrishnan, Keerthana and Kahatapitiya, Kumara and Xiao, Ted and Rao, Kanishka and Stone, Austin and Lu, Yao and Ibarz, Julian and Arnab, Anurag},
+  booktitle={arXiv preprint arXiv:2211.09119},
+  year={2022}
+}
+```
