@@ -263,6 +263,6 @@ class DummyExecutor(futures.Executor):
         future.set_result(result)
       return future
 
-  def shutdown(self, wait: bool = True):
+  def shutdown(self, wait: bool = True):  # pytype: disable=signature-mismatch  # overriding-parameter-name-checks
     with self._shutdown_lock:
       self._shutdown = True
