@@ -35,6 +35,19 @@ import tensorflow as tf
 from official.vision.image_classification import augment
 
 
+def _get_shape(x):
+  """Gets tensor shape as a list, allowing mixing static and dynamic shapes."""
+  dynamic_shape = tf.shape(x)
+  if x.shape.ndims is None:
+    return dynamic_shape
+  static_shape = x.shape.as_list()
+  shapes = [
+      static_shape[i] if static_shape[i] is not None else dynamic_shape[i]
+      for i in range(x.shape.ndims)
+  ]
+  return shapes
+
+
 def _fill_rectangle_video(image,
                           center_width,
                           center_height,
@@ -635,9 +648,10 @@ def cutout(big_image, pad_size, num_frames, replace=0) -> tf.Tensor:
   Returns:
     An image Tensor that is of type uint8.
   """
+  big_image_shape = _get_shape(big_image)
   image = tf.reshape(big_image, [
-      num_frames, big_image.shape[0] // num_frames, big_image.shape[1],
-      big_image.shape[2]
+      num_frames, big_image_shape[0] // num_frames, big_image_shape[1],
+      big_image_shape[2]
   ])
   image_height = tf.shape(image)[1]
   image_width = tf.shape(image)[2]
@@ -760,7 +774,7 @@ def distort_image_with_randaugment(frames,
       # 'Rotate', 'ShearX', 'ShearY', 'TranslateX', 'TranslateY',
   ]
 
-  input_shape = frames.shape
+  input_shape = _get_shape(frames)
   num_frames = input_shape[0]
   image = tf.reshape(frames, [-1, frames.shape[2], frames.shape[3]])
   input_image_type = image.dtype
