@@ -886,7 +886,6 @@ def accumulate_gradients(
     def get_microbatch(batch: Dict[str, jnp.ndarray],
                        idx: int) -> Dict[str, jnp.ndarray]:
       """Fetch microbatch slice from the given batch."""
-      assert microbatch_size * idx < batch_size
       return jax.tree_map(
           lambda x: x.reshape((-1, microbatch_size) + x.shape[1:])[idx], batch)
 
