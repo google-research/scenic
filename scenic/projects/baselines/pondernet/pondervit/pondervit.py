@@ -1,4 +1,4 @@
-"""Universal Vision Transformer with Adaptive Computation Time."""
+"""Vision Transformer with PonderNet."""
 
 from typing import Any, Optional
 
@@ -231,7 +231,7 @@ class PonderNetEncoder(nn.Module):
 
 
 class PonderViT(nn.Module):
-  """Universall Vision Transformer model.
+  """Pondernet Vision Transformer model.
 
     Attributes:
     num_classes: Number of output classes.

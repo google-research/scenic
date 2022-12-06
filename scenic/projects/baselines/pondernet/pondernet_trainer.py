@@ -1,4 +1,4 @@
-"""Training script with transfer learning utilities."""
+"""Training script."""
 
 import functools
 from typing import Any, Callable, Dict, Iterator, Tuple, Optional, Type

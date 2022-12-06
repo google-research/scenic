@@ -31,6 +31,22 @@ from scenic.train_lib import lr_schedules
 from scenic.train_lib import optimizers
 
 
+def find_states(opt_state, cls):
+  leaves = jax.tree_util.tree_leaves(
+      opt_state, is_leaf=lambda node: isinstance(node, cls))
+  return [leaf for leaf in leaves if isinstance(leaf, cls)]
+
+
+def get_step(opt_state):
+  """Returns `ScaleByScheduleState.count` from `opt_state` as an integer."""
+  counts = {
+      int(state.count)
+      for state in find_states(opt_state, optax.ScaleByScheduleState)
+  }
+  assert len(counts) == 1, f'Expected exactly 1 ScaleByScheduleState: {counts}'
+  return next(iter(counts))
+
+
 def _make_mask_trees(
     params,
     patterns_names_values: Union[Sequence[Tuple[str, str, Any]],
