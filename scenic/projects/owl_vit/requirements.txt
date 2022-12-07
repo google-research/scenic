@@ -8,4 +8,4 @@ git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI
 lvis
 
 # To import Sinkhorn matcher:
-git+https://github.com/ott-jax/ott@main
+ott-jax
