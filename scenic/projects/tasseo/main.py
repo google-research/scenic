@@ -23,6 +23,7 @@ from scenic.projects.tasseo.datasets import chrmID_big_metaphase_context_dataset
 from scenic.projects.tasseo.datasets import chrmID_dataset
 from scenic.projects.tasseo.datasets import chrmID_metaphase_context_dataset
 from scenic.projects.tasseo.datasets import longtail_baseline_dataset
+from scenic.projects.tasseo.datasets import longtail_rhs_baseline_dataset
 from scenic.projects.tasseo.datasets import metaphase_sexid_dataset
 # pylint: enable=unused-import
 from scenic.train_lib import train_utils

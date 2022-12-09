@@ -124,7 +124,7 @@ def get_hyper(hyper):
   test_fold_nums = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
   # wids corresponding to pattern/test_fold combination.
-  wids = [(39359226, i) for i in range(1, 41)]
+  wids = [(43892109, i) for i in range(1, 41)]
   test_set_domain = hyper.product([
       hyper.sweep('config.dataset_configs.pattern_pathname', pattern_pathnames),
       hyper.sweep('config.dataset_configs.test_fold_num', test_fold_nums),
