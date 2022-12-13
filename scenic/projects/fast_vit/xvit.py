@@ -422,9 +422,14 @@ class XViT(nn.Module):
       if transformer_encoder_type in ['grid', 'grid_attention']:
         # First put patches of patches in rows. (we already projected pixels to
         # patches in the stem and at this level, the input tokens are patches).
-        # TODO(dehghani): Check if nn_ops.extract_image_patches is faster.
         pp_size = self.transformer_encoder_configs.patches_of_patches_size
-        x = nn_ops.extract_patches(lhs=x, rhs_shape=pp_size, strides=pp_size)
+        x = nn_ops.extract_image_patches(
+            lhs=x,
+            rhs_shape=(1,) + pp_size + (1,),
+            strides=(1,) + pp_size + (1,),
+            padding='VALID',
+            rhs_dilation=(1,) * 4
+        )
         # TODO(dehghani): Check if we can output a 4D tensor directly and get
         #  rid of this reshape.
         bs, ph, pw, h, w, c = x.shape
@@ -436,6 +441,7 @@ class XViT(nn.Module):
         elif transformer_encoder_type == 'grid_attention':
           transformer_encoder_type = 'axial_attention'
 
+      cls_token = x[:, 0, 0]
       x = EncoderAxial(
           mlp_dim=self.mlp_dim,
           num_layers=self.num_layers,
@@ -446,7 +452,6 @@ class XViT(nn.Module):
           attention_dropout_rate=self.attention_dropout_rate,
           name='Transformer')(
               x, train=train)
-      cls_token = x[:, 0, 0]
 
     else:
       raise ValueError(
