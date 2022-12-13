@@ -60,7 +60,8 @@ def box_yxyx_to_cxcywh(x: Array, np_backbone: PyModule = jnp) -> Array:
 def box_iou(boxes1: Array,
             boxes2: Array,
             np_backbone: PyModule = jnp,
-            all_pairs: bool = True) -> Array:
+            all_pairs: bool = True,
+            eps: float = 1e-6) -> Array:
   """Computes IoU between two sets of boxes.
 
   Boxes are in [x, y, x', y'] format [x, y] is top-left, [x', y'] is bottom
@@ -72,6 +73,7 @@ def box_iou(boxes1: Array,
       number of boxes if all_pairs is True.
     np_backbone: numpy module: Either the regular numpy package or jax.numpy.
     all_pairs: Whether to compute IoU between all pairs of boxes or not.
+    eps: Epsilon for numerical stability.
 
   Returns:
     If all_pairs == True, returns the pairwise IoU cost matrix of shape
@@ -101,7 +103,7 @@ def box_iou(boxes1: Array,
     # union = sum of areas - intersection
     union = area1[..., :, None] + area2[..., None, :] - intersection
 
-    iou = intersection / (union + 1e-6)
+    iou = intersection / (union + eps)
 
   else:
     # Compute top-left and bottom-right corners of the intersection between
@@ -120,8 +122,8 @@ def box_iou(boxes1: Array,
     # union = sum of areas - intersection.
     union = area1 + area2 - intersection
 
-    # Somehow the PyTorch implementation does not use +1e-6 to avoid 1/0 cases.
-    iou = intersection / (union + 1e-6)
+    # Somehow the PyTorch implementation does not use eps to avoid 1/0 cases.
+    iou = intersection / (union + eps)
 
   return iou, union
 
@@ -129,7 +131,8 @@ def box_iou(boxes1: Array,
 def generalized_box_iou(boxes1: Array,
                         boxes2: Array,
                         np_backbone: PyModule = jnp,
-                        all_pairs: bool = True) -> Array:
+                        all_pairs: bool = True,
+                        eps: float = 1e-6) -> Array:
   """Generalized IoU from https://giou.stanford.edu/.
 
   The boxes should be in [x, y, x', y'] format specifying top-left and
@@ -141,6 +144,7 @@ def generalized_box_iou(boxes1: Array,
     np_backbone: Numpy module: Either the regular numpy package or jax.numpy.
     all_pairs: Whether to compute generalized IoU from between all-pairs of
       boxes or not. Note that if all_pairs == False, we must have m==n.
+    eps: Epsilon for numerical stability.
 
   Returns:
     If all_pairs == True, returns a [bs, n, m] pairwise matrix, of generalized
@@ -151,7 +155,7 @@ def generalized_box_iou(boxes1: Array,
   # assert (boxes1[:, :, 2:] >= boxes1[:, :, :2]).all()
   # assert (boxes2[:, :, 2:] >= boxes2[:, :, :2]).all()
   iou, union = box_iou(
-      boxes1, boxes2, np_backbone=np_backbone, all_pairs=all_pairs)
+      boxes1, boxes2, np_backbone=np_backbone, all_pairs=all_pairs, eps=eps)
 
   # Generalized IoU has an extra term which takes into account the area of
   # the box containing both of these boxes. The following code is very similar
@@ -173,8 +177,8 @@ def generalized_box_iou(boxes1: Array,
   area = wh[..., 0] * wh[..., 1]  # Either [bs, n] or [bs, n, m].
 
   # Finally, compute generalized IoU from IoU, union, and area.
-  # Somehow the PyTorch implementation does not use +1e-6 to avoid 1/0 cases.
-  return iou - (area - union) / (area + 1e-6)
+  # Somehow the PyTorch implementation does not use eps to avoid 1/0 cases.
+  return iou - (area - union) / (area + eps)
 
 
 ### Rotated Box Utilties ###
