@@ -60,7 +60,7 @@ def get_coco_config():
   config.num_training_epochs = num_epochs
   config.rng_seed = 0
   config.batch_size = batch_size
-  config.eval_batch_size = 32
+  config.eval_batch_size = batch_size * 2
 
   # Optimization.
   config.optimizer_config = ml_collections.ConfigDict()
@@ -82,7 +82,7 @@ def get_coco_config():
   # Logging.
   config.write_summary = True
   config.xprof = True  # Profile using xprof.
-  config.log_summary_steps = 50  # Train summary steps.
+  config.log_summary_steps = 200  # Train summary steps.
   # Expensive summary operations freq.
   config.log_large_summary_steps = steps_per_epoch.identity()
   # Train steps before eval, typically one epoch.

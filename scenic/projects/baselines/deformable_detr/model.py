@@ -13,12 +13,12 @@ from scenic.model_lib.base_models import base_model
 from scenic.model_lib.base_models import box_utils
 from scenic.model_lib.base_models import model_utils
 from scenic.projects.baselines.deformable_detr.backbone import DeformableDETRBackbone
+from scenic.projects.baselines.deformable_detr.backbone import InputPosEmbeddingSine
 from scenic.projects.baselines.deformable_detr.backbone import mask_for_shape
 from scenic.projects.baselines.deformable_detr.deformable_transformer import BBoxCoordPredictor
 from scenic.projects.baselines.deformable_detr.deformable_transformer import DeformableDETRTransformer
 from scenic.projects.baselines.deformable_detr.deformable_transformer import inverse_sigmoid
 from scenic.projects.baselines.deformable_detr.deformable_transformer import pytorch_kernel_init
-from scenic.projects.baselines.detr.model import InputPosEmbeddingSine
 
 ArrayDict = Dict[str, jnp.ndarray]
 MetricsDict = Dict[str, Tuple[jnp.ndarray, jnp.ndarray]]
@@ -80,7 +80,8 @@ def compute_cost(
   cost_giou = -box_utils.generalized_box_iou(
       box_utils.box_cxcywh_to_xyxy(out_bbox),
       box_utils.box_cxcywh_to_xyxy(tgt_bbox),
-      all_pairs=True)
+      all_pairs=True,
+      eps=1e-8)
 
   total_cost = (
       bbox_loss_coef * cost_bbox + class_loss_coef * cost_class +
@@ -181,7 +182,8 @@ def loss_boxes(*,
   loss_giou = 1 - box_utils.generalized_box_iou(
       box_utils.box_cxcywh_to_xyxy(src_boxes),
       box_utils.box_cxcywh_to_xyxy(tgt_boxes),
-      all_pairs=False)
+      all_pairs=False,
+      eps=1e-8)
   loss_giou *= tgt_not_padding
   loss_giou = giou_loss_coef * loss_giou.sum()
 

@@ -6,7 +6,67 @@ import flax.linen as nn
 import jax
 import jax.numpy as jnp
 from scenic.projects.baselines import resnet
-from scenic.projects.baselines.detr.model import InputPosEmbeddingSine
+
+
+class InputPosEmbeddingSine(nn.Module):
+  """Creates sinusoidal positional embeddings for inputs."""
+
+  hidden_dim: int
+  dtype: jnp.dtype = jnp.float32
+  scale: Optional[float] = None
+  temperature: float = 10000
+
+  @nn.compact
+  def __call__(self, padding_mask: jnp.ndarray) -> jnp.ndarray:
+    """Creates the positional embeddings for transformer inputs.
+
+    This is slightly different from the one used in DETR in that an offset of
+    -0.5 is added when calculating `x_embed` and `y_embed`.
+
+    Args:
+      padding_mask: Binary matrix with 0 at padded image regions. Shape is
+        [batch, height, width]
+
+    Returns:
+      Positional embedding for inputs.
+
+    Raises:
+      ValueError if `hidden_dim` is not an even number.
+    """
+    if self.hidden_dim % 2:
+      raise ValueError('`hidden_dim` must be an even number.')
+
+    mask = padding_mask.astype(jnp.float32)
+    y_embed = jnp.cumsum(mask, axis=1)
+    x_embed = jnp.cumsum(mask, axis=2)
+
+    # Normalization:
+    eps = 1e-6
+    scale = self.scale if self.scale is not None else 2 * jnp.pi
+    y_embed = (y_embed - 0.5)/ (y_embed[:, -1:, :] + eps) * scale
+    x_embed = (x_embed - 0.5) / (x_embed[:, :, -1:] + eps) * scale
+
+    num_pos_feats = self.hidden_dim // 2
+    dim_t = jnp.arange(num_pos_feats, dtype=jnp.float32)
+    dim_t = self.temperature**(2 * (dim_t // 2) / num_pos_feats)
+
+    pos_x = x_embed[:, :, :, jnp.newaxis] / dim_t
+    pos_y = y_embed[:, :, :, jnp.newaxis] / dim_t
+    pos_x = jnp.stack([
+        jnp.sin(pos_x[:, :, :, 0::2]),
+        jnp.cos(pos_x[:, :, :, 1::2]),
+    ],
+                      axis=4).reshape(padding_mask.shape + (-1,))
+    pos_y = jnp.stack([
+        jnp.sin(pos_y[:, :, :, 0::2]),
+        jnp.cos(pos_y[:, :, :, 1::2]),
+    ],
+                      axis=4).reshape(padding_mask.shape + (-1,))
+
+    pos = jnp.concatenate([pos_y, pos_x], axis=3)
+    b, h, w = padding_mask.shape
+    pos = jnp.reshape(pos, [b, h * w, self.hidden_dim])
+    return jnp.asarray(pos, self.dtype)
 
 
 def mask_for_shape(shape, pad_mask: Optional[jnp.ndarray] = None):

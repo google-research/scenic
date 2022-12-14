@@ -20,12 +20,13 @@ $ python scenic/projects/baselines/deformable_detr/main.py -- \
   --workdir=./
 ```
 
-In the config, you have to set the path to the pre-trained ResNet50 backbone
-that you can download from [here](https://storage.googleapis.com/scenic-bucket/baselines/ResNet50_ImageNet1k).
+In the config, you have to set the path to a pre-trained ResNet50 backbone.
+You can download one from [here](https://storage.googleapis.com/scenic-bucket/baselines/ResNet50_ImageNet1k).
 (More information on other potential pre-trained backbones can be found [here](../baselines#resnet).)
 
 
-### Training Results
-| config | Average Precision | Checkpoint |
-|--------|:-----------------:|:----------:|
-| coco_config.py | 0.445     | To be released later |
+### Results
+| Average Precision | Notes |
+|:-----------------:|-------|
+| 0.459 | The model is trained from PyTorch ResNet50_Weights.IMAGENET1K_V1. |
+| 0.459 | The model is evaluated with the corresponding official PyTorch weights. |

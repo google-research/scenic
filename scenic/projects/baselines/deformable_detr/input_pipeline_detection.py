@@ -1,6 +1,6 @@
 """Data generator for COCO with Deformable DETR."""
 import functools
-from typing import Any, Callable, Dict, Mapping, Optional, Tuple
+from typing import Any, Callable, Mapping, Optional
 
 from absl import logging
 from flax import jax_utils
@@ -9,13 +9,125 @@ import jax.numpy as jnp
 from scenic.dataset_lib import dataset_utils
 from scenic.dataset_lib import datasets
 from scenic.dataset_lib.coco_dataset import coco_utils
-from scenic.projects.baselines.detr.input_pipeline_detection import decode_coco_detection_example
-from scenic.projects.baselines.detr.input_pipeline_detection import make_coco_transforms
+from scenic.projects.baselines.detr import transforms
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
-DecodeExampleFn = Callable[[Mapping[str, Any], Tuple[float, float]],
-                           Mapping[str, Any]]
+DecodeExampleFn = Callable[[Mapping[str, Any]], Mapping[str, Any]]
+
+
+class ImageNetNormalization:
+  """Performs standard ImageNet normalization.
+
+  Note: ImageNet normalization is separated out as a module to fix bugs in the
+  original DETR porting to JAX. Bugs:
+    (1) 0.485 in mean_rgb was typoed as 0.48. (2) To be consistent with the
+    pytorch implementation, rgb normalization should happen after data
+    augmentation instead of before.
+  """
+
+  def __init__(self):
+    # Computed from a subset of the training set. The original (randomly
+    # generated) subset used for calculation and the exact way of calculation is
+    # not known to the public, but the numbers have been widely adopted since.
+    self.mean_rgb = tf.constant([0.485, 0.456, 0.406], dtype=tf.float32)
+    self.std_rgb = tf.constant([0.229, 0.224, 0.225], dtype=tf.float32)
+
+  def __call__(self, features):
+    features['inputs'] = (features['inputs'] - self.mean_rgb) / self.std_rgb
+    return features
+
+
+def make_coco_transforms(image_set, max_size=1333):
+  """Returns a preprocessing function that operates on inputs and labels."""
+  scales = [480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800]
+  ratio = max_size / 1333.
+
+  scales = [int(s * ratio) for s in scales]
+  scales2 = [int(s * ratio) for s in [400, 500, 600]]
+
+  normalize_boxes = transforms.NormalizeBoxes()
+  normalize_image = ImageNetNormalization()
+  init_padding_mask = transforms.InitPaddingMask()
+
+  if image_set == 'train':
+    return transforms.Compose([
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomSelect(
+            transforms.RandomResize(scales, max_size=max_size),
+            transforms.Compose([
+                transforms.RandomResize(scales2),
+                transforms.RandomSizeCrop(int(ratio * 384), int(ratio * 600)),
+                transforms.RandomResize(scales, max_size=max_size),
+            ])), normalize_boxes, normalize_image, init_padding_mask
+    ])
+
+  elif image_set == 'validation':
+    return transforms.Compose([
+        transforms.Resize(max(scales), max_size=max_size),
+        normalize_boxes, normalize_image, init_padding_mask
+    ])
+
+  else:
+    raise ValueError(f'Unknown image_set: {image_set}')
+
+
+def decode_boxes(bbox, size):
+  """Convert yxyx [0, 1] normalized boxes to xyxy unnormalized format."""
+  y0, x0, y1, x1 = tf.split(bbox, 4, axis=-1)
+  h = tf.cast(size[0], tf.float32)
+  w = tf.cast(size[1], tf.float32)
+
+  y0 = tf.clip_by_value(y0 * h, 0.0, h)
+  x0 = tf.clip_by_value(x0 * w, 0.0, w)
+  y1 = tf.clip_by_value(y1 * h, 0.0, h)
+  x1 = tf.clip_by_value(x1 * w, 0.0, w)
+
+  bbox = tf.concat([x0, y0, x1, y1], axis=-1)
+  return bbox
+
+
+def decode_coco_detection_example(example):
+  """Given an instance and raw labels, creates <inputs, label> pair.
+
+  Decoding includes.
+  1. Converting images from uint8 [0, 255] to [0, 1.] float32.
+  2. Mean subtraction and standardization using hard-coded mean and std.
+  3. Convert boxes from yxyx [0-1] to xyxy un-normalized.
+  4. Add 1 to all labels to account for background/padding object at label 0.
+  5. Shuffling dictionary keys to be consistent with the rest of the code.
+
+  Args:
+    example: dict; Input image and raw labels.
+
+  Returns:
+    A dictionary of {'inputs': input image, 'labels': task label}.
+  """
+  image = tf.image.convert_image_dtype(example['image'], dtype=tf.float32)
+
+  boxes = decode_boxes(example['objects']['bbox'], tf.shape(image)[0:2])
+
+  target = {
+      'area': example['objects']['area'],
+      'boxes': boxes,
+      'objects/id': example['objects']['id'],
+      'is_crowd': example['objects']['is_crowd'],
+      'labels': example['objects']['label'] + 1,  # 0'th class is padding.
+  }
+
+  # Filters objects to exclude degenerate boxes.
+  keep = tf.where(tf.logical_and(boxes[:, 2] > boxes[:, 0],
+                                 boxes[:, 3] > boxes[:, 1]))[:, 0]
+  target_kept = {k: tf.gather(v, keep) for k, v in target.items()}
+
+  target_kept['orig_size'] = tf.cast(tf.shape(image)[0:2], dtype=tf.int32)
+  target_kept['size'] = tf.identity(target_kept['orig_size'])
+  target_kept['image/id'] = example['image/id']
+
+  return {
+      'inputs': image,
+      'label': target_kept,
+  }
 
 
 # This is only overridden from DETR to take a data_dir.
@@ -39,8 +151,7 @@ def coco_load_split_from_tfds(batch_size: int,
       returns the preprocessed the example. Note that the preprocessing is done
       BEFORE caching to re-use them.
     decode_fn: A function that given an example decodes the image, converts it
-      to float32, mean-subtracts it, and pulls out the relevant parts from the
-      tfds features.
+      to float32, and pulls out the relevant parts from the tfds features.
     cache: whether to use the ds.cache or nor.
     max_size: Maximum image size.
     max_boxes: Maximum number of boxes.
@@ -110,8 +221,7 @@ def coco_load_split_from_tfds(batch_size: int,
 
 
 def decode_coco_deformable_detr_example(
-    example: Dict[str, Any],
-    input_range: Optional[Tuple[float, float]] = None) -> Dict[str, Any]:
+    example: Mapping[str, Any]) -> Mapping[str, Any]:
   """Given an instance and raw labels, creates <inputs, label> pair.
 
   Calls DETR decoder and then just converts the labels to those expected by
@@ -120,13 +230,11 @@ def decode_coco_deformable_detr_example(
 
   Args:
     example: Input image and raw labels.
-    input_range: Range of input. By default we use Mean and StdDev
-      normalization.
 
   Returns:
     A dictionary of {'inputs': input image, 'labels': task label}.
   """
-  result = decode_coco_detection_example(example, input_range)
+  result = decode_coco_detection_example(example)
 
   # Remap labels.
   label_ref_keys = sorted(list(coco_utils.get_label_map('ref_coco').keys()))
@@ -183,9 +291,7 @@ def get_dataset(*,
   valid_max_size = dataset_configs.get('valid_max_size', max_size)
   eval_preprocess_fn = make_coco_transforms('validation', valid_max_size)
 
-  decode_fn = functools.partial(
-      decode_coco_deformable_detr_example,
-      input_range=dataset_configs.get('input_range'))
+  decode_fn = decode_coco_deformable_detr_example
 
   train_ds, train_ds_info = coco_load_split_from_tfds(
       batch_size,

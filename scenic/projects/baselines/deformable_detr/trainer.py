@@ -173,6 +173,41 @@ def get_train_step(apply_fn: Callable[..., Tuple[PyTree, PyTree]],
   return train_step
 
 
+def _handle_legacy_format(train_state):
+  """Handle legacy format.
+
+  To remove this function, make sure all checkpoints that are to be loaded are
+  in the non-legacy format:
+    * checkpoint['params'] is a PyTree of parameters;
+    * checkpoint['model_state']['batch_stats'] is a PyTree of batch statistics.
+
+  Args:
+    train_state: A train state.
+  """
+  if 'params' not in train_state:
+    train_state['params'] = train_state.pop('optimizer').pop(
+        'target')
+    if 'param' in train_state['params']:
+      train_state['params'] = train_state['params']['param']
+  if 'model_state' in train_state and 'batch_stats' not in train_state[
+      'model_state']:
+    bad_restored_batch_stats = train_state.pop('model_state')
+    good_restored_batch_stats = {}
+    for key, value in bad_restored_batch_stats.items():
+      current = good_restored_batch_stats
+      subkeys = [subkey for subkey in key.split('/') if subkey]
+      for subkey in subkeys[:-1]:
+        if subkey not in current:
+          new_current = {}
+          current[subkey] = new_current
+          current = new_current
+        else:
+          current = current[subkey]
+      current[subkeys[-1]] = value
+    train_state['model_state'] = {}
+    train_state['model_state']['batch_stats'] = good_restored_batch_stats
+
+
 def get_model_and_tx_and_train_state(rng: RngType,
                                      dataset: dataset_utils.Dataset,
                                      config: ml_collections.ConfigDict,
@@ -217,6 +252,7 @@ def get_model_and_tx_and_train_state(rng: RngType,
     logging.info('Init from checkpoint: %s', init_checkpoint_path)
     restored_train_state = flax_restore_checkpoint(
         init_checkpoint_path, target=None)
+    _handle_legacy_format(restored_train_state)
 
     train_state = pretrain_utils.init_from_pretrain_state(
         train_state,
@@ -232,32 +268,9 @@ def get_model_and_tx_and_train_state(rng: RngType,
     bb_checkpoint_path = config.pretrained_backbone_configs.get(
         'checkpoint_path')
     bb_train_state = flax_restore_checkpoint(bb_checkpoint_path, target=None)
-
-    # Handle legacy format.
-    if 'params' not in bb_train_state:
-      bb_train_state['params'] = bb_train_state.pop('optimizer').pop(
-          'target').pop('params')
-    if 'model_state' in bb_train_state and 'batch_stats' not in bb_train_state[
-        'model_state']:
-      bad_restored_batch_stats = bb_train_state.pop('model_state')
-      good_restored_batch_stats = {}
-      for key, value in bad_restored_batch_stats.items():
-        current = good_restored_batch_stats
-        subkeys = [subkey for subkey in key.split('/') if subkey]
-        for subkey in subkeys[:-1]:
-          if subkey not in current:
-            new_current = {}
-            current[subkey] = new_current
-            current = new_current
-          else:
-            current = current[subkey]
-        current[subkeys[-1]] = value
-      bb_train_state['model_state'] = {}
-      bb_train_state['model_state']['batch_stats'] = good_restored_batch_stats
-
-    model_prefix_path = ['backbone', 'resnet']
+    _handle_legacy_format(bb_train_state)
     train_state = pretrain_utils.init_from_pretrain_state(
-        train_state, bb_train_state, model_prefix_path=model_prefix_path)
+        train_state, bb_train_state)
 
   # Replicate the optimzier, state, and rng.
   train_state = jax_utils.replicate(train_state)
@@ -408,7 +421,7 @@ def train_and_evaluate(
       # `train_utils.unreplicate_and_get` here instead of right before writing
       # summaries, but that means in each step, we have data transfer between
       # tpu and host, which might slow down the training.
-      train_metrics.append(t_metrics)
+      train_metrics.append(train_utils.unreplicate_and_get(t_metrics))
 
     for h in hooks:
       h(step)
@@ -441,8 +454,7 @@ def train_and_evaluate(
       # Write summary:
       train_summary = train_utils.log_train_summary(
           step=step,
-          train_metrics=jax.tree_util.tree_map(train_utils.unreplicate_and_get,
-                                               train_metrics),
+          train_metrics=train_metrics,
           extra_training_logs=jax.tree_util.tree_map(
               train_utils.unreplicate_and_get, extra_training_logs),
           writer=writer,

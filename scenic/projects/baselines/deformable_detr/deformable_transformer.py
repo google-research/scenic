@@ -299,7 +299,7 @@ class DeformableDETRDecoderLayer(nn.Module):
         bias_init=uniform_initializer(
             -bias_range, bias_range, dtype=self.dtype),
         name='linear1')(
-            x)
+            query)
 
     x = nn.relu(x)
     x = nn.Dropout(rate=self.dropout)(x, deterministic=not train)
