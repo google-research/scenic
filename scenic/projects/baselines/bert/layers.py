@@ -202,7 +202,8 @@ class Encoder1DBlock(nn.Module):
     num_heads: Number of self-attention heads.
     dropout_rate: Dropout rate.
     attention_dropout_rate: Dropout for attention heads.
-    pre_norm: Whether to use PreLN, otherwise PostLN.
+    pre_norm: Whether to use PreLN, otherwise PostLN. For more detail, see
+      https://arxiv.org/pdf/2002.04745.pdf.
     dtype: The dtype of the computation (default: float32).
 
   Returns:
@@ -245,18 +246,20 @@ class Encoder1DBlock(nn.Module):
     x = nn.Dropout(rate=self.dropout_rate)(x, deterministic)
     x = x + inputs
     if not self.pre_norm:  # post-attention-layer-normalization
+      # Normalized x is used for residual connection.
       x = nn.LayerNorm(dtype=self.dtype)(x)
 
     # MLP block.
     if self.pre_norm:  # pre-mlp-layer-normalization
-      x = nn.LayerNorm(dtype=self.dtype)(x)
+      # Do not overwrite x because it will be used for residual connection.
+      y = nn.LayerNorm(dtype=self.dtype)(x)
     y = MlpBlock(
         dtype=self.dtype,
         mlp_dim=self.mlp_dim,
         dropout_rate=self.dropout_rate,
         kernel_init=nn.initializers.xavier_uniform(),
         bias_init=nn.initializers.normal(stddev=1e-6))(
-            x, train=not deterministic)
+            y if self.pre_norm else x, train=not deterministic)
     y = y + x
     # post-mlp-layer-normalization
     if not self.pre_norm:
