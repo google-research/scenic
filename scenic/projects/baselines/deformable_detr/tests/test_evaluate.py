@@ -11,6 +11,7 @@ import jax.random
 import numpy as np
 from scenic.dataset_lib import datasets
 from scenic.projects.baselines.deformable_detr import evaluate as ddetr_eval
+from scenic.projects.baselines.deformable_detr import input_pipeline_detection  # pylint: disable=unused-import
 from scenic.projects.baselines.deformable_detr import trainer
 from scenic.projects.baselines.deformable_detr.configs import mini_config
 from scenic.projects.baselines.deformable_detr.model import DeformableDETRModel

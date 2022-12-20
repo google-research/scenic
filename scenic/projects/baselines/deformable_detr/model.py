@@ -298,6 +298,7 @@ class DeformableDETR(nn.Module):
     backbone_num_filters: Number of filters for Resnet.
     backbone_num_layers: Number of layers for Resnet.
     dropout: Dropout rate.
+    compiler_config: Compiler configuration.
     dtype: Data type of the computation (default: float32).
   """
   num_classes: int
@@ -314,6 +315,7 @@ class DeformableDETR(nn.Module):
   backbone_num_filters: int
   backbone_num_layers: int
   dropout: float
+  compiler_config: ml_collections.ConfigDict
   dtype: jnp.dtype = jnp.float32
 
   @nn.compact
@@ -396,6 +398,7 @@ class DeformableDETR(nn.Module):
         bbox_embeds=bbox_embeds,
         name='transformer',
         dropout=self.dropout,
+        compiler_config=self.compiler_config,
         dtype=self.dtype)(
             inputs=projs,
             pad_masks=pad_masks,
@@ -474,6 +477,7 @@ class DeformableDETRModel(base_model.BaseModel):
         backbone_num_layers=self.config.backbone_num_layers,
         transformer_ffn_dim=self.config.transformer_ffn_dim,
         dropout=self.config.dropout_rate,
+        compiler_config=self.config.compiler_config,
         dtype=jnp.float32)
 
   def compute_loss_for_layer(
