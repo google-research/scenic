@@ -340,9 +340,9 @@ class MatchingTest(parameterized.TestCase):
   def test_slicer(self, matcher_fn):
     """Simulate padding and ensure that slicer can deal with it."""
     n_cols = self.cost_n_cols // 2
-    mask = np.concatenate((np.ones((1, n_cols[0]), dtype=np.bool),
+    mask = np.concatenate((np.ones((1, n_cols[0]), dtype=bool),
                            np.zeros(
-                               (1, self.num_preds - n_cols[0]), dtype=np.bool)),
+                               (1, self.num_preds - n_cols[0]), dtype=bool)),
                           axis=1)
     cost = mask * self.cost_matrix + (1. - mask) * 5
 
@@ -360,9 +360,9 @@ class MatchingTest(parameterized.TestCase):
   def test_slicer_implicit(self, matcher_fn):
     """Ensure that implicit use of slicer works."""
     n_cols = self.cost_n_cols // 2
-    mask = np.concatenate((np.ones((1, n_cols[0]), dtype=np.bool),
+    mask = np.concatenate((np.ones((1, n_cols[0]), dtype=bool),
                            np.zeros(
-                               (1, self.num_preds - n_cols[0]), dtype=np.bool)),
+                               (1, self.num_preds - n_cols[0]), dtype=bool)),
                           axis=1)
     cost = mask * self.cost_matrix + (1. - mask) * 5
 

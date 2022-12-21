@@ -34,7 +34,7 @@ def generate_fake_example(w: int, h: int, identifier: int):
           'area': np.arange(num_objects, dtype=np.int64) * 50,
           'bbox': np.stack([np.array([0., 0., 1., 1.])] * num_objects),
           'id': np.arange(num_objects),
-          'is_crowd': np.full((num_objects,), False, dtype=np.bool),
+          'is_crowd': np.full((num_objects,), False, dtype=bool),
           'label': np.random.randint(
               0, 81, size=(num_objects,), dtype=np.int32),
       }
