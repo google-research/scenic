@@ -392,7 +392,7 @@ class BaseModelWithMatching(base_model.BaseModel):  # pytype: disable=ignored-ab
     assert loss in self.loss_and_metrics_map, f'Unknown loss {loss}.'
     return self.loss_and_metrics_map[loss](outputs, batch, indices, **kwargs)
 
-  def loss_function(
+  def loss_function(  # pytype: disable=signature-mismatch  # overriding-return-type-checks
       self,
       outputs: ArrayDict,
       batch: ArrayDict,

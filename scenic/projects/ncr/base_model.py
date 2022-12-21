@@ -29,7 +29,7 @@ class NCRModel(base_model.BaseModel):
   Supports both softmax-classification and multi-label classification models.
   """
 
-  def loss_function(
+  def loss_function(  # pytype: disable=signature-mismatch  # overriding-return-type-checks
       self,
       logits: Array,
       batch: base_model.Batch,
