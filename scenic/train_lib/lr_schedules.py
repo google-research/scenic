@@ -140,6 +140,7 @@ def cosine_decay_scheduler(step, steps_per_cycle, t_mul=1, m_mul=1., alpha=0.):
   Returns:
     Scaling factor applied to the learning rate on the given step.
   """
+  assert steps_per_cycle > 0, 'steps_per_cycle must be > 0'
   progress = step / float(steps_per_cycle)
   if t_mul == 1.0:
     i_restart = jnp.floor(progress)
