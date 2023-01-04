@@ -16,7 +16,6 @@ import numpy as np
 from scenic.common_lib import debug_utils
 from scenic.train_lib_deprecated import optimizers
 from scenic.train_lib_deprecated import train_utils
-from scenic.train_lib_deprecated.google.transfer import fewshot_utils
 import scipy
 import sklearn.metrics
 
@@ -41,6 +40,88 @@ def f1_score_with_invalid(target: np.ndarray,
   # For any prediction != 0 or 1, set it to the opposite of what the target is:
   prediction[invalid_idx_mask] = 1 - target[invalid_idx_mask]
   return {'f1': sklearn.metrics.f1_score(target, prediction)}
+
+
+_BIAS_CONSTANT = 100.0
+
+
+# Setup function for few-shot regression on CPU to avoid 'polluting' the TPU.
+# It's fast enough when done in jax instead of numpy.
+@functools.partial(jax.jit, backend='cpu', static_argnums=(5, 6))
+def _fewshot_acc_fn(
+    x: jnp.ndarray,
+    y: jnp.ndarray,
+    x_test: jnp.ndarray,
+    y_test: jnp.ndarray,
+    l2_reg: float,
+    num_classes: int,
+    target_is_one_hot: bool = False,
+    stddev_constant: float = 1e-5,
+) -> float:
+  """Computes (x,y) linear regression accuracy on (x_test, y_test).
+
+  Args:
+    x: An [n_examples, n_classes] matrix of feature representations. This will
+      be whitened before computing linear regression.
+    y: Array of labels. Shape is either [n_examples] or [n_examples, n_classes].
+      In the latter case, target_is_one_hot must be True.
+    x_test: An [n_test_examples, n_classes] matrix of feature representations.
+      Will be whitened before computing linear regression.
+    y_test: Array of labels. Shape is either [n_examples] or [n_examples,
+      n_classes]. In the latter case, target_is_one_hot must be True.
+    l2_reg: L2 regularisation co-efficient to apply when computing linear
+      regression (also known as "ridge regression").
+    num_classes: The number of classes in the dataset. Used to convert y to a
+      one-hot representation if not already.
+    target_is_one_hot: If the labels, y, are already one-hot or not.
+    stddev_constant: Small constant to add when computing the standard deviation
+      to avoid it being 0.
+
+  Returns:
+    The accuracy or precision@1 (for one-hot labels), after computing linear
+      regression.
+  """
+
+  def preprocess_features(
+      data: jnp.ndarray, mean: jnp.ndarray, std: jnp.ndarray
+  ) -> jnp.ndarray:
+    """Whitens features and adds a bias term."""
+    data_whitened = (data - mean) / std
+    # Add a constant feature for the bias, large so it's almost unregularized.
+    data_whitened_bias = jnp.pad(
+        data_whitened, ((0, 0), (0, 1)), constant_values=_BIAS_CONSTANT
+    )
+    return data_whitened_bias
+
+  mean = jnp.mean(x, axis=0, keepdims=True)
+  std = jnp.std(x, axis=0, keepdims=True) + stddev_constant
+
+  x_whitened = preprocess_features(x, mean, std)
+  x_test_whitened = preprocess_features(x_test, mean, std)
+
+  # Solve linear regression problem.
+  if not target_is_one_hot:
+    y_one_hot = jax.nn.one_hot(y, num_classes)
+  else:
+    y_one_hot = y
+  y_rescaled = 2.0 * y_one_hot - 1.0
+  w = jnp.linalg.solve(
+      x_whitened.T @ x_whitened + jnp.eye(x_whitened.shape[1]) * l2_reg,
+      x_whitened.T @ y_rescaled,
+  )
+
+  if target_is_one_hot:
+    # Compute the precision@1 for multilabel datasets. This is the same as
+    # accuracy if there is one active label.
+    preds = x_test_whitened @ w
+    top1_idx = jnp.argmax(preds, axis=-1)
+    top1_correct = jnp.take_along_axis(y_test, top1_idx[..., None], axis=-1)
+    top1_correct = jnp.squeeze(top1_correct)
+    return jnp.mean(top1_correct)
+  else:
+    # Predict test-set values and measure their accuracy.
+    preds = jnp.argmax(x_test_whitened @ w, axis=1)
+    return jnp.mean(preds == y_test)
 
 
 def matthews_corrcoef(target: np.ndarray,
@@ -296,8 +377,9 @@ class BERTFewShotEvaluator:
       y = labels_train[all_idx]
 
       for l2_reg in self.l2_regs:
-        acc = fewshot_utils._fewshot_acc_fn(  # pylint: disable=protected-access
-            x, y, repr_test, labels_test, l2_reg, num_classes)
+        acc = _fewshot_acc_fn(  # pylint: disable=protected-access
+            x, y, repr_test, labels_test, l2_reg, num_classes
+        )
         results[shots, l2_reg] = np.array(acc)
     return results
 

@@ -4,7 +4,6 @@ r"""Default configs for ViT on structural variant classification using pileups.
 """
 
 import ml_collections
-from scenic.projects.svvit.google import dataset_meta_data
 
 
 def get_config(runlocal=''):
@@ -34,15 +33,3 @@ def get_config(runlocal=''):
   return config
 
 
-# TODO(shamsiz) Add dataset sizes to dataset_meta_data, input it through config.
-def get_hyper(hyper):
-  """Defines the hyper-parameters sweeps for doing grid search."""
-
-  return hyper.product([
-      hyper.sweep('config.init_from.xm', [(43304022, 1), (43304022, 2),
-                                          (43304412, 1), (43304412, 2)]),
-      hyper.sweep(
-          'config.dataset_configs.eval_path',
-          list(dataset_meta_data.DATASET_PATHS['del', 'paired',
-                                               'ref_right'].values()))
-  ])

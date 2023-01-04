@@ -63,7 +63,7 @@ class InstallCommand(install.install):
 install_requires_projects = [
     "ott-jax>=0.2.0",
     "sklearn",
-    "lingvo==0.11.0",
+    "lingvo==0.12.6",
     "seaborn>=0.11.2",
     "dmvr @ git+https://github.com/deepmind/dmvr.git",
 ]

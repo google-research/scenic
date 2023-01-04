@@ -4,7 +4,6 @@ r"""Default configs for ViT on structural variant classification using pileups.
 """
 
 import ml_collections
-from scenic.projects.svvit.google import dataset_meta_data
 
 _TRAIN_SIZE = 30_000 * 19
 VERSION = 'S'  # Version has to match with the pretraining job.
@@ -23,12 +22,6 @@ def get_config(runlocal=''):
   config.dataset_name = 'pileup_window'
   config.data_dtype_str = 'float32'
   config.dataset_configs = ml_collections.ConfigDict()
-  config.dataset_configs.train_path = dataset_meta_data.DATASET_PATHS[
-      'del', 'paired', 'ref_right']['hgsvc2_train']
-  config.dataset_configs.eval_path = dataset_meta_data.DATASET_PATHS[
-      'del', 'paired', 'ref_right']['hgsvc2_test']
-  config.dataset_configs.test_path = dataset_meta_data.DATASET_PATHS[
-      'del', 'paired', 'ref_right']['NA12878_freeze3_hg38_ready']
 
   # Model.
   config.model_name = 'xvit_classification'

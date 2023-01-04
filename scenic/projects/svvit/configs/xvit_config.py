@@ -4,7 +4,6 @@ r"""Default configs for X-ViT on structural variant classification using pileups
 """
 
 import ml_collections
-from scenic.projects.svvit.google import dataset_meta_data
 
 _TRAIN_SIZE = 30_000 * 18
 VERSION = 'Ti'
@@ -100,43 +99,3 @@ def get_config():
   return config
 
 
-def get_hyper(hyper):
-  """Defines the hyper-parameters sweeps for doing grid search."""
-  # Dataset related hyper parameters.
-  dataset_names = hyper.sweep('config.dataset_name', [
-      'pileup_window',
-  ])
-  train_paths = hyper.sweep('config.dataset_configs.train_path', [
-      dataset_meta_data.DATASET_PATHS['ref_right']['del']['single']
-      ['hgsvc2_train'],
-  ])
-  eval_paths = hyper.sweep('config.dataset_configs.eval_path', [
-      dataset_meta_data.DATASET_PATHS['ref_right']['del']['single']
-      ['hgsvc2_test'],
-  ])
-  dataset_domains = hyper.zipit([dataset_names, train_paths, eval_paths])
-
-  # Model related hyper parameters.
-  hidden_size = hyper.sweep('config.model.hidden_size', [
-      HIDDEN_SIZE['Ti'],
-      HIDDEN_SIZE['S'],
-      HIDDEN_SIZE['B'],
-  ])
-  num_heads = hyper.sweep('config.model.num_heads', [
-      NUM_HEADS['Ti'],
-      NUM_HEADS['S'],
-      NUM_HEADS['B'],
-  ])
-  mlp_dim = hyper.sweep('config.model.mlp_dim', [
-      MLP_DIM['Ti'],
-      MLP_DIM['S'],
-      MLP_DIM['B'],
-  ])
-  num_layers = hyper.sweep('config.model.num_layers', [
-      NUM_LAYERS['Ti'],
-      NUM_LAYERS['S'],
-      NUM_LAYERS['B'],
-  ])
-  model_domains = hyper.zipit([hidden_size, num_heads, mlp_dim, num_layers])
-
-  return hyper.product([model_domains, dataset_domains])
