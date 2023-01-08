@@ -92,6 +92,14 @@
     > performing inference (classification/segmentation) for point cloud data.
     > Details can be found in the [paper](https://arxiv.org/abs/2012.09688).
 
+*   [PolyViT](polyvit)
+
+    > PolyViT is a simple and effective model for co-training a single
+    > transformer backbone on multiple modalities and tasks, resulting in a
+    > parameter-efficient model that performs as well or better than models
+    > trained on single modalities or tasks.
+    > Details can be found in the [paper](https://arxiv.org/abs/2111.12993).
+
 
 <a name="projects"></a>
 ## Scenic projects
