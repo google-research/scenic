@@ -313,7 +313,7 @@ class MultiHeadAttention(nn.Module):
     Args:
       inputs_q: Input queries of shape  `[bs, ..., len_q, features]`.
       inputs_kv: Key/values of shape `[bs, ..., len_k, features]` or None for
-        self-attention, inn which case key/values will be derived from inputs_q.
+        self-attention, in which case key/values will be derived from inputs_q.
       pos_emb_q: Positional embedding to be added to the query.
       pos_emb_k: Positional embedding to be added to the key.
       pos_emb_v: Positional embedding to be added to the value.
