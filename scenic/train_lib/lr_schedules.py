@@ -140,7 +140,8 @@ def cosine_decay_scheduler(step, steps_per_cycle, t_mul=1, m_mul=1., alpha=0.):
   Returns:
     Scaling factor applied to the learning rate on the given step.
   """
-  assert steps_per_cycle > 0, 'steps_per_cycle must be > 0'
+  if steps_per_cycle <= 0:
+    raise ValueError(f'steps_per_cycle must be > 0. Got {steps_per_cycle}.')
   progress = step / float(steps_per_cycle)
   if t_mul == 1.0:
     i_restart = jnp.floor(progress)
@@ -228,15 +229,17 @@ def compound_lr_scheduler(config):
             0.0, (step - (warmup_steps + config.get('start_decay_step', 0.))))
         total_steps = config.get('total_steps', steps_per_cycle)
 
-        # we make the cos equal and subtract warmup steps for each cycle.
+        # We make the cos equal and subtract warmup steps for each cycle. If
+        # there are fewer steps than warmup steps, cosine can be skipped.
         steps_per_cycle = steps_per_cycle - int(
             warmup_steps / (total_steps / steps_per_cycle))
-        ratio *= cosine_decay_scheduler(
-            adjusted_step,
-            steps_per_cycle,
-            t_mul=t_mul,
-            m_mul=m_mul,
-            alpha=alpha)
+        if steps_per_cycle > 0:
+          ratio *= cosine_decay_scheduler(
+              adjusted_step,
+              steps_per_cycle,
+              t_mul=t_mul,
+              m_mul=m_mul,
+              alpha=alpha)
       elif name == 'linear_decay':
         warmup_steps = config.get('warmup_steps', 0.)
         total_steps = config.get('total_steps')
