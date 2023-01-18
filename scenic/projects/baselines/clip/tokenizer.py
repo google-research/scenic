@@ -27,7 +27,7 @@ def _tokenize(texts: Union[str, Sequence[str]], tokenizer: Any,
   all_tokens = [
       [sot_token] + tokenizer.encode(text) + [eot_token] for text in texts
   ]
-  result = np.zeros((len(all_tokens), context_length), dtype=np.long)
+  result = np.zeros((len(all_tokens), context_length), dtype=int)
   for i, tokens in enumerate(all_tokens):
     if len(tokens) > context_length:
       if truncate:
