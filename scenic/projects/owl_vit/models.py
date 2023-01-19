@@ -187,7 +187,10 @@ class TextZeroShotDetectionModule(nn.Module):
         params = restored_train_state['optimizer']['target']
       else:
         params = restored_train_state['params']
-      params = checkpoints.convert_pre_linen(params)
+
+      # Explicitly removing unused parameters after loading:
+      params['class_head'].pop('padding', None)
+      params['class_head'].pop('padding_bias', None)
 
     return params
 
