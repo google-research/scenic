@@ -1,7 +1,6 @@
 """Code for running (interactive) inference with OWL-ViT models."""
 
 import dataclasses
-import functools
 from typing import Any, Dict, Tuple
 
 from flax import linen as nn
@@ -189,7 +188,6 @@ class Model:
     scores = sigmoid(np.max(logits, axis=-1))
     return top_query_ind, scores
 
-  @functools.partial(jax.jit, static_argnums=(0,))
   def _embed_image_jitted(
       self, image: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
     """Embeds image and returns image features, class embeddings, and boxes."""
@@ -202,7 +200,6 @@ class Model:
         query_embeddings=None)['class_embeddings']
     return features, class_embeddings, pred_boxes
 
-  @functools.partial(jax.jit, static_argnums=(0,))
   def _predict_classes_jitted(
       self,
       image_features: jnp.ndarray,
@@ -211,6 +208,5 @@ class Model:
     return self.module.class_predictor(
         image_features=image_features, query_embeddings=query_embeddings)
 
-  @functools.partial(jax.jit, static_argnums=(0,))
   def _embed_texts_jitted(self, queries: jnp.ndarray) -> jnp.ndarray:
     return self.module.text_embedder(text_queries=queries, train=False)
