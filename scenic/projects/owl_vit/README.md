@@ -37,13 +37,13 @@ Table of contents:
 
 ## Pretrained checkpoints
 
-OWL-ViT models and their pre-trained checkpoints are specified in [configuration files](configs). Checkpoint files are compatible with [Flax](https://github.com/google/flax). We provide the following variants, both as JAX/Flax checkpoints and as `tf.SavedModel`s:
+OWL-ViT models and their pre-trained checkpoints are specified in [configuration files](https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs). Checkpoint files are compatible with [Flax](https://github.com/google/flax). We provide the following variants, both as JAX/Flax checkpoints and as `tf.SavedModel`s:
 
 | Backbone | Pre-training | LVIS AP | LVIS APr | Config | Size | JAX Checkpoint | tf.SavedModel |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| ViT-B/32 | CLIP         | 19.3    | 16.9     | [clip_b32](configs/clip_b32.py) | 583 MiB | [download](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b32_b0203fc) | [gs](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b32_b0203fc_tf_model) |
-| ViT-B/16 | CLIP         | 20.8    | 17.1     | [clip_b16](configs/clip_b16.py) | 581 MiB | [download](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b16_6171dab) | [gs](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b16_6171dab_tf_model) |
-| ViT-L/14 | CLIP         | 34.6    | 31.2     | [clip_l14](configs/clip_l14.py) | 1652 MiB | [download](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_l14_d83d374) | [gs](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_l14_d83d374_tf_model) |
+| ViT-B/32 | CLIP         | 19.3    | 16.9     | [clip_b32](https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/clip_b32.py) | 583 MiB | [download](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b32_b0203fc) | [gs](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b32_b0203fc_tf_model) |
+| ViT-B/16 | CLIP         | 20.8    | 17.1     | [clip_b16](https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/clip_b16.py) | 581 MiB | [download](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b16_6171dab) | [gs](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b16_6171dab_tf_model) |
+| ViT-L/14 | CLIP         | 34.6    | 31.2     | [clip_l14](https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/clip_l14.py) | 1652 MiB | [download](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_l14_d83d374) | [gs](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_l14_d83d374_tf_model) |
 
 ## Colabs
 
