@@ -54,6 +54,7 @@ with open('/path/to/clip.npy', 'wb') as f:
 Note that these models run natively on images with resolution 224 and normalized
 using `IMAGE_MEAN` and `IMAGE_STD`. The maximum text length is 77.
 
+
 ### Acknowledgment
 We would like to thank Ben Poole and Dirk Weissenborn for their contribution to
 the CLIP implementation in Scenic.
