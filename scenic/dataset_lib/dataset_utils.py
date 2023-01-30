@@ -114,6 +114,12 @@ def maybe_pad_batch(batch: Dict[str, PyTree],
     sample_tensor = jax.tree_util.tree_leaves(batch)[0]
   else:
     sample_tensor = batch[inputs_key]
+  if sample_tensor.shape[batch_dim] > batch_size:
+    raise ValueError(
+        f'The indicated target batch_size is {batch_size}, but '
+        'the size of the current batch is larger than that: '
+        f'{sample_tensor.shape[batch_dim]}.'
+    )
   batch_pad = batch_size - sample_tensor.shape[batch_dim]
 
   if pixel_level:
