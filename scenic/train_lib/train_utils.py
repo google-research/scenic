@@ -15,6 +15,7 @@
 """Utility functions for Training."""
 
 import collections.abc as collections
+import copy
 import functools
 import os
 import re
@@ -968,13 +969,15 @@ class Chrono:
   def inform(self, first_step: int, total_steps: int, global_bs: int,
              steps_per_epoch: int):
     """Provide some extra info that's only known later in the program."""
-    self.prev_step = first_step
-    self.first_step = first_step
+    self.prev_step = copy.deepcopy(first_step)
+    self.first_step = copy.deepcopy(first_step)
     self.total_steps = total_steps
     self.steps_per_epoch = steps_per_epoch
     self.global_bs = global_bs
     if total_steps:
-      self.note = f'Steps:{first_step}/{total_steps} [{first_step/total_steps:.1%}]'
+      self.note = (
+          f'Steps:{first_step}/{total_steps} [{first_step/total_steps:.1%}]'
+      )
 
   def tick(self, step: int, writer: metric_writers.MetricWriter,
            write_note: Callable[[str], None]):
@@ -1050,7 +1053,9 @@ class Chrono:
     self.note += f'\nWalltime:{hms(self.accum_program_time)}'
     self.note += f' ({hms(self.accum_pause_time)} Not-train)'
     self.note += f'\nETA:{hms(dt / steps_timed * steps_todo)}'
-    self.note += f'\nTotal train time:{hms(dt / steps_timed * self.total_steps)}'
+    self.note += (
+        f'\nTotal train time:{hms(dt / steps_timed * self.total_steps)}'
+    )
     write_note(self.note)
     writer.write_scalars(step, summary)
     self.prev_time = now
