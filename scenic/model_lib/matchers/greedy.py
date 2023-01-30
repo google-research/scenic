@@ -46,5 +46,5 @@ def greedy_matcher(cost):
     return cost, indices
 
   _, indices = jax.lax.scan(greedy_select, cost, None,
-                            min(cost.shape[1], cost.shape[0]))
+                            min(cost.shape[1], cost.shape[2]))
   return indices.transpose([1, 2, 0])

@@ -276,6 +276,7 @@ class MatchingTest(parameterized.TestCase):
         target_is_onehot=False)
 
     indices = matcher_fn(cost)
+    self.assertEqual(indices.shape, (cost.shape[0], 2, cost.shape[1]))
     for row, col in indices:
       self.assertTrue(jnp.array_equal(row, col))
 
