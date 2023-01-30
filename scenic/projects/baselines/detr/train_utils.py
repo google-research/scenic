@@ -217,7 +217,7 @@ def process_and_fetch_to_host(pred_or_tgt, batch_mask):
     # Squeeze out the dummy dimension.
     return jax.tree_util.tree_map(lambda x: np.squeeze(x, axis=0), x_list)
 
-  leaves, treedef = jax.tree_flatten(pred_or_tgt)
+  leaves, treedef = jax.tree_util.tree_flatten(pred_or_tgt)
 
   batch_shape = batch_mask.shape
   assert all([leaf.shape[:2] == batch_shape for leaf in leaves]), (

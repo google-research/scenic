@@ -322,7 +322,7 @@ def convert_strict_big_vision_to_scenic_checkpoint(
       'opt': train_state.optimizer,
       'extra': dict(accum_train_time=0.0)
   }
-  _, checkpoint_tree = jax.tree_flatten(checkpoint_tree)
+  _, checkpoint_tree = jax.tree_util.tree_flatten(checkpoint_tree)
   checkpoint = load_big_vision_checkpoint(checkpoint_tree, checkpoint_path)
   logging.info('Loaded big_vision checkpoint from %s', checkpoint_path)
 

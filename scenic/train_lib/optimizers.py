@@ -270,7 +270,7 @@ def tree_flatten_with_names(
   Returns:
     A list of values with names: [(name, value), ...]
   """
-  vals, tree_def = jax.tree_flatten(tree)
+  vals, tree_def = jax.tree_util.tree_flatten(tree)
 
   # "Fake" token tree that is use to track jax internal tree traversal and
   # adjust our custom tree traversal to be compatible with it.
