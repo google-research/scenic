@@ -13,7 +13,7 @@ PADDING_VALUE_STR = b""
 
 
 def get_padding_value(dtype):
-  """Helper function for determing datatype-appropriate padding values."""
+  """Helper function for determining datatype-appropriate padding values."""
   if dtype in (tf.int32, tf.int64):
     return PADDING_VALUE
   elif dtype == tf.string:
