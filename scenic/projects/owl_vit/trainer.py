@@ -407,7 +407,7 @@ def train(*, rng: jnp.ndarray, config: ml_collections.ConfigDict,
     if ((step % log_summary_steps == 0) or (step == total_steps)
         or (lead_host and chrono.warmup)):
       ############### LOG TRAIN SUMMARY ###############
-      chrono.pause()
+      chrono.pause(wait_for=(train_metrics))
       if lead_host:
         chrono.tick(step, writer, write_note)
       # Write summary:

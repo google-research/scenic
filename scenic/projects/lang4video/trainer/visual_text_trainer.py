@@ -337,7 +337,7 @@ def train(
 
     if ((step % config.get('log_summary_steps', 100) == 0) or (step == 1) or
         (step == total_steps) or (lead_host and chrono.warmup)):
-      chrono.pause()
+      chrono.pause(wait_for=(metrics_list))
 
       if lead_host:
         chrono.tick(step, writer, write_note)

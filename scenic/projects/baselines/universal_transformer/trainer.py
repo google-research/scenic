@@ -574,7 +574,7 @@ def train(
     ############### LOG TRAIN SUMMARY ###############
     if (step % log_summary_steps == 1) or (step
                                            == total_steps) or chrono.warmup:
-      chrono.pause()
+      chrono.pause(wait_for=(train_metrics))
       if lead_host:
         chrono.tick(step, writer, write_note)
       train_summary = train_utils.log_train_summary(

@@ -252,7 +252,9 @@ def _create_text_dataset(
     config_for_text.dataset_configs = config_for_text.text_dataset_configs
 
     # We copy this one over also:
-    config_for_text.dataset_configs.max_num_words = config.dataset_configs.max_num_words
+    config_for_text.dataset_configs.max_num_words = (
+        config.dataset_configs.max_num_words
+    )  # pylint: disable=g-line-too-long
 
   return train_utils.get_dataset(config_for_text, data_rng)
 
@@ -455,7 +457,7 @@ def train(
 
     if ((step % config.get('log_summary_steps', 100) == 0) or (step == 1) or
         (step == total_steps) or (lead_host and chrono.warmup)):
-      chrono.pause()
+      chrono.pause(wait_for=(metrics_list))
 
       if lead_host:
         chrono.tick(step, writer, write_note)
