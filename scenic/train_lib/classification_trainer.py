@@ -318,7 +318,10 @@ def train(
   chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
   logging.info('Starting training loop at step %d.', start_step + 1)
   report_progress = periodic_actions.ReportProgress(
-      num_train_steps=total_steps, writer=writer)
+      num_train_steps=total_steps,
+      writer=writer,
+      every_steps=config.get('report_progress_step', log_summary_steps),
+  )
 
   def write_note(note):
     if lead_host:

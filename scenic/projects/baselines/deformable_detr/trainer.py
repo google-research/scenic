@@ -378,7 +378,10 @@ def train_and_evaluate(
 
   logging.info('Starting training loop at step %d.', start_step + 1)
   report_progress = periodic_actions.ReportProgress(
-      num_train_steps=total_steps, writer=writer)
+      num_train_steps=total_steps,
+      writer=writer,
+      every_steps=config.get('report_progress_step', log_summary_steps),
+  )
   hooks = []
   if lead_host:
     hooks.append(report_progress)
@@ -552,7 +555,10 @@ def evaluate(
     step0_log['gflops'] = gflops
   writer.write_scalars(1, step0_log)
 
-  report_progress = periodic_actions.ReportProgress(writer=writer)
+  report_progress = periodic_actions.ReportProgress(
+      writer=writer,
+      every_steps=config.get('report_progress_step', 10),
+  )
   hooks = []
   if lead_host:
     hooks.append(report_progress)

@@ -373,7 +373,10 @@ def train(
 
   logging.info('Starting training loop at step %d.', start_step + 1)
   report_progress = periodic_actions.ReportProgress(
-      num_train_steps=total_steps, writer=writer)
+      num_train_steps=total_steps,
+      writer=writer,
+      every_steps=config.get('report_progress_step', log_summary_steps),
+  )
   hooks = []
   if lead_host:
     hooks.append(report_progress)
