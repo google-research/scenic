@@ -380,6 +380,7 @@ def train_and_evaluate(
   report_progress = periodic_actions.ReportProgress(
       num_train_steps=total_steps,
       writer=writer,
+      every_secs=None,
       every_steps=config.get('report_progress_step', log_summary_steps),
   )
   hooks = []
@@ -557,6 +558,7 @@ def evaluate(
 
   report_progress = periodic_actions.ReportProgress(
       writer=writer,
+      every_secs=None,
       every_steps=config.get('report_progress_step', 10),
   )
   hooks = []

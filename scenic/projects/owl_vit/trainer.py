@@ -363,7 +363,11 @@ def train(*, rng: jnp.ndarray, config: ml_collections.ConfigDict,
   logging.info('Start training from step %d to %d.', start_step + 1,
                total_steps + 1)
   report_progress = periodic_actions.ReportProgress(
-      num_train_steps=total_steps, writer=writer)
+      num_train_steps=total_steps,
+      writer=writer,
+      every_secs=None,
+      every_steps=log_summary_steps,
+  )
 
   def write_note(note):
     if lead_host:
