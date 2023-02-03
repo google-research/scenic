@@ -397,21 +397,13 @@ def train(
       del eval_metrics
       chrono.resume()
     ##################### CHECKPOINTING ###################
-    if ((step % checkpoint_steps == 0 and step > 0) or
+    if ((step % checkpoint_steps == 1 and step > 1) or
         (step == total_steps)) and config.checkpoint:
       chrono.pause(wait_for=(train_state.params, train_state.opt_state))
       with report_progress.timed('checkpoint'):
-        # Sync model state across replicas.
-        train_state = train_utils.sync_model_state_across_replicas(train_state)
-        if lead_host:
-          # Take the first replica.
-          unrep_train_state = jax_utils.unreplicate(train_state)
-          metadata = unrep_train_state.metadata
-          metadata['chrono'] = chrono.save()
-          unrep_train_state.replace(metadata=metadata)  # pytype: disable=attribute-error
-          train_utils.save_checkpoint(workdir, unrep_train_state)
-          del unrep_train_state
-      chrono.resume()  # Un-pause now.
+        train_utils.handle_checkpointing(train_state, chrono, workdir)
+      chrono.resume()
+
   # Wait until computations are done before exiting.
   train_utils.barrier_across_hosts()
   # Return the train and eval summary after last step for regression testing.

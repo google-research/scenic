@@ -1092,3 +1092,33 @@ def barrier_across_hosts():
     x = jnp.ones([jax.local_device_count()])
     x = jax.device_get(jax.pmap(lambda x: jax.lax.psum(x, 'i'), 'i')(x))
     assert x[0] == jax.device_count()
+
+
+def handle_checkpointing(
+    train_state: TrainState,
+    chrono: Chrono,
+    workdir: str,
+    max_checkpoints_to_keep=3,
+):
+  """Handles all the bookkeeping around checkpointing.
+
+  Syncs the training state and unreplicates it, stops & restarts Chrono
+  (and handles its metadata) and writes the actual checkpoint.
+
+  Args:
+    train_state: A replicated TrainState.
+    chrono: The Chrono object.
+    workdir: the workdir of the process.
+    max_checkpoints_to_keep: how many checkpoints to keep.
+  """
+  train_state = sync_model_state_across_replicas(train_state)
+  if jax.process_index() == 0:
+    unrep_train_state = jax_utils.unreplicate(train_state)
+    metadata = unrep_train_state.metadata
+    metadata['chrono'] = chrono.save()
+    unrep_train_state.replace(metadata=metadata)
+    save_checkpoint(
+        workdir,
+        unrep_train_state,
+        max_to_keep=max_checkpoints_to_keep)
+    del unrep_train_state
