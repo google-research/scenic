@@ -21,30 +21,18 @@ import scipy.optimize as sciopt
 
 @cpu_matcher
 def hungarian_matcher(cost):
-  """Computes Hungarian Matching on cost matrix for a batch of datapoints.
-
-  Uses a map over linear_sum_assignment, which computes the matching between
-  predictions for a single datapoint.
-
-  Predicted boxes that were not matched to any non-empty target box will be
-  given a dummy matching to the last target box, which is assumed to be empty.
-  Due to this padding of indices, the number of indices for all datapoints are
-  all equal to num_queries. The cost matrix should be already padded to the
-  correct shape with dummy targets.
+  """Computes Hungarian Matching given a single cost matrix.
 
   Relevant DETR code:
   https://github.com/facebookresearch/detr/blob/647917626d5017e63c1217b99537deb2dcb370d6/models/matcher.py#L35
 
   Args:
-    cost: np.ndarray; Batch of matching cost matrices; should be on CPU
-      already.
+    cost: Matching cost matrix of shape [N, M].
 
   Returns:
-    An np.ndarray batch_size, containing indices (index_i, index_j) where:
-        - index_i is the indices of the selected predictions (in order).
-        - index_j is the indices of the corresponding selected targets (in
-        order).
-      Each index_i and index_j is an np.array of shape [num_queries].
+    Array of shape [min(N, M), 2] where each row contains a matched pair of
+    indices into the rows (N) and columns (M) of the cost matrix.
   """
-  return np.array(
-      list(map(lambda x: tuple(sciopt.linear_sum_assignment(x)), cost)))
+  # Matrix is transposed to maintain the convention of other matchers:
+  col_ind, row_ind = sciopt.linear_sum_assignment(cost.T)
+  return np.stack([row_ind, col_ind]).astype(np.int32)
