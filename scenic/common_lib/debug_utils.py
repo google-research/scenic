@@ -173,7 +173,13 @@ def compute_flops_with_pytree(flax_model_apply_fn: Callable[[jnp.ndarray], Any],
 
   dummy_input = create_dummy_input(input_spec)
 
-  m = jax.xla_computation(flax_model_apply_fn)(**dummy_input).as_hlo_module()
+  if isinstance(dummy_input, dict):
+    m = jax.xla_computation(flax_model_apply_fn)(**dummy_input).as_hlo_module()
+  elif isinstance(dummy_input, abc.Sequence):
+    m = jax.xla_computation(flax_model_apply_fn)(*dummy_input).as_hlo_module()
+  else:
+    m = jax.xla_computation(flax_model_apply_fn)(dummy_input).as_hlo_module()
+
   client = jax.lib.xla_bridge.get_backend()
   analysis = jax.lib.xla_client._xla.hlo_module_cost_analysis(client, m)  # pylint: disable=protected-access
 
