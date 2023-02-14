@@ -269,9 +269,7 @@ def initialize_bert_model(
     variables = {'params': init_params, **init_model_state}
     flax_model_apply_fn = functools.partial(
         model_def.apply, variables, train=False, debug=False, rngs=rngs)
-    m = jax.xla_computation(flax_model_apply_fn)(dummy_input).as_hlo_module()
-    client = jax.lib.xla_bridge.get_backend()
-    analysis = jax.lib.xla_client._xla.hlo_module_cost_analysis(client, m)  # pylint: disable=protected-access
+    analysis = jax.jit(flax_model_apply_fn).lower(dummy_input).cost_analysis()
     flops = analysis['flops']
     if count_flops.get('fuse_multiply_add', True):
       flops = flops / 2

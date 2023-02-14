@@ -41,10 +41,9 @@ def compute_flops(flax_model_apply_fn: Callable[[jnp.ndarray], Any],
     in_st = debug_utils.input_spec_to_jax_shape_dtype_struct(spec, batch_size=1)
     input_placeholder[modality] = jnp.zeros(in_st.shape, in_st.dtype)
 
-  m = jax.xla_computation(flax_model_apply_fn)(
-      input_placeholder).as_hlo_module()
-  client = jax.lib.xla_bridge.get_backend()
-  analysis = jax.lib.xla_client._xla.hlo_module_cost_analysis(client, m)  # pylint: disable=protected-access
+  analysis = (
+      jax.jit(flax_model_apply_fn).lower(input_placeholder).cost_analysis()
+  )
 
   flops = analysis['flops']
   if fuse_multiply_add:
