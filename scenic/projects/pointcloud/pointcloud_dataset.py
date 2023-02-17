@@ -103,7 +103,7 @@ def modelnet40_load_split(batch_size,
       dataset_config.dataset_name,
       split=split,
       data_dir=dataset_config.dataset_path,
-      feature_key='pc')
+      skip_decode=('pc',))
   # Download dataset:
   dataset_builder.download_and_prepare()
 

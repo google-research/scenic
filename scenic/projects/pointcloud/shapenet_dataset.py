@@ -113,7 +113,7 @@ def shapenet_load_split(batch_size,
       dataset_config.dataset_name,
       split,
       data_dir=dataset_config.dataset_path,
-      feature_key='pc')
+      skip_decode=('pc',))
 
   class_proportions = get_class_proportions(ds, dataset_config.num_classes)
 
