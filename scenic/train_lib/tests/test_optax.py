@@ -29,7 +29,7 @@ class OptaxTest(tf.test.TestCase, parameterized.TestCase):
   def test_make_mask_trees(self, allow_unmatched):
     """Tests `make_mask_trees`."""
     tree = {'a': {'b': 1}, 'c': 2}
-    patterns = [('a/.*', 'A'), ('b/.*', 'B'), ('c', 'C')]
+    patterns = [('a/.*', 'A', 0.1), ('b/.*', 'B', 0.3), ('c', 'C', 0.3)]
     masks = optax.make_mask_trees(
         tree, patterns, allow_unmatched=allow_unmatched)
     target_masks = [

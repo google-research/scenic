@@ -64,8 +64,12 @@ def _make_mask_trees(
   else:
     patterns, names, values = [], [], []
 
-  masks = make_mask_trees(params, list(zip(patterns, names)),
-                          allow_unmatched=allow_unmatched, log=log)
+  masks = make_mask_trees(
+      params,
+      list(zip(patterns, names, values)),
+      allow_unmatched=allow_unmatched,
+      log=log,
+  )
   return masks, list(zip(names, values))
 
 
@@ -85,17 +89,17 @@ def _split_frozen(masks, scheds):
 
 def make_mask_trees(
     tree,
-    patterns_names: Sequence[Tuple[str, Optional[str]]],
+    patterns_names: Sequence[Tuple[str, Optional[str], float]],
     *,
     allow_unmatched: bool = False,
-    log: Optional[str] = None):
+    log: Optional[str] = None,
+):
   """Returns a boolean mask tree for every pattern (only first match)."""
 
-  patterns, _ = zip(*patterns_names)
+  patterns, _, _ = zip(*patterns_names)
   compiled_patterns = list(map(re.compile, patterns))
 
   def matchfirst(_, name):
-    matches = []
     matches = [bool(pattern.fullmatch(name)) for pattern in compiled_patterns]
 
     matched = sum(map(int, matches))
