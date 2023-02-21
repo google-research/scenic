@@ -36,7 +36,7 @@ def point_count(logits: jnp.ndarray,
     return np.prod(one_hot_targets.shape[:3])
   assert weights.ndim == 2, (
       'For segmentation task, the weights should be a point level mask.')
-  return weights.sum()
+  return weights.sum()  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 # Standard default metrics for the semantic segmentation models.
@@ -90,7 +90,7 @@ def semantic_segmentation_metrics_function(
   # sharded batch.
   evaluated_metrics = {}
   for key, val in metrics.items():
-    evaluated_metrics[key] = model_utils.psum_metric_normalizer(
+    evaluated_metrics[key] = model_utils.psum_metric_normalizer(  # pytype: disable=wrong-arg-types  # jax-ndarray
         (val[0](logits, one_hot_targets, weights),
          val[1](logits, one_hot_targets, weights)))
   return evaluated_metrics

@@ -200,7 +200,7 @@ def get_constant_initializer(constant: float) -> Initializer:
               dtype: jnp.dtype = np.float32) -> np.ndarray:
     return constant * np.ones(shape, dtype=dtype)
 
-  return init_fn
+  return init_fn  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 class Affine(nn.Module):

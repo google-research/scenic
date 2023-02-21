@@ -761,7 +761,7 @@ def process_and_fetch_to_host(
   else:
     # Pred_or_tgt was dict of arrays, so convert dict of lists to list of dicts:
     keys, values = zip(*pred_or_tgt.items())
-    return [dict(zip(keys, v)) for v in zip(*values)]
+    return [dict(zip(keys, v)) for v in zip(*values)]  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 def get_backbone_multioptimizer(

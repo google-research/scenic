@@ -134,7 +134,7 @@ class TopologicalViTClassificationModel(ClassificationModel):
     else:
       l2_loss = model_utils.l2_regularization(model_params)
       total_loss = sof_ce_loss + 0.5 * self.config.l2_decay_factor * l2_loss
-    return total_loss
+    return total_loss  # pytype: disable=bad-return-type  # jax-ndarray
 
   def get_label_weights(self) -> jnp.ndarray:
     """Returns labels' weights to be used for computing weighted loss.

@@ -160,7 +160,7 @@ class Model:
     # Find box with lowest overall similarity:
     best_box_ind = selected_inds[np.argmin(mean_sim)]
 
-    return class_embeddings[best_box_ind], best_box_ind
+    return class_embeddings[best_box_ind], best_box_ind  # pytype: disable=bad-return-type  # jax-ndarray
 
   def get_scores(
       self,

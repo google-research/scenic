@@ -520,7 +520,7 @@ class Add1DPositionEmbedding(nn.Module):
     pos_emb_shape = (1, embedding_length, inputs.shape[-1])
     if self.posemb_init is None:
       # Use a fixed (non-learned) sinusoidal position embedding.
-      pos_embedding = sinusoidal_init(max_len=embedding_length)(None,
+      pos_embedding = sinusoidal_init(max_len=embedding_length)(None,  # pytype: disable=wrong-arg-types  # jax-ndarray
                                                                 pos_emb_shape,
                                                                 None)
     else:
