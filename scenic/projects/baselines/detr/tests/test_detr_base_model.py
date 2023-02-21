@@ -145,7 +145,7 @@ class TestObjectDetectionWithMatchingModel(parameterized.TestCase):
 
     # Test loss function in the pmapped setup:
     def function_to_pmap(outputs, batch):
-      return model.labels_losses_and_metrics(outputs, batch, indices, log)
+      return model.labels_losses_and_metrics(outputs, batch, indices, log)  # pytype: disable=wrong-arg-types  # jax-ndarray
 
     labels_lm_pmapped = jax.pmap(function_to_pmap, axis_name='batch')
 

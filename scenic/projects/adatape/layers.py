@@ -272,7 +272,7 @@ class ATRTapeAppender(nn.Module):
         scan_out, (bs, self.max_steps * self.num_token_per_step, self.features))
     _, halting_probability, remainders, n_updates, _ = carry_output
 
-    return scan_out, (remainders, n_updates)
+    return scan_out, (remainders, n_updates)  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 class TapeBank(nn.Module):
@@ -350,7 +350,7 @@ class TapeBank(nn.Module):
       scores = jnp.dot(query, tape_tokens_keys.T)
       topk_idndex = jax.lax.top_k(scores, self.num_tape_tokens)[1]
       assert jnp.issubdtype(topk_idndex.dtype, jnp.integer)
-      return jnp.take(tape_tokens, topk_idndex, axis=0), (None, None)
+      return jnp.take(tape_tokens, topk_idndex, axis=0), (None, None)  # pytype: disable=bad-return-type  # jax-ndarray
     else:
       token_selected_keys = tape_tokens[:, :, :self.features //
                                         self.ac_config.split_tt]
@@ -361,7 +361,7 @@ class TapeBank(nn.Module):
       assert jnp.issubdtype(topk_idndex.dtype, jnp.integer)
       topk_idndex = jnp.expand_dims(topk_idndex, axis=-1)
       tape_tokens = jnp.take_along_axis(tape_tokens, topk_idndex, axis=1)
-      return tape_tokens, (None, None)
+      return tape_tokens, (None, None)  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 class Encoder1DBlock(nn.Module):
@@ -388,7 +388,7 @@ class Encoder1DBlock(nn.Module):
   stochastic_depth: float = 0.0
 
   @nn.compact
-  def __call__(self,
+  def __call__(self,  # pytype: disable=annotation-type-mismatch  # jax-ndarray
                inputs_q: jnp.ndarray,
                inputs_kv: jnp.ndarray = None,
                input_mask: Optional[jnp.ndarray] = None,
@@ -492,7 +492,7 @@ def update_input_mask(
     tape_mask = jnp.ones((input_mask.shape[0], (new_len - input_mask.shape[1])))
     input_mask = jnp.concatenate([input_mask, tape_mask], axis=1)
 
-  return input_mask, logging_input_mask, taped_x
+  return input_mask, logging_input_mask, taped_x  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 def get_q_kv_mask(

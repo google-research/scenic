@@ -93,7 +93,7 @@ class DownsampleBlock(nn.Module):
         use_batch_norm=self.use_batch_norm)(
             x, train=train)
     x = nn.max_pool(x, window_shape=(2, 2), strides=(2, 2))
-    return x, residual
+    return x, residual  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 class BottleneckBlock(nn.Module):

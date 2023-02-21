@@ -209,7 +209,7 @@ class ModifiedResNet(nn.Module):
     if self.out_features is not None:
       x = self.attnpool(x)
 
-    return x, feature_map
+    return x, feature_map  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 class MLP(nn.Module):
@@ -315,7 +315,7 @@ class VisionTransformer(nn.Module):
     else:
       x = LayerNorm(name='ln_post')(x)
 
-    return x, feature_map
+    return x, feature_map  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 class TextEncoder(nn.Module):

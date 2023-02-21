@@ -163,7 +163,7 @@ def bert_metrics_function(outputs: Dict[str, jnp.ndarray],
       ]):
     evaluated_metrics[name] = model_utils.psum_metric_normalizer(
         (value, normalizer))
-  return evaluated_metrics
+  return evaluated_metrics  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 def compute_bert_loss(mlm_logits: jnp.ndarray, nsp_logits: jnp.ndarray,
@@ -188,7 +188,7 @@ def compute_bert_loss(mlm_logits: jnp.ndarray, nsp_logits: jnp.ndarray,
                                                    batch['masked_lm_ids'],
                                                    batch['masked_lm_weights'],
                                                    batch_weights)
-  return nsp_loss + mlm_loss
+  return nsp_loss + mlm_loss  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 class BERTBaseModel(base_model.BaseModel):
@@ -228,7 +228,7 @@ class BERTBaseModel(base_model.BaseModel):
     ```
   """
 
-  def get_metrics_fn(self, split: Optional[str] = None) -> MetricFn:
+  def get_metrics_fn(self, split: Optional[str] = None) -> MetricFn:  # pytype: disable=signature-mismatch  # jax-ndarray
     """Returns a callable metric function for the model.
 
     Args:

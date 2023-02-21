@@ -412,7 +412,7 @@ class PonderViTMultiLabelClassificationModel(MultiLabelClassificationModel):
       l2_loss = model_utils.l2_regularization(model_params)
       total_loss = total_loss + 0.5 * self.config.l2_decay_factor * l2_loss
 
-    return total_loss
+    return total_loss  # pytype: disable=bad-return-type  # jax-ndarray
 
   def init_from_train_state(
       self, train_state: Any, restored_train_state: Any,

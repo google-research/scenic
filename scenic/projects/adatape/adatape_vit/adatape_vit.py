@@ -303,7 +303,7 @@ class AdaTapeMultiLabelClassificationModel(MultiLabelClassificationModel):
         is not None) and (act_config.act_loss_weight > 0.0):
       ponder_loss = ponder_loss_fn(auxiliary_outputs[1], weights)
       total_loss += act_config.act_loss_weight * ponder_loss
-    return total_loss
+    return total_loss  # pytype: disable=bad-return-type  # jax-ndarray
 
   def init_from_train_state(
       self, train_state: Any, restored_train_state: Any,
