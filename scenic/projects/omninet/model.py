@@ -60,7 +60,7 @@ class OmnidirectionalEncoder1D(nn.Module):
         logging.info('Skipping vanilla transformer at layer %d', lyr)
         skip = False
       else:
-        x = fast_vit_model_utils.Encoder1DBlock(
+        x = fast_vit_model_utils.Encoder1DBlock(  # pytype: disable=wrong-arg-types  # jax-ndarray
             mlp_dim=self.mlp_dim,
             attention_fn=self.attention_fn,
             attention_configs=self.attention_configs,
@@ -108,7 +108,7 @@ class OmnidirectionalEncoder1D(nn.Module):
             post_sa_fn = None
 
           if self.omninet.encoder.type == '1d':
-            xp = fast_vit_model_utils.Encoder1DBlock(
+            xp = fast_vit_model_utils.Encoder1DBlock(  # pytype: disable=wrong-arg-types  # jax-ndarray
                 mlp_dim=self.omninet.get('mlp_dim', self.mlp_dim),
                 attention_fn=self.omninet.attention_fn,
                 attention_configs=self.omninet.attention_configs,

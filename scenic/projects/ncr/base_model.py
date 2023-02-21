@@ -103,7 +103,7 @@ class NCRModel(base_model.BaseModel):
     loss_metrics['ncr_loss'] = 0.0
     loss_metrics['total_loss'] = total_loss
 
-    return total_loss, loss_metrics
+    return total_loss, loss_metrics  # pytype: disable=bad-return-type  # jax-ndarray
 
   def ncr_loss(
       self,
@@ -163,7 +163,7 @@ class NCRModel(base_model.BaseModel):
     loss_metrics['ncr_loss'] = ncr_loss
     loss_metrics['total_loss'] = total_loss
 
-    return total_loss, loss_metrics
+    return total_loss, loss_metrics  # pytype: disable=bad-return-type  # jax-ndarray
 
   def get_metrics_fn(self, split: Optional[str] = None) -> base_model.MetricFn:
     """Returns a callable metric function for the model.

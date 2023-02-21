@@ -175,7 +175,7 @@ def train_step(
   else:
     # No mixup is applied, all modalities share the same labels.
     labels = batch['label']
-    batch['label'] = {}
+    batch['label'] = {}  # pytype: disable=container-type-mismatch  # jax-ndarray
     for modality in batch['inputs']:
       batch['label'][modality] = labels
     batch['label']['all'] = labels
