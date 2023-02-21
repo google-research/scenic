@@ -49,7 +49,7 @@ def num_pixels(logits: jnp.ndarray,
     return np.prod(one_hot_targets.shape[:3])
   assert weights.ndim == 3, (
       'For segmentation task, the weights should be a pixel level mask.')
-  return weights.sum()
+  return weights.sum()  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 # Standard default metrics for the semantic segmentation models.
@@ -104,7 +104,7 @@ def semantic_segmentation_metrics_function(
   # sharded batch.
   evaluated_metrics = {}
   for key, val in metrics.items():
-    evaluated_metrics[key] = model_utils.psum_metric_normalizer(
+    evaluated_metrics[key] = model_utils.psum_metric_normalizer(  # pytype: disable=wrong-arg-types  # jax-ndarray
         (val[0](logits, one_hot_targets, weights), val[1](
             logits, one_hot_targets, weights)),
         axis_name=axis_name)
@@ -195,7 +195,7 @@ class SegmentationModel(base_model.BaseModel):
     else:
       l2_loss = model_utils.l2_regularization(model_params)
       total_loss = sof_ce_loss + 0.5 * self.config.l2_decay_factor * l2_loss
-    return total_loss
+    return total_loss  # pytype: disable=bad-return-type  # jax-ndarray
 
   def get_label_weights(self) -> jnp.ndarray:
     """Returns labels' weights to be used for computing weighted loss.
@@ -204,7 +204,7 @@ class SegmentationModel(base_model.BaseModel):
     data for each class, when we have un-balances data for different classes.
     """
     if not self.config.get('class_rebalancing_factor'):
-      return None
+      return None  # pytype: disable=bad-return-type  # jax-ndarray
     if 'class_proportions' not in self.dataset_meta_data:
       raise ValueError(
           'When `class_rebalancing_factor` is nonzero, `class_proportions` must'

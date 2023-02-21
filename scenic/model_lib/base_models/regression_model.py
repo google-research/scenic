@@ -61,10 +61,10 @@ def regression_metrics_function(
   evaluated_metrics = {}
   for key, val in metrics.items():
     evaluated_metrics[key] = model_utils.psum_metric_normalizer(
-        (val[0](targets, predictions, weights), val[1](targets, predictions,
+        (val[0](targets, predictions, weights), val[1](targets, predictions,  # pytype: disable=wrong-arg-types  # jax-ndarray
                                                        weights)),
         axis_name=axis_name)
-  return evaluated_metrics
+  return evaluated_metrics  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 class RegressionModel(base_model.BaseModel):
@@ -140,7 +140,7 @@ class RegressionModel(base_model.BaseModel):
     if self.config.get('l2_decay_factor'):
       l2_loss = model_utils.l2_regularization(model_params)
       total_loss += 0.5 * self.config.l2_decay_factor * l2_loss
-    return total_loss
+    return total_loss  # pytype: disable=bad-return-type  # jax-ndarray
 
   def build_flax_model(self):
     raise NotImplementedError('Subclasses must implement build_flax_model().')

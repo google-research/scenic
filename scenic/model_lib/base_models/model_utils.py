@@ -522,7 +522,7 @@ def weighted_l1_loss(x: jnp.ndarray,
   if not reduction:
     return abs_diff
   elif reduction == 'mean':
-    return abs_diff.mean()
+    return abs_diff.mean()  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 def weighted_box_l1_loss(

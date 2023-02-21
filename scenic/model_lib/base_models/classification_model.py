@@ -77,7 +77,7 @@ def classification_metrics_function(
   # sharded batch.
   evaluated_metrics = {}
   for key, val in metrics.items():
-    evaluated_metrics[key] = model_utils.psum_metric_normalizer(
+    evaluated_metrics[key] = model_utils.psum_metric_normalizer(  # pytype: disable=wrong-arg-types  # jax-ndarray
         (val[0](logits, one_hot_targets, weights), val[1](
             logits, one_hot_targets, weights)),
         axis_name=axis_name)
@@ -166,7 +166,7 @@ class ClassificationModel(base_model.BaseModel):
     else:
       l2_loss = model_utils.l2_regularization(model_params)
       total_loss = sof_ce_loss + 0.5 * self.config.l2_decay_factor * l2_loss
-    return total_loss
+    return total_loss  # pytype: disable=bad-return-type  # jax-ndarray
 
   def build_flax_model(self):
     raise NotImplementedError('Subclasses must implement build_flax_model().')

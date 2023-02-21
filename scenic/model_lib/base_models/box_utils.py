@@ -125,7 +125,7 @@ def box_iou(boxes1: Array,
     # Somehow the PyTorch implementation does not use eps to avoid 1/0 cases.
     iou = intersection / (union + eps)
 
-  return iou, union
+  return iou, union  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 def generalized_box_iou(boxes1: Array,
