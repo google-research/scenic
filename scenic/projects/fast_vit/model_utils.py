@@ -59,7 +59,7 @@ class LinformerEncoderAttention(nn.Module):
       ..., jnp.ndarray] = attention_layers.dot_product_attention
 
   @nn.compact
-  def __call__(self,
+  def __call__(self,  # pytype: disable=annotation-type-mismatch  # jax-ndarray
                inputs_q: jnp.ndarray,
                inputs_kv: jnp.ndarray = None,
                *,

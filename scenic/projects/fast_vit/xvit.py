@@ -62,7 +62,7 @@ class Encoder1D(nn.Module):
 
     # Input encoder.
     for lyr in range(self.num_layers):
-      x = model_utils.Encoder1DBlock(
+      x = model_utils.Encoder1DBlock(  # pytype: disable=wrong-arg-types  # jax-ndarray
           mlp_dim=self.mlp_dim,
           attention_fn=self.attention_fn,
           attention_configs=self.attention_configs,
@@ -218,7 +218,7 @@ class Encoder1DPyramid(nn.Module):
                   x, deterministic=not train)
 
           # Input encoder.
-      x = model_utils.Encoder1DBlock(
+      x = model_utils.Encoder1DBlock(  # pytype: disable=wrong-arg-types  # jax-ndarray
           mlp_dim=self.mlp_dim,
           attention_fn=layer_attn_func,
           attention_configs=self.attention_configs,
@@ -278,7 +278,7 @@ class EncoderAxial(nn.Module):
         two_d_shape = x.shape
         # Row attention.
         x = model_utils.get_axial_1d_input(x, axis=1)
-        x = model_utils.Encoder1DBlock(
+        x = model_utils.Encoder1DBlock(  # pytype: disable=wrong-arg-types  # jax-ndarray
             mlp_dim=self.mlp_dim,
             attention_fn=self.attention_fn,
             attention_configs=self.attention_configs,
@@ -290,7 +290,7 @@ class EncoderAxial(nn.Module):
 
         # Column attention.
         x = model_utils.get_axial_1d_input(x, axis=2)
-        x = model_utils.Encoder1DBlock(
+        x = model_utils.Encoder1DBlock(  # pytype: disable=wrong-arg-types  # jax-ndarray
             mlp_dim=self.mlp_dim,
             attention_fn=self.attention_fn,
             attention_configs=self.attention_configs,
@@ -314,7 +314,7 @@ class EncoderAxial(nn.Module):
         raise ValueError('Undefined transformer encoder type: '
                          f'{self.transformer_encoder_type}.')
 
-    return nn.LayerNorm(x, name='encoder_norm')
+    return nn.LayerNorm(x, name='encoder_norm')  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 class XViT(nn.Module):

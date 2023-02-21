@@ -159,7 +159,7 @@ class LayoutDenoiseBaseModel(base_model.BaseModel):
 
       # Process metrics dictionary to generate final unnormalized metrics
       metrics['minibatch_object_detection_loss'] = (total_loss, 1)
-      return total_loss, metrics
+      return total_loss, metrics  # pytype: disable=bad-return-type  # jax-ndarray
     else:
       raise ValueError('Unsupported task %s' % task)
 

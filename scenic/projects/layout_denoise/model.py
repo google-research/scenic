@@ -106,7 +106,7 @@ class DeTRTransformer(nn.Module):
             pos_embedding=pos_embedding,
             query_pos_emb=query_pos_emb,
             train=train)
-    return output
+    return output  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 class VHOnlyModel(nn.Module):
@@ -168,7 +168,7 @@ class VHOnlyModel(nn.Module):
             pos_embedding=pos_embedding,
             train=train)
 
-    return encoded
+    return encoded  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 class MLPModel(nn.Module):
@@ -207,7 +207,7 @@ class MLPModel(nn.Module):
     for _ in range(self.num_encoder_layers):
       x = common.dense(x, self.hidden_dim, jnp.float32)
       x = nn.Dropout(rate=self.dropout_rate)(x, deterministic=not train)
-    return x
+    return x  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 class LayoutDenoiseModel(nn.Module):
