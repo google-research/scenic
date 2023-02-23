@@ -90,9 +90,9 @@ class ImageTextEncoder(Encoder, abc.ABC):
   text_encoder: Optional[TextEncoder] = None
 
   similarity: Literal['cosine', 'dot_product'] = 'dot_product'
-  logit_scale: jnp.ndarray = 0
+  logit_scale: jnp.ndarray = 0  # pytype: disable=annotation-type-mismatch  # jax-ndarray
 
-  def __call__(
+  def __call__(  # pytype: disable=signature-mismatch  # jax-ndarray
       self,
       image: jnp.ndarray,  # Shape: (N, H, W, C)
       text: jnp.ndarray,  # Shape: (N, L)

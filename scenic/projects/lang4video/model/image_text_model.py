@@ -96,7 +96,7 @@ class ImageTextModel(base_model.BaseModel):
   def get_metrics_fn(self, split: Optional[str] = None) -> base_model.MetricFn:
     return lambda scores, batch: {}
 
-  def loss_function(
+  def loss_function(  # pytype: disable=signature-mismatch  # jax-ndarray
       self,
       scores: jnp.ndarray,  # Shape: (N, N)
       batch: Optional[base_model.Batch] = None,

@@ -96,7 +96,7 @@ class BertTextEncoder(TextEncoder):
   compute_mlm: bool = True
 
   @nn.compact
-  def __call__(
+  def __call__(  # pytype: disable=signature-mismatch  # jax-ndarray
       self,
       text: jnp.ndarray,
       mask: Optional[jnp.ndarray] = None,
