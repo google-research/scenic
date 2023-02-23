@@ -38,7 +38,12 @@ class TextZeroShotDetectionModule(nn.Module):
   @nn.nowrap
   def load_variables(self, checkpoint_path: str) -> Mapping[str, Any]:
     restored = checkpoints.restore_checkpoint(checkpoint_path, target=None)
-    return {'params': restored['optimizer']['target']}
+    if 'optimizer' in restored:
+      # Pre-Optax checkpoint:
+      params = restored['optimizer']['target']
+    else:
+      params = restored['params']
+    return {'params': params}
 
   def setup(self):
     self._embedder = layers.ClipImageTextEmbedder(
