@@ -148,7 +148,7 @@ def deform_attn_sampling_fn(values: Array, sampling_locations: Array,
   len_q = attn_weights.shape[1]
   split_indices = np.cumsum(np.array([h * w for h, w in shapes]))[:-1]
   # Split values by level.
-  values_by_level = values.split(split_indices, axis=-2)
+  values_by_level = values.split(split_indices, axis=-2)  # pytype: disable=attribute-error  # jax-ndarray
   sampled_values_all_levels = []
 
   if use_remat:
