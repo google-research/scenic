@@ -101,7 +101,7 @@ def bow_classification_metrics_function(
   # sharded batch.
   evaluated_metrics = {}
   for key, val in metrics.items():
-    evaluated_metrics[key] = model_utils.psum_metric_normalizer(
+    evaluated_metrics[key] = model_utils.psum_metric_normalizer(  # pytype: disable=wrong-arg-types  # jax-ndarray
         (val[0](logits, multihot_target, weights),
          val[1](logits, multihot_target, weights)))
   return evaluated_metrics
@@ -142,7 +142,7 @@ def multihead_classification_metrics_function(
                                                split_names):
     for key, val in metrics.items():
       evaluated_metrics[
-          f'{name}_{key}'] = model_utils.psum_metric_normalizer(
+          f'{name}_{key}'] = model_utils.psum_metric_normalizer(  # pytype: disable=wrong-arg-types  # jax-ndarray
               (val[0](logits_i, one_hot_targets_i,
                       weights), val[1](logits_i, one_hot_targets_i,
                                        weights)))

@@ -128,7 +128,7 @@ class AddPositionEmbs(nn.Module):
     pos_emb_shape = (1, self.max_len, inputs.shape[-1])
     if self.posemb_init is None:
       # Use a fixed (non-learned) sinusoidal position embedding.
-      pos_embedding = sinusoidal_init(max_len=self.max_len)(None, pos_emb_shape,
+      pos_embedding = sinusoidal_init(max_len=self.max_len)(None, pos_emb_shape,  # pytype: disable=wrong-arg-types  # jax-ndarray
                                                             None)
     else:
       pos_embedding = self.param('pos_embedding',
@@ -348,7 +348,7 @@ class Encoder1DBlock(nn.Module):
       shape = (x.shape[0],) + (1,) * (x.ndim - 1)
       return jax.random.bernoulli(self.make_rng('dropout'), droplayer_p, shape)
     else:
-      return 0.0
+      return 0.0  # pytype: disable=bad-return-type  # jax-ndarray
 
   @nn.compact
   def __call__(self, inputs: jnp.ndarray, deterministic: bool,

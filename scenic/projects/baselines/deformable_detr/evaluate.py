@@ -86,7 +86,7 @@ def _add_examples(global_metrics_evaluator: DeformableDetrGlobalEvaluator,
                   predictions: Sequence[ArrayDict],
                   labels: Sequence[ArrayDict]):
   for pred, label in zip(predictions, labels):
-    global_metrics_evaluator.add_example(prediction=pred, target=label)
+    global_metrics_evaluator.add_example(prediction=pred, target=label)  # pytype: disable=wrong-arg-types  # jax-ndarray
 
 
 def run_eval(

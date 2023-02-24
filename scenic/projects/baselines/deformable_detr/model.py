@@ -611,6 +611,6 @@ class DeformableDETRModel(base_model.BaseModel):
     # Store metrics for logging.
     metrics = {k: (v, 1.) for k, v in losses.items()}
     for k, v in metrics.items():
-      metrics[k] = model_utils.psum_metric_normalizer(v)
+      metrics[k] = model_utils.psum_metric_normalizer(v)  # pytype: disable=wrong-arg-types  # jax-ndarray
 
-    return losses['total_loss'], metrics
+    return losses['total_loss'], metrics  # pytype: disable=bad-return-type  # jax-ndarray

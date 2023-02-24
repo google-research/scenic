@@ -156,4 +156,4 @@ def prepare_coco_eval_dicts(
   if gather:
     predictions_out = jax.lax.all_gather(predictions_out, 'batch')
     targets = jax.lax.all_gather(targets, 'batch')
-  return targets, predictions_out
+  return targets, predictions_out  # pytype: disable=bad-return-type  # jax-ndarray
