@@ -304,6 +304,7 @@ def train(
   if not log_eval_steps:
     raise ValueError("'log_eval_steps' should be specified in the config.")
   checkpoint_steps = config.get('checkpoint_steps') or log_eval_steps
+  max_checkpoint_keep = config.get('max_checkpoint_keep', 3)
   log_summary_steps = config.get('log_summary_steps') or log_eval_steps
 
   # Ceil rounding such that we include the last incomplete batch.
@@ -402,7 +403,8 @@ def train(
         (step == total_steps)) and config.checkpoint:
       chrono.pause(wait_for=(train_state.params, train_state.opt_state))
       with report_progress.timed('checkpoint'):
-        train_utils.handle_checkpointing(train_state, chrono, workdir)
+        train_utils.handle_checkpointing(
+            train_state, chrono, workdir, max_checkpoint_keep)
       chrono.resume()
 
   # Wait until computations are done before exiting.
