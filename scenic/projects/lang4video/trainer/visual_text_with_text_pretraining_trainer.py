@@ -103,7 +103,7 @@ def train_step(
         mlm_logits, masked_lm_ids, masked_lm_weights)
     loss_ = loss_image_text_ + config.get('mlm_loss_weight', 1) * loss_mlm_
 
-    return loss_, (new_model_state_, loss_image_text_, loss_mlm_)
+    return loss_, (new_model_state_, loss_image_text_, loss_mlm_)  # pytype: disable=bad-return-type  # jax-ndarray
 
   grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
   (loss, (new_model_state, loss_image_text,

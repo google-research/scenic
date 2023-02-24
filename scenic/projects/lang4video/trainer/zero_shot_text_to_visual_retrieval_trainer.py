@@ -105,7 +105,7 @@ def compute_retrieval_metrics(
   summary[f'median_rank{suffix}'] = jnp.median(ranks)
   summary[f'mean_rank{suffix}'] = ranks.mean()
 
-  return summary
+  return summary  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 def _compute_metrics(
@@ -147,7 +147,7 @@ def _compute_metrics(
   metrics_summary['loss'] = jax.vmap(loss_fn)(
       batched_scores, where=where, initial=initial).mean(where=where)
 
-  return metrics_summary
+  return metrics_summary  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 @get_cached_fn

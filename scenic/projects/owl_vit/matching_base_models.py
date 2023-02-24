@@ -193,7 +193,7 @@ class BaseModelWithMatching(base_model.BaseModel, metaclass=abc.ABCMeta):
     # [bs, 1 + max_num_boxes].
     unnormalized_loss_class = jnp.sum(unnormalized_loss_class, axis=-1)
     # Normalize by number of "true" labels after removing padding label.
-    denom = tgt_labels[..., 1:].sum(axis=[1, 2])
+    denom = tgt_labels[..., 1:].sum(axis=[1, 2])  # pytype: disable=wrong-arg-types  # jax-ndarray
 
     if batch_weights is not None:
       denom *= batch_weights
@@ -258,7 +258,7 @@ class BaseModelWithMatching(base_model.BaseModel, metaclass=abc.ABCMeta):
     # Compute matches if not provided.
     if matches is None:
       if 'cost' not in outputs:
-        cost, n_cols = self.compute_cost_matrix(outputs, batch['label'])
+        cost, n_cols = self.compute_cost_matrix(outputs, batch['label'])  # pytype: disable=wrong-arg-types  # jax-ndarray
       else:
         cost, n_cols = outputs['cost'], outputs.get('cost_n_cols')
       matches = self.matcher(cost, n_cols)
@@ -319,7 +319,7 @@ class BaseModelWithMatching(base_model.BaseModel, metaclass=abc.ABCMeta):
     # Process metrics dictionary to generate final unnormalized metrics.
     metrics = self.get_metrics(metrics_dict)
     metrics['total_loss'] = (total_loss, 1)
-    return total_loss, metrics
+    return total_loss, metrics  # pytype: disable=bad-return-type  # jax-ndarray
 
   def get_metrics(self, metrics_dict: MetricsDict) -> MetricsDict:
     """Arrange loss dictionary into a metrics dictionary."""
@@ -480,5 +480,5 @@ class ObjectDetectionModel(BaseModelWithMatching):
 
     # Sum metrics and normalizers over all replicas.
     for k, v in metrics.items():
-      metrics[k] = model_utils.psum_metric_normalizer(v)
-    return losses, metrics
+      metrics[k] = model_utils.psum_metric_normalizer(v)  # pytype: disable=wrong-arg-types  # jax-ndarray
+    return losses, metrics  # pytype: disable=bad-return-type  # jax-ndarray

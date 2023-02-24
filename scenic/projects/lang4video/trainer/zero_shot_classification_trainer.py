@@ -90,7 +90,7 @@ def eval_step(
       metrics[k] = (jax.lax.psum(v[0].sum(), axis_name=NUM_DEVICES_AXIS_NAME),
                     actual_batch_size)
 
-  return metrics
+  return metrics  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 def compute_class_text_embeddings(

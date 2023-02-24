@@ -81,7 +81,7 @@ def train_step(
 
     loss_ = model.loss_function(scores).mean()
 
-    return loss_, new_model_state_
+    return loss_, new_model_state_  # pytype: disable=bad-return-type  # jax-ndarray
 
   grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
   (loss, new_model_state), grad = grad_fn(train_state.params)

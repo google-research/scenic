@@ -417,7 +417,7 @@ def get_predictions(config: ml_collections.ConfigDict,
         class_names,
         template,
         max_token_len=config.dataset_configs.max_query_length)
-    query_embeddings.append(embed_queries(np.array(tokenized_queries)))
+    query_embeddings.append(embed_queries(np.array(tokenized_queries)))  # pytype: disable=wrong-arg-types  # jax-ndarray
 
   # Prediction loop:
   predictions = []
@@ -426,7 +426,7 @@ def get_predictions(config: ml_collections.ConfigDict,
       desc='Inference progress',
       total=int(dataset.cardinality().numpy())):
 
-    outputs = predict(batch[modalities.IMAGE], query_embeddings)
+    outputs = predict(batch[modalities.IMAGE], query_embeddings)  # pytype: disable=wrong-arg-types  # jax-ndarray
 
     # Selec top k predictions:
     scores, labels, boxes = pmapped_top_k(

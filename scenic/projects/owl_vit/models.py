@@ -127,7 +127,7 @@ class TextZeroShotDetectionModule(nn.Module):
       which is num_dimensions instead of num_tokens.
     """
     _, text_features = self._embedder(texts=text_queries, train=train)
-    return text_features
+    return text_features  # pytype: disable=bad-return-type  # jax-ndarray
 
   def __call__(self,
                inputs: jnp.ndarray,
