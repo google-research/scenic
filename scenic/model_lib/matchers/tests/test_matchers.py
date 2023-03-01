@@ -141,7 +141,7 @@ def compute_cost(
       jnp.max(mask, axis=1),
       jnp.expand_dims(jnp.arange(1, max_num_boxes + 1), axis=0), 0)
   n_cols = jnp.max(n_cols, axis=1)
-  return cost, n_cols
+  return cost, n_cols  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 # TODO(agritsenko): remove this copy-paste from
