@@ -1001,10 +1001,9 @@ class Chrono:
     ds = step - self.prev_step  # Steps between ticks
     self.prev_step = step
     self.accum_examples_seen += ds * self.global_bs
-    summary.update({
-        'examples_seen': self.accum_examples_seen,
-        'epoch': step / self.steps_per_epoch,
-    })
+    summary.update({'examples_seen': self.accum_examples_seen})
+    if self.steps_per_epoch:
+      summary.update({'epoch': step / self.steps_per_epoch})
 
     # We take the start as the second time `tick` is called, so we avoid
     # measuring the overhead of compilation and don't include it in time
