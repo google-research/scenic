@@ -32,13 +32,19 @@ def convert_and_save_model(
     params: PyTree,
     model_dir: str,
     *,
-    input_signatures: Union[Sequence[tf.TensorSpec],
-                            Sequence[Sequence[tf.TensorSpec]]],
-    polymorphic_shapes: Optional[Union[str, jax2tf.PolyShape]] = None,
+    input_signatures: Union[
+        Sequence[tf.TensorSpec],
+        Sequence[Sequence[tf.TensorSpec]],
+        Sequence[dict[str, tf.TensorSpec]],
+    ],
+    polymorphic_shapes: Optional[
+        Union[str, jax2tf.PolyShape, dict[str, str]]
+    ] = None,
     with_gradient: bool = False,
     enable_xla: bool = True,
     compile_model: bool = True,
-    saved_model_options: Optional[tf.saved_model.SaveOptions] = None):
+    saved_model_options: Optional[tf.saved_model.SaveOptions] = None
+):
   """Converts a JAX function and saves a SavedModel.
 
   We assume that the JAX model consists of a prediction function and trained
