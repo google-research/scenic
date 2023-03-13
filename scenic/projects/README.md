@@ -100,6 +100,10 @@
     > trained on single modalities or tasks.
     > Details can be found in the [paper](https://arxiv.org/abs/2111.12993).
 
+*   [T5](t5)
+
+    > Wrappers of T5 models in [t5x](https://github.com/google-research/t5x).
+
 
 <a name="projects"></a>
 ## Scenic projects
