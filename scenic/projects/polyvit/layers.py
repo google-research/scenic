@@ -1,7 +1,7 @@
 """Layers used in PolyVit."""
 
 import functools
-from typing import Any, Callable, Iterable, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Sequence, Tuple, Union
 
 import flax.linen as nn
 import jax
@@ -16,7 +16,7 @@ from scenic.projects.polyvit import polyvit_base_model
 from scenic.projects.vivit import model as vivit_model
 
 
-Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
+Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 
 
 def sinusoidal_init(max_len: int = 2048,

@@ -14,7 +14,7 @@
 
 """Common neural network modules."""
 
-from typing import Callable, Iterable, Optional
+from typing import Callable, Iterable, Optional, Sequence
 
 import flax.linen as nn
 import jax
@@ -23,7 +23,7 @@ import jax.numpy as jnp
 import numpy as np
 
 # Inputs are PRNGKey, input shape and dtype.
-Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
+Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 
 
 class Residual(nn.Module):

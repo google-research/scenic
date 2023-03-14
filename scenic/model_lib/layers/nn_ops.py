@@ -14,14 +14,14 @@
 
 """Common neural network funcitonality that doesn't require parameters."""
 
-from typing import Callable, Iterable
+from typing import Callable, Sequence
 import flax.linen as nn
 import jax
 from jax import lax
 import jax.numpy as jnp
 import numpy as np
 
-Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
+Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 
 
 def extract_image_patches(lhs,

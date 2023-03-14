@@ -1,6 +1,6 @@
 """PolyVit."""
 
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Optional, Sequence
 
 import flax.linen as nn
 import jax
@@ -11,7 +11,7 @@ from scenic.projects.polyvit import model_utils
 from scenic.projects.polyvit import polyvit_base_model
 
 
-Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
+Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 
 
 class PolyVit(nn.Module):
