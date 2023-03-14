@@ -1,7 +1,7 @@
 """MBT: Multimodal Bottleneck Transformers."""
 
 import functools
-from typing import Any, Callable, Dict, Iterable, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple
 
 from absl import logging
 import flax.linen as nn
@@ -20,7 +20,7 @@ from scenic.model_lib.layers import nn_layers
 from scenic.projects.baselines import vit
 from scenic.projects.mbt import model_utils
 
-Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
+Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 
 _MBT_CLASSIFICATION_METRICS = immutabledict({
     'accuracy': (base_model_utils.weighted_correctly_classified,

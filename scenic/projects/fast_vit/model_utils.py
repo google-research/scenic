@@ -3,7 +3,7 @@
 import abc
 import enum
 import functools
-from typing import Any, Callable, Dict, Optional, Tuple, Iterable
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Iterable
 
 from absl import logging
 from flax import linen as nn
@@ -14,7 +14,7 @@ import jax.numpy as jnp
 import numpy as np
 from scenic.model_lib.layers import attention_layers
 
-Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
+Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 
 
 class LinformerEncoderAttention(nn.Module):

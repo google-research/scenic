@@ -1,5 +1,5 @@
 """AdaTape Layers."""
-from typing import Any, Callable, Iterable, Optional, Tuple
+from typing import Any, Callable, Optional, Sequence, Tuple
 
 from absl import logging
 import flax.linen as nn
@@ -8,7 +8,7 @@ import jax.numpy as jnp
 import ml_collections
 from scenic.model_lib.layers import nn_layers
 
-Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
+Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 
 
 def truncated_normal_initializer():

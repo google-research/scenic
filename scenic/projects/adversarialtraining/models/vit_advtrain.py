@@ -1,6 +1,6 @@
 """Vision Transformer."""
 
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Optional, Sequence
 
 from absl import logging
 import flax
@@ -15,7 +15,7 @@ from scenic.model_lib.layers import nn_layers
 import scipy
 
 
-Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
+Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 
 
 class SplitDropout(nn.Module):

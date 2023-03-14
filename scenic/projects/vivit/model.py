@@ -1,7 +1,7 @@
 """ViViT: Vision Transformer for Video."""
 
 import functools
-from typing import Any, Optional, Callable, Iterable
+from typing import Any, Optional, Callable, Sequence
 
 from absl import logging
 import flax.linen as nn
@@ -21,7 +21,7 @@ from scenic.model_lib.layers import nn_layers
 from scenic.projects.baselines import vit
 from scenic.projects.vivit import model_utils
 
-Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
+Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 
 
 def get_model_cls(model_name):

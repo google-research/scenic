@@ -1,6 +1,6 @@
 """BERT Layers."""
 
-from typing import Any, Callable, Iterable, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Sequence, Tuple, Union
 
 import flax.linen as nn
 import jax
@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 from scenic.model_lib.layers import nn_layers
 
-Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
+Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 
 
 def bert_truncated_normal_initializer():
