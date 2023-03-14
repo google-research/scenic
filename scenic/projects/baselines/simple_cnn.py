@@ -11,7 +11,7 @@ from scenic.model_lib.base_models.segmentation_model import SegmentationModel
 from scenic.model_lib.layers import nn_layers
 
 
-Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
+Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 
 
 class SimpleCNN(nn.Module):

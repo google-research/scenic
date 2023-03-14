@@ -1,6 +1,6 @@
 """Simple fully connected feedforward neural network classifier."""
 
-from typing import Callable, Iterable, Union
+from typing import Callable, Iterable, Union, Sequence
 
 import flax.linen as nn
 from jax.nn import initializers
@@ -12,7 +12,7 @@ from scenic.model_lib.layers import nn_layers
 
 # TODO(mrit): Upstream this to jax.nn.initializers
 #   Inputs are PRNGKey, input shape and dtype.
-Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
+Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 
 
 class FullyConnected(nn.Module):
