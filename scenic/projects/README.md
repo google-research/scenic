@@ -104,6 +104,13 @@
 
     > Wrappers of T5 models in [t5x](https://github.com/google-research/t5x).
 
+*   [Vid2Seq](vid2seq)
+
+    > Vid2Seq is a single-stage dense video captioning model, pre-trained on
+    > unlabelled narrated videos.
+    > Details can be found in the [paper](https://arxiv.org/abs/2302.14115).
+
+
 
 <a name="projects"></a>
 ## Scenic projects
