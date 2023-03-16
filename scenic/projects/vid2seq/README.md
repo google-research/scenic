@@ -1,6 +1,6 @@
 # Repository for Vid2Seq: Large-Scale Pretraining of a Visual Language Model for Dense Video Captioning
 
-### [Project Page](https://antoyang.github.io/vid2seq.html) | [arXiv](https://arxiv.org/abs/TBC)
+### [Project Page](https://antoyang.github.io/vid2seq.html) | [arXiv](https://arxiv.org/abs/2302.14115)
 
 <img src="vid2seq.png" width="700" height="400" />
 
@@ -16,6 +16,7 @@ More details can be found in the [paper](https://arxiv.org/abs/2302.14115) publi
 Vid2Seq achieves state-of-the-art on standard dense event captioning benchmarks, including ActivityNet-Captions, YouCook2 and ViTT.
 Vid2Seq also generalizes well to video paragraph captioning (ActivityNet-Captions, YouCook2) and the standard task of video clip captioning (MSR-VTT, MSVD).
 We release the code for pretraining on YT-Temporal-1B and downstream adaptation to ActivityNet-Captions and YouCook2.
+We also plan to release the corresponding pretrained model checkpoints soon.
 
 ## Training
 

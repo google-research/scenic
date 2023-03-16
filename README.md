@@ -59,6 +59,7 @@ Projects that were developed in Scenic or used it for their experiments:
 * [Simple Open-Vocabulary Object Detection with Vision Transformers](https://arxiv.org/abs/2205.06230)
 * [Learning with Neighbor Consistency for Noisy Labels](https://arxiv.org/abs/2202.02200)
 * [Token Turing Machines](https://arxiv.org/pdf/2211.09119.pdf)
+* [Vid2Seq: Large-Scale Pretraining of a Visual Language Model for Dense Video Captioning](https://arxiv.org/pdf/2302.14115.pdf)
 
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 
