@@ -3,10 +3,15 @@
 from typing import Any, Optional, Dict
 
 import flax.linen as nn
+from flax.linen.initializers import zeros
 import jax
 import jax.numpy as jnp
 import ml_collections
 from scenic.model_lib.base_models.multilabel_classification_model import MultiLabelClassificationModel
+from scenic.projects.performer import performer
+
+NUM_FT_PARAMS_PER_HEAD = 25
+NUM_POINT_DIMS = 3
 
 
 def _pairwise_distances(coordinates):
@@ -26,6 +31,24 @@ def top_k_hot(distances, k):
   return tops.sum(axis=-2)
 
 
+# The applied attention type is described in attention_fn_configs which
+# has the following fields:
+#
+# <attention_kind>: str; possible values: 'regular', 'performer'
+# <performer>: Dict[Any, Any]; a dictionary of the following fields:
+#
+#   <kernel_transformation>: str; possible values: 'softmax', 'relu', 'quartet'
+#   <use_random_projections>: boolean
+#   <num_fetures>: int
+#   <seed>: int
+#   <rpe_method>: str
+#   <num_realizations>: int
+#   <num_sines>: int
+#   <favor_type>: str; possible values: 'favorplus', 'favorplusplus',
+#                                       'favorsharp'
+#   <masking_type>: str; possible values: 'nomask', 'fftmasked', 'sharpmasked'
+
+
 class SelfAttentionLayer(nn.Module):
   """Self Attention Layer."""
   in_channels: Any
@@ -33,44 +56,89 @@ class SelfAttentionLayer(nn.Module):
   kernel_size: Optional[int] = 1
   mask_function: Optional[str] = 'linear'
   attention_type: Optional[str] = 'naive'
+  attention_fn_configs: Optional[Dict[Any, Any]] = None
 
   @nn.compact
   def __call__(self,
                inputs,
+               coords=None,
                numerical_stabilizer=1e-9,
                train: bool = False):
     """Applies self attention on the input data.
 
     Args:
       inputs: Input tensor of shape [batch_size, num_points, feature_dim]
+      coords: Input tensor of point positions of the shape [batch_size,
+        num_points, 3]
       numerical_stabilizer: takes into account stability when inputs are zero.
       train: Whether it is training or not.
 
     Returns:
       output: Tensor of shape [batch_size, num_points, feature_dim]
     """
-    input_q = nn.Conv(self.out_channels,
-                      kernel_size=(self.kernel_size, self.kernel_size),
-                      use_bias=True)(inputs)
-    input_k = nn.Conv(self.out_channels,
-                      kernel_size=(self.kernel_size, self.kernel_size),
-                      use_bias=True)(inputs)
-    input_v = nn.Conv(self.out_channels,
-                      kernel_size=(self.kernel_size, self.kernel_size),
-                      use_bias=True)(inputs)
+    input_q = nn.Conv(
+        self.out_channels,
+        kernel_size=(self.kernel_size, self.kernel_size),
+        use_bias=True)(
+            inputs)
+    input_k = nn.Conv(
+        self.out_channels,
+        kernel_size=(self.kernel_size, self.kernel_size),
+        use_bias=True)(
+            inputs)
+    input_v = nn.Conv(
+        self.out_channels,
+        kernel_size=(self.kernel_size, self.kernel_size),
+        use_bias=True)(
+            inputs)
 
-    attention = jnp.einsum('...MC,...NC->...MN', input_q, input_k)
-
-    attention = nn.softmax(attention, axis=-1)
-    attention = attention / (
-        numerical_stabilizer + jnp.sum(attention, axis=1, keepdims=True))
-
-    output = jnp.einsum('...MN,...NC->...NC', attention, input_v)
+    if self.attention_fn_configs is None or self.attention_fn_configs[
+        'attention_kind'] == 'regular':
+      attention = jnp.einsum('...MC,...NC->...MN', input_q, input_k)
+      attention = nn.softmax(attention, axis=-1)
+      attention = attention / (
+          numerical_stabilizer + jnp.sum(attention, axis=1, keepdims=True))
+      output = jnp.einsum('...MN,...NC->...NC', attention, input_v)
+    else:
+      query = jnp.expand_dims(input_q, axis=-2)
+      key = jnp.expand_dims(input_k, axis=-2)
+      value = jnp.expand_dims(input_v, axis=-2)
+      if self.attention_fn_configs['performer']['masking_type'] == 'nomask':
+        output = performer.regular_performer_dot_product_attention(
+            query,
+            key,
+            value,
+            kernel_config=self.attention_fn_configs['performer'])
+      elif self.attention_fn_configs['performer'][
+          'masking_type'] == 'fftmasked':
+        toeplitz_params = self.param('toeplitz_params', zeros,
+                                     (query.shape[-2], 2 * query.shape[-3] - 1))
+        output = performer.masked_performer_dot_product_attention(
+            query,
+            key,
+            value,
+            toeplitz_params=toeplitz_params,
+            kernel_config=self.attention_fn_configs['performer'])
+      elif self.attention_fn_configs['performer'][
+          'masking_type'] == 'sharpmasked':
+        toeplitz_params = self.param(
+            'toeplitz_params', zeros,
+            (query.shape[-2], 5 * NUM_FT_PARAMS_PER_HEAD))
+        output = performer.sharp_masked_performer_dot_product_attention(
+            query,
+            key,
+            value,
+            coords,
+            toeplitz_params=toeplitz_params,
+            kernel_config=self.attention_fn_configs['performer'])
+      output = jnp.squeeze(output, axis=-2)
 
     output = (inputs - output) if self.attention_type == 'offset' else output
-    output = nn.Conv(self.out_channels,
-                     kernel_size=(self.kernel_size, self.kernel_size),
-                     use_bias=True)(output)
+    output = nn.Conv(
+        self.out_channels,
+        kernel_size=(self.kernel_size, self.kernel_size),
+        use_bias=True)(
+            output)
     output = nn.BatchNorm(use_running_average=not train)(output)
     output = nn.relu(output)
     return output + inputs
@@ -84,7 +152,6 @@ class PointCloudTransformerEncoder(nn.Module):
   encoder_feature_dim: Optional[int] = 1024
   num_attention_layers: Optional[int] = 4
   num_heads: Optional[int] = 1
-  attention_fn_cls: Optional[str] = 'softmax'
   attention_fn_configs: Optional[Dict[Any, Any]] = None
   use_attention_masking: Optional[bool] = False
   use_knn_mask: Optional[bool] = False
@@ -102,7 +169,8 @@ class PointCloudTransformerEncoder(nn.Module):
     output = nn.Conv(
         self.feature_dim,
         kernel_size=(self.kernel_size, self.kernel_size),
-        use_bias=True)(output)
+        use_bias=True)(
+            output)
     output = nn.BatchNorm(use_running_average=not train)(output)
 
     # Self-attention blocks, input_shape= [B, N, D]
@@ -110,7 +178,9 @@ class PointCloudTransformerEncoder(nn.Module):
     for _ in range(self.num_attention_layers):
       output = SelfAttentionLayer(
           in_channels=self.feature_dim,
-          out_channels=self.feature_dim)(output)
+          out_channels=self.feature_dim,
+          attention_fn_configs=self.attention_fn_configs)(
+              output, inputs)
       attention_outputs.append(output)
 
     output = jnp.concatenate(attention_outputs, axis=-1)
@@ -119,7 +189,8 @@ class PointCloudTransformerEncoder(nn.Module):
     output = nn.Conv(
         self.encoder_feature_dim,
         kernel_size=(self.kernel_size, self.kernel_size),
-        use_bias=True)(output)
+        use_bias=True)(
+            output)
     output = nn.BatchNorm(use_running_average=not train)(output)
     output = nn.leaky_relu(output, negative_slope=0.2)
     return output
@@ -133,7 +204,6 @@ class PointCloudTransformerClassifier(nn.Module):
   num_classes: Optional[int] = 40
   dropout_rate: Optional[float] = 0.5
   attention_type: Optional[str] = 'standard'
-  attention_fn_cls: Optional[str] = 'softmax'
   attention_fn_configs: Optional[Dict[Any, Any]] = None
   use_attention_masking: Optional[bool] = False
   use_knn_mask: Optional[bool] = False
@@ -147,7 +217,6 @@ class PointCloudTransformerClassifier(nn.Module):
           in_dim=self.in_dim,
           feature_dim=self.feature_dim,
           kernel_size=self.kernel_size,
-          attention_fn_cls=self.attention_fn_cls,
           attention_fn_configs=self.attention_fn_configs,
           use_attention_masking=self.use_attention_masking,
           use_knn_mask=self.use_knn_mask,
@@ -161,14 +230,12 @@ class PointCloudTransformerClassifier(nn.Module):
     output = nn.Dense(4 * self.feature_dim, use_bias=True)(output)
     output = nn.BatchNorm(use_running_average=not train)(output)
     output = nn.leaky_relu(output, negative_slope=0.2)
-    output = nn.Dropout(
-        rate=self.dropout_rate, deterministic=not train)(output)
+    output = nn.Dropout(rate=self.dropout_rate, deterministic=not train)(output)
     # LBR Block 2
     output = nn.Dense(2 * self.feature_dim, use_bias=True)(output)
     output = nn.BatchNorm(use_running_average=not train)(output)
     output = nn.leaky_relu(output, negative_slope=0.2)
-    output = nn.Dropout(
-        rate=self.dropout_rate, deterministic=not train)(output)
+    output = nn.Dropout(rate=self.dropout_rate, deterministic=not train)(output)
     # Classification head
     output = nn.Dense(self.num_classes, use_bias=True)(output)
     return output
@@ -185,7 +252,6 @@ class PointCloudTransformerClassificationModel(MultiLabelClassificationModel):
         num_classes=self.config.dataset_configs.num_classes,
         dropout_rate=self.config.dropout_rate,
         attention_type=self.config.attention_type,
-        attention_fn_cls=self.config.attention_fn_cls,
         attention_fn_configs=self.config.attention_fn_configs,
         use_attention_masking=self.config.use_attention_masking,
         use_knn_mask=self.config.attention_masking_configs.use_knn_mask,

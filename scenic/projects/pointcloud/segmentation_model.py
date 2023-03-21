@@ -104,7 +104,6 @@ class PointCloudTransformerSegmentation(nn.Module):
   kernel_size: Optional[int] = 1
   num_class: Optional[int] = 50
   dropout_rate: Optional[float] = 0.5
-  attention_fn_cls: Optional[str] = 'softmax'
   attention_fn_configs: Optional[Dict[Any, Any]] = None
   use_attention_masking: Optional[bool] = False
   use_knn_mask: Optional[bool] = False
@@ -126,7 +125,6 @@ class PointCloudTransformerSegmentation(nn.Module):
           in_dim=self.in_dim,
           feature_dim=self.feature_dim,
           kernel_size=self.kernel_size,
-          attention_fn_cls=self.attention_fn_cls,
           attention_fn_configs=self.attention_fn_configs,
           use_attention_masking=self.use_attention_masking,
           use_knn_mask=self.use_knn_mask,
@@ -190,7 +188,6 @@ class PointCloudTransformerSegmentationModel(SegmentationModel):
         kernel_size=self.config.kernel_size,
         num_class=self.config.dataset_configs.num_classes,
         dropout_rate=self.config.dropout_rate,
-        attention_fn_cls=self.config.attention_fn_cls,
         attention_fn_configs=self.config.attention_fn_configs,
         use_attention_masking=self.config.use_attention_masking,
         use_knn_mask=self.config.attention_masking_configs.use_knn_mask,
