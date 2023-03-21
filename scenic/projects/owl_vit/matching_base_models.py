@@ -482,3 +482,197 @@ class ObjectDetectionModel(BaseModelWithMatching):
     for k, v in metrics.items():
       metrics[k] = model_utils.psum_metric_normalizer(v)  # pytype: disable=wrong-arg-types  # jax-ndarray
     return losses, metrics  # pytype: disable=bad-return-type  # jax-ndarray
+
+
+class ObjectDetectionModelWithMasks(ObjectDetectionModel):
+  """Base model for object detection with matching including a mask loss.
+
+  The masks are predicted one for each instance and must be in direct
+  correspondence with the bounding boxes (both predicted and ground truth).
+
+  In practice this is typically used to predict cropped masks within the
+  predicted bounding boxes, similar to what has been done with, for example,
+  mask RCNN. Right now the cropping must occur outside this class.
+  """
+
+  def __init__(self, config: Optional[ml_collections.ConfigDict],
+               dataset_meta_data: Dict[str, Any]):
+    """Initializes detection model.
+
+    Args:
+      config: Hyper-parameter dictionary.
+      dataset_meta_data: Dataset meta data specifies `target_is_onehot`, which
+        must be True. The padded objects have label 0. The first
+        legitimate object has label 1, and so on.
+    """
+    super().__init__(config, dataset_meta_data)
+    self.losses_and_metrics.append('masks')
+    if config is not None:
+      self.loss_terms_weights['loss_mask'] = config.mask_loss_coef
+
+  @property
+  def loss_and_metrics_map(
+      self) -> Dict[str, Callable[..., Tuple[ArrayDict, MetricsDict]]]:
+    """Returns a dict that lists all losses for this model."""
+    return {
+        **super().loss_and_metrics_map,
+        'boxes': self.boxes_losses_and_metrics,
+        'masks': self.masks_losses_and_metrics,
+    }
+
+  def masks_losses_and_metrics(
+      self,
+      outputs: ArrayDict,
+      batch: ArrayDict,
+      indices: jnp.ndarray) -> Tuple[ArrayDict, MetricsDict]:
+    """Mask losses - pixelwise cross entropy a la mask-RCNN.
+
+    Note that it is assumed all masks, both predicted and ground truth, have
+    been resized to a fixed height and width (i.e., allowing distortion of the
+    aspect ratio).
+
+    Args:
+      outputs: Model predictions. For the purpose of this loss, outputs
+        must have key 'pred_masks'. outputs['pred_masks'] is a nd-array of the
+        predicted masks with (batch, num-instances, h, w) shape, type float32
+        in range [0, 1].
+      batch: Has keys 'inputs', 'batch_mask' and, 'label' (ground truth).
+        batch['label'] is a dict. For the purpose of this loss, batch['label']
+        must have key 'masks', which the value has the same format
+        as outputs['pred_masks']. Additionally in batch['label'], key
+        'valid_masks'. This is to decide which masks are invalid
+        and need to be ignored. Invalid masks have label 0. If
+        batch['batch_mask'] is provided it is used to weight the loss for
+        different images in the current batch of examples.
+      indices: Matcher output which conveys source to target pairing of objects.
+
+    Returns:
+      loss: Has keys 'loss_mask'. This is mask losses averaged over the batch.
+        Therefore it has shape [].
+      metrics: Has keys 'loss_mask'. This is the metrics psumed over the batch.
+        Therefore it has shape [].
+    """
+    assert 'pred_masks' in outputs
+    assert 'label' in batch
+
+    targets = batch['label']
+    assert 'masks' in targets
+    assert 'valid_masks' in targets
+    assert targets['valid_masks'].shape[1] == targets['masks'].shape[1]
+    assert targets['valid_masks'].shape[1] == targets['boxes'].shape[1]
+    losses, metrics = {}, {}
+    batch_weights = batch.get('batch_mask')
+
+    pred_masks = model_utils.simple_gather(outputs['pred_masks'], indices[:, 0])
+    tgt_masks = model_utils.simple_gather(targets['masks'], indices[:, 1])
+    tgt_not_padding = model_utils.simple_gather(targets['valid_masks'],
+                                                indices[:, 1])
+
+    src_boxes = model_utils.simple_gather(outputs['pred_boxes'], indices[:, 0])
+    tgt_boxes = model_utils.simple_gather(targets['boxes'], indices[:, 1])
+
+    if self.config.weight_mask_loss_by_iou:
+      src_boxes_xyxy = box_utils.box_cxcywh_to_xyxy(src_boxes)
+      tgt_boxes_xyxy = box_utils.box_cxcywh_to_xyxy(tgt_boxes)
+      box_iou, _ = box_utils.box_iou(
+          src_boxes_xyxy, tgt_boxes_xyxy, all_pairs=False)
+      loss_weight = jax.lax.stop_gradient(box_iou)
+    else:
+      loss_weight = 1.0
+
+    if self.config.move_true_to_pred_mask:
+      tgt_masks = jax.vmap(jax.vmap(move_true_to_pred_mask))(
+          true_mask=tgt_masks,
+          true_box=tgt_boxes,
+          pred_box=jax.lax.stop_gradient(src_boxes))
+
+    unnormalized_ce_loss_mask = (
+        model_utils.weighted_unnormalized_sigmoid_cross_entropy(
+            logits=pred_masks, multi_hot_targets=tgt_masks
+        )
+    )
+    # Take the mean across the spatial height, width of the masks.
+    unnormalized_ce_loss_mask = jnp.mean(
+        unnormalized_ce_loss_mask, axis=(-1, -2))
+    unnormalized_ce_loss_mask *= loss_weight  # Weigh loss by box overlap.
+    denom = tgt_not_padding.sum(axis=1)
+    if batch_weights is not None:
+      denom *= batch_weights
+      unnormalized_ce_loss_mask = model_utils.apply_weights(
+          unnormalized_ce_loss_mask, batch_weights)
+    unnormalized_ce_loss_mask *= tgt_not_padding
+    norm_type = self.config.get('normalization')
+
+    if norm_type != 'per_example':
+      denom = jnp.maximum(jax.lax.pmean(denom.sum(), axis_name='batch'), 1)
+      normalized_ce_loss_mask = unnormalized_ce_loss_mask.sum() / denom
+    else:
+      denom = jnp.maximum(denom, 1.)
+      normalized_ce_loss_mask = (unnormalized_ce_loss_mask.sum(axis=1) /
+                                 denom).mean()
+
+    losses['loss_mask'] = normalized_ce_loss_mask.sum()
+    metrics['loss_mask'] = (normalized_ce_loss_mask.sum(), 1.)
+
+    # Sum metrics and normalizers over all replicas.
+    for k, v in metrics.items():
+      metrics[k] = model_utils.psum_metric_normalizer(v)  # pytype: disable=wrong-arg-types  # jax-ndarray
+    return losses, metrics  # pytype: disable=bad-return-type  # jax-ndarray
+
+
+def move_true_to_pred_mask(*, true_mask, true_box, pred_box):
+  """Scales and translates the true mask into the pred box reference frame.
+
+  If predicted and true boxes are not identical, then the segmentation masks
+  within the boxes will be misaligned. This function scales and translates the
+  true mask so that it aligns with the predicted mask, based on the positions
+  of the true and predicted bounding boxes.
+
+  This decouples the mask loss from the bounding box locations. In other words,
+  the mask loss will be exactly as if we were using full-image masks, rather
+  than within-box masks.
+
+  Args:
+    true_mask: Array of shape (n, n) containing the true mask for the area
+      inside the true bounding box.
+    true_box: True (cx, cy, w, h) bounding box.
+    pred_box: Predicted (cx, cy, w, h) bounding box.
+
+  Returns:
+    New array of shape (n, n) containing the true mask for the area inside the
+    predicted box.
+
+  Raises:
+    ValueError if true_mask is not a single square 2D mask.
+  """
+  if true_mask.ndim != 2:
+    raise ValueError(f'Expected a single 2D masks, got shape {true_mask.shape}')
+  if true_mask.shape[0] != true_mask.shape[1]:
+    raise ValueError(f'Expected mask to be square, got shape {true_mask.shape}')
+
+  cx_true, cy_true, w_true, h_true = jnp.split(true_box, 4, axis=-1)
+  cx_pred, cy_pred, w_pred, h_pred = jnp.split(pred_box, 4, axis=-1)
+  w_pred = jnp.maximum(w_pred, 1e-6)
+  h_pred = jnp.maximum(h_pred, 1e-6)
+
+  # Get top-left corner coordinates:
+  x0_true = cx_true - w_true / 2
+  y0_true = cy_true - h_true / 2
+  x0_pred = cx_pred - w_pred / 2
+  y0_pred = cy_pred - h_pred / 2
+
+  # Get coordinates of the true box in the reference frame of the pred box:
+  x0_true_wrt_pred = (x0_true - x0_pred) / w_pred
+  y0_true_wrt_pred = (y0_true - y0_pred) / h_pred
+  w_true_wrt_pred = w_true / w_pred
+  h_true_wrt_pred = h_true / h_pred
+
+  # Scale and translate true masks:
+  width = true_mask.shape[0]
+  return jax.image.scale_and_translate(
+      true_mask,
+      shape=true_mask.shape,
+      spatial_dims=(0, 1),
+      scale=jnp.concatenate((h_true_wrt_pred, w_true_wrt_pred)),
+      translation=width * jnp.concatenate((y0_true_wrt_pred, x0_true_wrt_pred)),
+      method='linear')

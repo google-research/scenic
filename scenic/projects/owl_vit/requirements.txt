@@ -3,6 +3,9 @@ torch>=1.10.2
 tqdm
 git+https://github.com/openai/CLIP.git
 
+# For the mask head:
+git+https://github.com/google-research/big_vision.git
+
 # COCO and LVIS API for evaluation:
 git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI
 lvis

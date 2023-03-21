@@ -10,6 +10,8 @@ OWL-ViT is an **open-vocabulary object detector**. Given an image and a free-tex
 [[Minimal Colab]](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb)
 [[Playground Colab]](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_inference_playground.ipynb)
 
+**Update (2023-03-21):** Added a new checkpoint with a segmentation mask head. See the [Minimal Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb) for a usage example.
+<br>
 **Update (2022-10-14):** Added [training](#training) and [evaluation](#evaluation) code.
 <br>
 **Update (2022-07-06):** Extended TensorFlow-conversion [Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_Export_JAX_model_to_TensorFlow_SavedModel.ipynb) with examples for conversion to TFLite.
