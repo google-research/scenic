@@ -105,7 +105,7 @@ def semantic_segmentation_metrics_function(
   evaluated_metrics = {}
   for key, val in metrics.items():
     evaluated_metrics[key] = model_utils.psum_metric_normalizer(  # pytype: disable=wrong-arg-types  # jax-ndarray
-        (val[0](logits, one_hot_targets, weights), val[1](
+        (val[0](logits, one_hot_targets, weights), val[1](  # pytype: disable=wrong-arg-types  # jax-types
             logits, one_hot_targets, weights)),
         axis_name=axis_name)
   return evaluated_metrics

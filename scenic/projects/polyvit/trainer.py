@@ -402,7 +402,7 @@ def train(
   )
 
   def get_dataset_at_step(step):
-    return all_datasets[ds_indices_per_step[step]]
+    return all_datasets[ds_indices_per_step[step]]  # pytype: disable=unsupported-operands  # jax-types
 
   # Create LR schedules and optimizer.
   schedule_fns = scenic_optax.make_schedule(config.get('schedule'))
