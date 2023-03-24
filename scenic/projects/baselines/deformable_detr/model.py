@@ -606,7 +606,7 @@ class DeformableDETRModel(base_model.BaseModel):
       losses['l2_loss'] = 0.5 * self.config.l2_decay_factor * l2_loss
 
     # Sum total loss.
-    losses['total_loss'] = jax.tree_util.tree_reduce(jnp.add, losses, 0)
+    losses['total_loss'] = jax.tree_util.tree_reduce(jnp.add, losses, 0)  # pytype: disable=wrong-arg-types  # numpy-scalars
 
     # Store metrics for logging.
     metrics = {k: (v, 1.) for k, v in losses.items()}
