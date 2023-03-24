@@ -436,9 +436,9 @@ class Conv(nn.Conv):
   dtype: jnp.dtype = jnp.float32
   precision: Optional[jax.lax.Precision] = None
   kernel_init: Callable[  # pytype: disable=annotation-type-mismatch  # jax-types
-      [Any, Iterable[int], Any], Any] = nn.linear.default_kernel_init
+      [Any, Sequence[int], Any], Any] = nn.linear.default_kernel_init
   bias_init: Callable[
-      [Any, Iterable[int], Any], Any] = nn.initializers.zeros
+      [Any, Sequence[int], Any], Any] = nn.initializers.zeros
 
   @nn.compact
   def __call__(
