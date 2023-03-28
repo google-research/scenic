@@ -16,6 +16,13 @@
     > classifications. This includes [AdvProp](https://arxiv.org/abs/1911.09665)
     > and (Pyramid Adversarial Training Improves ViT Performance)[https://arxiv.org/abs/2111.15121].
 
+*   [AVATAR](avatar)
+
+    > [AVATAR](https://gabeur.github.io/avatar-visspeech) is a
+    > sequence-to-sequence AudioVisual ASR TrAnsformeR which is
+    > trained end-to-end from spectrograms and full-frame RGB for the task of
+    > audiovisual speech recognition (AV-ASR).
+
 *   [ViViT](vivit)
 
     > ViViT is a family of pure-transformer based models for video

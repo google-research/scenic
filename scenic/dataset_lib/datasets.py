@@ -50,6 +50,8 @@ _IMPORT_TABLE = {
         'scenic.dataset_lib.svhn_dataset',
     'video_tfrecord_dataset':
         'scenic.projects.vivit.data.video_tfrecord_dataset',
+    'av_asr_tfrecord_dataset':
+        'scenic.projects.avatar.datasets.av_asr_tfrecord_dataset',
     'bit':
         'scenic.dataset_lib.big_transfer.bit',
     'bert_wikibooks':
