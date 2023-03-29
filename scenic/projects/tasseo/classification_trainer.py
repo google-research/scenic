@@ -303,6 +303,7 @@ def train(
   if not log_eval_steps:
     raise ValueError("'log_eval_steps' should be specified in the config.")
   checkpoint_steps = config.get('checkpoint_steps') or log_eval_steps
+  max_checkpoint_keep = config.get('max_checkpoint_keep', 3)
   log_summary_steps = config.get('log_summary_steps') or log_eval_steps
 
   # Ceil rounding such that we include the last incomplete batch.
@@ -325,7 +326,11 @@ def train(
   chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
   logging.info('Starting training loop at step %d.', start_step + 1)
   report_progress = periodic_actions.ReportProgress(
-      num_train_steps=total_steps, writer=writer)
+      num_train_steps=total_steps,
+      writer=writer,
+      every_secs=None,
+      every_steps=config.get('report_progress_step', log_summary_steps),
+  )
 
   def write_note(note):
     if lead_host:
@@ -417,22 +422,16 @@ def train(
             writer=writer)
       writer.flush()
       del eval_metrics, eval_global_metrics_summary
+      chrono.resume()
     ##################### CHECKPOINTING ###################
-    if ((step % checkpoint_steps == 0 and step > 0) or
+    if ((step % checkpoint_steps == 1 and step > 1) or
         (step == total_steps)) and config.checkpoint:
       chrono.pause(wait_for=(train_state.params, train_state.opt_state))
       with report_progress.timed('checkpoint'):
-        # Sync model state across replicas.
-        train_state = train_utils.sync_model_state_across_replicas(train_state)
-        if lead_host:
-          # Take the first replica.
-          unrep_train_state = jax_utils.unreplicate(train_state)
-          metadata = unrep_train_state.metadata
-          metadata['chrono'] = chrono.save()
-          unrep_train_state.replace(metadata=metadata)  # pytype: disable=attribute-error
-          train_utils.save_checkpoint(workdir, unrep_train_state)
-          del unrep_train_state
-      chrono.resume()  # Un-pause now.
+        train_utils.handle_checkpointing(
+            train_state, chrono, workdir, max_checkpoint_keep)
+      chrono.resume()
+
   # Wait until computations are done before exiting.
   train_utils.barrier_across_hosts()
   # Return the train and eval summary after last step for regression testing.
