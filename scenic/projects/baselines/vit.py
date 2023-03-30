@@ -40,6 +40,31 @@ class AddPositionEmbs(nn.Module):
     return inputs + pe
 
 
+class MAPHead(nn.Module):
+  """Multihead Attention Pooling."""
+  mlp_dim: Optional[int] = None  # Defaults to 4x input dim
+  num_heads: int = 12
+  dtype: Any = jnp.float32
+
+  @nn.compact
+  def __call__(self, x):
+    n, _, d = x.shape
+    probe = self.param('probe', nn.initializers.xavier_uniform(), (1, 1, d),
+                       x.dtype)
+    probe = jnp.tile(probe, [n, 1, 1])
+
+    x = nn.MultiHeadDotProductAttention(
+        num_heads=self.num_heads, kernel_init=nn.initializers.xavier_uniform()
+    )(probe, x)
+
+    y = nn.LayerNorm()(x)
+    x = x + attention_layers.MlpBlock(
+        mlp_dim=self.mlp_dim,
+        dtype=self.dtype,
+        dropout_rate=0.0)(y, deterministic=True)
+    return x[:, 0]
+
+
 class Encoder1DBlock(nn.Module):
   """Transformer encoder layer.
 
@@ -253,6 +278,9 @@ class ViT(nn.Module):
     elif self.classifier in ('gap', 'gmp', 'gsp'):
       fn = {'gap': jnp.mean, 'gmp': jnp.max, 'gsp': jnp.sum}[self.classifier]
       x = fn(x, axis=1)
+    elif self.classifier == 'map':
+      x = MAPHead(
+          num_heads=self.num_heads, mlp_dim=self.mlp_dim, dtype=self.dtype)(x)
     else:
       raise ValueError(f'Unknown classifier {self.classifier}')
 
