@@ -323,7 +323,8 @@ def weighted_unnormalized_softmax_cross_entropy(
     weights: Optional[jnp.ndarray] = None,
     label_smoothing: Optional[float] = None,
     label_weights: Optional[jnp.ndarray] = None,
-    logits_normalized: bool = False) -> jnp.ndarray:
+    logits_normalized: bool = False,
+    keep_label_dimension: bool = False) -> jnp.ndarray:
   """Computes weighted softmax cross entropy give logits and targets.
 
   This computes sum_(x,y) softmax-ce(x, y) for a single, potentially padded
@@ -338,6 +339,8 @@ def weighted_unnormalized_softmax_cross_entropy(
     label_smoothing: Scalar to use to smooth the one-hot labels.
     label_weights: Weight per label of shape [num_classes].
     logits_normalized: If True, the logits are assumed to already be normalized.
+    keep_label_dimension: If True, the class dimension of the output loss is not
+      summed over.
 
   Returns:
     The softmax cross entropy of the examples in the given batch.
@@ -357,9 +360,12 @@ def weighted_unnormalized_softmax_cross_entropy(
 
   if not logits_normalized:
     logits = nn.log_softmax(logits)
-  loss = -jnp.einsum('...k,...k->...', one_hot_targets, logits)
+  loss = -one_hot_targets * logits
   if weights is not None:
     loss = apply_weights(loss, weights)
+
+  if not keep_label_dimension:
+    loss = loss.sum(axis=-1)
 
   return loss
 
@@ -736,7 +742,8 @@ def focal_softmax_cross_entropy(
     label_smoothing: Optional[float] = None,
     label_weights: Optional[jnp.ndarray] = None,
     logits_normalized: bool = False,
-    gamma: Optional[float] = 2.0) -> jnp.ndarray:
+    gamma: Optional[float] = 2.0,
+    keep_label_dimension: bool = False) -> jnp.ndarray:
   """Computes focal softmax cross-entropy given logits and targets.
 
   Focal loss as defined in https://arxiv.org/abs/1708.02002. Assuming y is the
@@ -765,18 +772,24 @@ def focal_softmax_cross_entropy(
     label_weights: Weight per label of shape [num_classes].
     logits_normalized: If True, the logits are assumed to be log probs.
     gamma: Modulating factor of the focal loss.
+    keep_label_dimension: If True, the class dimension of the output loss is not
+      summed over.
 
   Returns:
     The loss of the examples in the given batch.
   """
   loss = weighted_unnormalized_softmax_cross_entropy(
       logits, one_hot_targets, weights=None, label_smoothing=label_smoothing,
-      label_weights=label_weights, logits_normalized=logits_normalized)
+      label_weights=label_weights, logits_normalized=logits_normalized,
+      keep_label_dimension=True)
   prob = jnp.exp(logits) if logits_normalized else jax.nn.softmax(logits)
-  prob = (prob * one_hot_targets).sum(axis=-1)
+  prob = (prob * one_hot_targets).sum(axis=-1, keepdims=True)
   loss *= (1. - prob)**gamma
   if weights is not None:
     loss = apply_weights(loss, weights)
+
+  if not keep_label_dimension:
+    loss = loss.sum(axis=-1)
 
   return loss
 
