@@ -473,13 +473,14 @@ def mixup(batch: Dict['str', jnp.ndarray],
 
 
 @functools.lru_cache(maxsize=None)
-def get_builder(dataset, data_dir):
-  return tfds.builder(dataset, data_dir=data_dir, try_gcs=True)
+def get_builder(dataset, data_dir, version):
+  return tfds.builder(dataset, data_dir=data_dir, try_gcs=True, version=version)
 
 
-def get_num_examples(dataset, split, data_dir=None):
+def get_num_examples(dataset, split, data_dir=None,
+                     version: Optional[str] = None):
   """Returns the total number of examples in a dataset split."""
-  builder = get_builder(dataset, data_dir)
+  builder = get_builder(dataset, data_dir, version)
   # Download dataset:
   builder.download_and_prepare()
   num_examples = builder.info.splits[split].num_examples
@@ -518,9 +519,10 @@ def get_dataset_tfds(
     shuffle_files: bool = True,
     data_dir: Optional[str] = None,
     skip_decode: Optional[Union[Sequence[str], Dict[Any, Any]]] = ('image',),
+    version: Optional[str] = None,
 ):
   """Data provider."""
-  builder = get_builder(dataset, data_dir)
+  builder = get_builder(dataset, data_dir, version)
   split = tfds.even_splits(split, jax.process_count(), drop_remainder=True)[
       jax.process_index()
   ]
@@ -604,7 +606,8 @@ def get_data(dataset,
              ignore_errors=False,
              shuffle_files=True,
              dataset_service_address=None,
-             skip_decode=('image',)):
+             skip_decode=('image',),
+             version=None):
   """API kept for backwards compatibility."""
   data = get_dataset_tfds(
       dataset=dataset,
@@ -612,6 +615,7 @@ def get_data(dataset,
       shuffle_files=shuffle_files,
       data_dir=data_dir,
       skip_decode=skip_decode,
+      version=version
   )
   if 'train' not in split:
     dataset_service_address = None
