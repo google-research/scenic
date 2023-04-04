@@ -20,6 +20,7 @@ from absl import logging
 from flax import jax_utils
 import jax
 import jax.numpy as jnp
+import ml_collections
 import numpy as np
 from scenic.dataset_lib import dataset_utils
 from scenic.dataset_lib import datasets
@@ -89,6 +90,9 @@ def get_dataset(*,
   # Whether to cache training data. None: no caching. 'loaded':
   # cache right after loading a datapoint. 'batched': cache whole batches.
   cache = dataset_configs.get('cache', 'loaded')
+  skip_decode = dataset_configs.get('skip_decode', ('image',))
+  if isinstance(skip_decode, ml_collections.ConfigDict):
+    skip_decode = skip_decode.to_dict()
   train_ds = dataset_utils.get_data(
       dataset=dataset_configs.dataset,
       split=dataset_configs.train_split,
@@ -98,7 +102,8 @@ def get_dataset(*,
       shuffle_buffer_size=shuffle_buffer_size,
       prefetch=dataset_configs.get('prefetch_to_host', 2),
       cache=cache,
-      ignore_errors=True)
+      ignore_errors=True,
+      skip_decode=skip_decode)
 
   if dataset_service_address:
     if shuffle_seed is not None:
@@ -141,7 +146,8 @@ def get_dataset(*,
         preprocess_fn=functools.partial(pp_fn, how=pp_eval),
         cache='batched',
         repeat_after_batching=True,
-        drop_remainder=False)
+        drop_remainder=False,
+        skip_decode=skip_decode)
 
     valid_iter = iter(val_ds)
     valid_iter = map(tf_to_numpy, valid_iter)

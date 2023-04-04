@@ -20,7 +20,7 @@ Xiaohua Zhai and other collaborators from Brain ZRH.
 
 import collections
 import functools
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, Optional, Sequence, Union
 
 from absl import logging
 from flax.training import common_utils
@@ -496,26 +496,35 @@ def get_num_examples(dataset, split, data_dir=None):
   return num_examples
 
 
+def make_skip_decoders(skip_decode, features):
+  if skip_decode is None:
+    return None
+  elif isinstance(skip_decode, list) or isinstance(skip_decode, tuple):
+    return {f: tfds.decode.SkipDecoding() for f in skip_decode if f in features}
+  elif isinstance(skip_decode, dict):
+    return jax.tree_util.tree_map(
+        lambda _: tfds.decode.SkipDecoding(), skip_decode
+    )
+  else:
+    raise ValueError(
+        'skip_decode should be None, tuple, list, or dict - instead got'
+        f'{type(skip_decode)} {skip_decode}'
+    )
+
+
 def get_dataset_tfds(
     dataset: str,
     split: str,
     shuffle_files: bool = True,
     data_dir: Optional[str] = None,
-    skip_decode: Optional[Sequence[str]] = ('image',),
+    skip_decode: Optional[Union[Sequence[str], Dict[Any, Any]]] = ('image',),
 ):
   """Data provider."""
   builder = get_builder(dataset, data_dir)
   split = tfds.even_splits(split, jax.process_count(), drop_remainder=True)[
       jax.process_index()
   ]
-  if skip_decode is not None:
-    skip_decoders = {
-        f: tfds.decode.SkipDecoding()
-        for f in skip_decode
-        if f in builder.info.features
-    }
-  else:
-    skip_decoders = None
+  skip_decoders = make_skip_decoders(skip_decode, builder.info.features)
   # Each host is responsible for a fixed subset of data
   return builder.as_dataset(
       split=split,
@@ -594,13 +603,16 @@ def get_data(dataset,
              data_dir=None,
              ignore_errors=False,
              shuffle_files=True,
-             dataset_service_address=None):
+             dataset_service_address=None,
+             skip_decode=('image',)):
   """API kept for backwards compatibility."""
   data = get_dataset_tfds(
       dataset=dataset,
       split=split,
       shuffle_files=shuffle_files,
-      data_dir=data_dir)
+      data_dir=data_dir,
+      skip_decode=skip_decode,
+  )
   if 'train' not in split:
     dataset_service_address = None
   return make_pipeline(
