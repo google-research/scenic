@@ -58,9 +58,9 @@ class TrainState:
   tx: Optional[optax.GradientTransformation] = struct.field(
       default=None, pytree_node=False)
   opt_state: Optional[optax.OptState] = None
-  params: Optional[Any] = None
+  params: Optional[Any] = struct.field(default_factory=dict)
   global_step: Optional[int] = 0
-  model_state: Optional[Any] = None
+  model_state: Optional[Any] = struct.field(default_factory=dict)
   rng: Optional[jnp.ndarray] = None
   metadata: Optional[Dict[str, Any]] = None
 
