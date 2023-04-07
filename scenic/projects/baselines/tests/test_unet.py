@@ -2,6 +2,7 @@
 
 from absl.testing import absltest
 from absl.testing import parameterized
+import flax
 from jax import random
 import jax.numpy as jnp
 from scenic.common_lib import debug_utils
@@ -37,7 +38,7 @@ class UNetTest(parameterized.TestCase):
     # Check the output shape.
     self.assertEqual((2, *hw, 5), output.shape)
 
-    _, init_params = init_var.pop("params")
+    _, init_params = flax.core.pop(init_var, "params")
     # Check the parameters count.
     num_trainable_params = debug_utils.log_param_shapes(init_params)
     self.assertEqual(param_count, num_trainable_params)
