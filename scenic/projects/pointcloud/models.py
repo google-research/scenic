@@ -92,8 +92,13 @@ class SelfAttentionLayer(nn.Module):
         use_bias=True)(
             inputs)
 
-    if self.attention_fn_configs is None or self.attention_fn_configs[
-        'attention_kind'] == 'regular':
+    if self.attention_fn_configs is None:
+      attention = jnp.einsum('...MC,...NC->...MN', input_q, input_k)
+      attention = nn.softmax(attention, axis=-1)
+      attention = attention / (
+          numerical_stabilizer + jnp.sum(attention, axis=1, keepdims=True))
+      output = jnp.einsum('...MN,...NC->...NC', attention, input_v)
+    elif self.attention_fn_configs['attention_kind'] == 'regular':
       attention = jnp.einsum('...MC,...NC->...MN', input_q, input_k)
       attention = nn.softmax(attention, axis=-1)
       attention = attention / (
