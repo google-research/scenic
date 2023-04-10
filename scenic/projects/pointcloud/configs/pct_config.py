@@ -54,6 +54,7 @@ def get_config(runlocal=''):
   config.attention_fn_configs = ml_collections.ConfigDict()
   # config.attention_fn_configs.nonnegative_features = 'favorplusplus'
   config.attention_fn_configs.nb_features = 256
+  config.attention_fn_configs.attention_kind = 'regular'
 
   # Training.
   config.trainer_name = 'classification_trainer'
