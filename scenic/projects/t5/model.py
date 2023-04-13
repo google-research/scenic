@@ -10,7 +10,7 @@ model_name='t5_1_1_small'
 scenic_model = t5.MODELS[model_name]()
 scenic_loaded_state = t5.load_pretrained_weights(model_name)
 
-scenic_model_bound=model.bind(scenic_loaded_state)
+scenic_model_bound = scenic_model.bind(scenic_loaded_state)
 
 tokenizer = t5_tokenizer.build_dmvr_sp_model()
 

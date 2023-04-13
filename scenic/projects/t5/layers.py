@@ -459,7 +459,9 @@ class T5Model(base_model.BaseModel):
 
     Args:
       params: model parameters.
-      batch: a batch of inputs.
+      batch: a batch of inputs. It's a nested Pytree with two keys:
+        `encoder_inputs` and `decoder_inputs`, each of which contains the
+        default T5 encoder and decoder params.
       decode_fn: function implementing the decode method.
       eos_id: EOS token id in the vocabulary.
       decoder_params: additional (model-independent) parameters for the decoder.
