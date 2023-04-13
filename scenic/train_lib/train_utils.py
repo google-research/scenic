@@ -1146,7 +1146,7 @@ def handle_checkpointing(
     unrep_train_state = jax_utils.unreplicate(train_state)
     metadata = unrep_train_state.metadata
     metadata['chrono'] = chrono.save()
-    unrep_train_state.replace(metadata=metadata)
+    unrep_train_state = unrep_train_state.replace(metadata=metadata)
     save_checkpoint(
         workdir,
         unrep_train_state,
