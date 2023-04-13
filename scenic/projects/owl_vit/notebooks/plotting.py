@@ -1,4 +1,5 @@
 """OWL-ViT notebool plotting functions."""
+import bokeh
 from bokeh import events
 from bokeh import layouts
 from bokeh import models
@@ -24,15 +25,16 @@ def create_text_conditional_figure(image: np.ndarray,
   """
   plot = _create_image_figure(image, fig_size)
   box_data_source = _plot_boxes(plot, boxes)
+  plot_width = plot.width if bokeh.__version__ >= '3.0.3' else plot.plot_width
 
   # Create div that will display the query legend:
-  legend = widgets.Div(text='', height=30, width=plot.plot_width - 35)
+  legend = widgets.Div(text='', height=30, width=plot_width - 35)
 
   # Create text input and register callback:
   text_input = widgets.TextInput(
       value='',
       title='Enter comma-separated queries:',
-      width=plot.plot_width - 35)
+      width=plot_width - 35)
   text_input.js_on_change(
       'value_input',
       interactive.get_text_input_js_callback(box_data_source, legend))
@@ -123,16 +125,23 @@ def _create_image_figure(image: np.ndarray,
   height = np.mean(np.any(image[..., 0] != 0.5, axis=1))
   plot_width = int(width * fig_size)
   plot_height = int(height * fig_size)
+  if bokeh.__version__ >= '3.0.3':
+    plot_size_kws = {'width': plot_width, 'height': plot_height}
+  else:
+    plot_size_kws = {'plot_width': plot_width, 'plot_height': plot_height}
   plot = plotting.figure(
       title=title,
-      plot_width=plot_width,
-      plot_height=plot_height,
       x_range=[0., width],
       y_range=[height, 0.],
-      tools=tools)
+      tools=tools,
+      **plot_size_kws)
   plot.axis.visible = False
   plot.toolbar.logo = None
-  plot.image_rgba(image=[_bokeh_format_image(image)], x=0., y=1., dw=1., dh=1.)
+  image = _bokeh_format_image(image)
+  if bokeh.__version__ >= '3.0.3':
+    plot.image_rgba(image=[image], x=0., y=0., dw=1., dh=1.)
+  else:
+    plot.image_rgba(image=[image], x=0., y=1., dw=1., dh=1.)
   return plot
 
 
@@ -165,5 +174,7 @@ def _bokeh_format_image(image):
   """Formats an RGB image (range [0.0, 1.0], shape [H, W, 3]) for bokeh."""
   # Add alpha layer:
   image = np.concatenate((image, np.ones_like(image[..., :1])), axis=-1)
-  image = np.flipud(image) * 255
+  image = image * 255
+  if bokeh.__version__ < '3.0.3':
+    image = np.flipud(image)
   return image.astype(np.uint8).view(np.uint32).reshape(image.shape[:2])
