@@ -2,6 +2,7 @@
 
 from absl.testing import parameterized
 
+import flax
 from jax import random
 import jax.numpy as jnp
 import ml_collections
@@ -322,8 +323,8 @@ class ModelTest(tf.test.TestCase, parameterized.TestCase):
     num_frames = 8  # matches with the default config.
     inputs = jnp.ones((2, num_frames, 8, 8, 3))
     rng, init_rng = random.split(rng)
-    init_model_state, init_params = mtv.flax_model.init(
-        init_rng, inputs, train=False).pop('params')
+    init_model_state, init_params = flax.core.pop(mtv.flax_model.init(
+        init_rng, inputs, train=False), 'params')
 
     # Check that the forward pass works with mutated model_state.
     rng, dropout_rng = random.split(rng)
@@ -348,8 +349,8 @@ class ModelTest(tf.test.TestCase, parameterized.TestCase):
     num_frames = 8  # matches with the default config.
     inputs = jnp.ones((2, num_frames, 8, 8, 3))
     rng, init_rng = random.split(rng)
-    init_model_state, init_params = mtv.flax_model.init(
-        init_rng, inputs, train=False).pop('params')
+    init_model_state, init_params = flax.core.pop(mtv.flax_model.init(
+        init_rng, inputs, train=False), 'params')
 
     # Check that the forward pass works with mutated model_state.
     rng, dropout_rng = random.split(rng)
