@@ -4,6 +4,7 @@ import functools
 
 from absl.testing import absltest
 from absl.testing import parameterized
+import flax
 from jax import random
 from jax.flatten_util import ravel_pytree
 import jax.numpy as jnp
@@ -56,8 +57,8 @@ class MixerTest(parameterized.TestCase):
 
     rng, init_rng = jax.random.split(rng)
     dummy_input = jnp.zeros(INPUT_SHAPE, jnp.float32)
-    init_model_state, init_params = model.flax_model.init(
-        init_rng, dummy_input, train=False, debug=False).pop('params')
+    init_model_state, init_params = flax.core.pop(model.flax_model.init(
+        init_rng, dummy_input, train=False, debug=False), 'params')
 
     # Check that the forward pass works with mutated model_state.
     rng, dropout_rng = jax.random.split(rng)
