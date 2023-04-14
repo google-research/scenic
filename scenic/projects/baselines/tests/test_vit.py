@@ -2,6 +2,7 @@
 
 from absl.testing import absltest
 from absl.testing import parameterized
+import flax
 import jax
 import jax.numpy as jnp
 import jax.tree_util
@@ -58,8 +59,8 @@ class ViTTest(parameterized.TestCase):
 
     rng, init_rng = jax.random.split(rng)
     dummy_input = jnp.zeros(INPUT_SHAPE, jnp.float32)
-    init_model_state, init_params = model.flax_model.init(
-        init_rng, dummy_input, train=False, debug=False).pop('params')
+    init_model_state, init_params = flax.core.pop(model.flax_model.init(
+        init_rng, dummy_input, train=False, debug=False), 'params')
 
     # Check that the forward pass works in train mode.
     rng, dropout_rng = jax.random.split(rng)
