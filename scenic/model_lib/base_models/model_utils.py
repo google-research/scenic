@@ -639,7 +639,7 @@ def weighted_mean_squared_error(
     predictions: Output of model in shape [batch, ..., num_features].
     targets: Targets of shape [batch, ..., num_features].
     weights:  None or array of shape [batch,] This is the weight to apply to the
-      loss  computed for each example in the batch. Can be used to ignore padded
+      loss computed for each example in the batch. Can be used to ignore padded
       examples in the batch.
     axis: The axis (or axes) to compute the loss over. If not specified, all
       dimensions besides the leading batch dimension are used.
