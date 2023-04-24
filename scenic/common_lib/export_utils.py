@@ -43,7 +43,8 @@ def convert_and_save_model(
     with_gradient: bool = False,
     enable_xla: bool = True,
     compile_model: bool = True,
-    saved_model_options: Optional[tf.saved_model.SaveOptions] = None
+    saved_model_options: Optional[tf.saved_model.SaveOptions] = None,
+    native_serialization: Optional[str] = "default"
 ):
   """Converts a JAX function and saves a SavedModel.
 
@@ -95,6 +96,11 @@ def convert_and_save_model(
     compile_model: Use TensorFlow jit_compiler on the SavedModel. This
       is needed if the SavedModel will be used for TensorFlow serving.
     saved_model_options: Options to pass to `savedmodel.save`.
+    native_serialization: Serialize the JAX function natively to
+      StableHLO with compatibility guarantees. This makes it easier to have
+      confidence that the code executed when calling this function from
+      TensorFlow is exactly the same as JAX would run natively. See
+      jax2tf.convert() for details.
 
   Raises:
     ValueError: If at least one input signature is not defined. However, if
@@ -109,7 +115,8 @@ def convert_and_save_model(
       jax_fn,
       with_gradient=with_gradient,
       polymorphic_shapes=[None, polymorphic_shapes],
-      enable_xla=enable_xla)
+      enable_xla=enable_xla,
+      native_serialization=native_serialization)
 
   def get_tf_variable(path, param):
     return tf.Variable(param, trainable=with_gradient, name="/".join(path))
