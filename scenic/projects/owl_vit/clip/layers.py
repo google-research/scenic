@@ -75,7 +75,9 @@ class Bottleneck(nn.Module):
                       (self.stride, self.stride))
     out = bn3(conv3(out))
 
-    downsample = self.stride > 1 or x.shape[-1] != self.features * self.expansion
+    downsample = (
+        self.stride > 1 or x.shape[-1] != self.features * self.expansion
+    )
     if downsample:
       x = Shortcut(features=self.features * self.expansion,
                    stride=self.stride, name='downsample')(x)
@@ -253,7 +255,7 @@ class ResidualAttentionBlock(nn.Module):
       attn_mask: Optional[jnp.ndarray] = None,
       *,
       deterministic: bool = True) -> jnp.ndarray:
-    xn = LayerNorm(name='ln_1')(x)
+    xn = LayerNorm(name='ln_0')(x)
     y = nn.SelfAttention(
         self.num_heads, name='attn', deterministic=deterministic)(xn, attn_mask)
 
@@ -261,7 +263,7 @@ class ResidualAttentionBlock(nn.Module):
     drop_pattern = self.get_drop_pattern(y, deterministic)
     x = y * (1.0 - drop_pattern) + x
 
-    xn = LayerNorm(name='ln_2')(x)
+    xn = LayerNorm(name='ln_1')(x)
     y = MLP(name='mlp')(xn)
 
     # Droplayer.

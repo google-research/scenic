@@ -1,5 +1,6 @@
 """Implementation of the OWL-ViT detection model."""
 
+import copy
 from typing import Any, Dict, List, Mapping, Optional
 
 import flax.linen as nn
@@ -13,6 +14,32 @@ from scenic.projects.owl_vit.clip import model as clip_model
 from scenic.projects.owl_vit.clip import tokenizer as clip_tokenizer
 
 Params = layers.Params
+
+
+def _fix_old_layernorm(transformer_params):
+  """Fix layer norm numbering of old checkpoints."""
+  if 'ln_0' in transformer_params['resblocks.0']:
+    # This checkpoint has the new format.
+    return transformer_params
+
+  fixed_params = copy.deepcopy(transformer_params)
+  for resblock in fixed_params.values():
+    resblock['ln_0'] = resblock.pop('ln_1')
+    resblock['ln_1'] = resblock.pop('ln_2')
+
+  return fixed_params
+
+
+def _fix_old_checkpoints(params):
+  """Makes old checkpoints forward-compatible."""
+  if 'clip' in params['backbone']:
+    params['backbone']['clip']['visual']['transformer'] = _fix_old_layernorm(
+        params['backbone']['clip']['visual']['transformer']
+    )
+    params['backbone']['clip']['text']['transformer'] = _fix_old_layernorm(
+        params['backbone']['clip']['text']['transformer']
+    )
+  return params
 
 
 class TextZeroShotDetectionModule(nn.Module):
@@ -45,6 +72,7 @@ class TextZeroShotDetectionModule(nn.Module):
       params = restored['optimizer']['target']
     else:
       params = restored['params']
+    params = _fix_old_checkpoints(params)
     return {'params': params}
 
   def setup(self):
