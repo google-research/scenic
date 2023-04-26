@@ -325,7 +325,7 @@ class PolyVitBaseModel(base_model.BaseModel):
         polyvit_metrics_function, dataset_meta_data=self.dataset_meta_data,
         class_splits=class_splits, split_names=split_names)
 
-  def loss_function(self,
+  def loss_function(self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
                     logits: jnp.ndarray,
                     batch: base_model.Batch,
                     dataset_name: str,

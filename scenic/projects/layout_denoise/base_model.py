@@ -132,7 +132,7 @@ class LayoutDenoiseBaseModel(base_model.BaseModel):
       metrics[k] = model_utils.psum_metric_normalizer(v)
     return normalized_loss_ce, metrics
 
-  def loss_function(
+  def loss_function(  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
       self,
       outputs: ArrayDict,
       batch: ArrayDict,

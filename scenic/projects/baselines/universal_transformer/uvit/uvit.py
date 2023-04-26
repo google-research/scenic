@@ -338,7 +338,7 @@ class UViTMultiLabelClassificationModel(MultiLabelClassificationModel):
         dtype=model_dtype,
     )
 
-  def loss_function(self,
+  def loss_function(self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
                     logits: jnp.array,
                     auxiliary_outputs: Any,
                     batch: base_model.Batch,
