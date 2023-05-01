@@ -223,7 +223,7 @@ class ViT(nn.Module):
     dropout_rate: Dropout rate.
     attention_dropout_rate: Dropout for attention heads.
     classifier: type of the classifier layer. Options are 'gap', 'gmp', 'gsp',
-      'token'.
+      'token', 'none'.
     dtype: JAX data type for activations.
   """
 
@@ -281,6 +281,8 @@ class ViT(nn.Module):
     elif self.classifier == 'map':
       x = MAPHead(
           num_heads=self.num_heads, mlp_dim=self.mlp_dim, dtype=self.dtype)(x)
+    elif self.classifier == 'none':
+      pass
     else:
       raise ValueError(f'Unknown classifier {self.classifier}')
 
@@ -289,11 +291,14 @@ class ViT(nn.Module):
       x = nn.tanh(x)
     else:
       x = nn_layers.IdentityLayer(name='pre_logits')(x)
-    x = nn.Dense(
-        self.num_classes,
-        kernel_init=nn.initializers.zeros,
-        name='output_projection')(
-            x)
+
+    if self.num_classes > 0:
+      # If self.num_classes <= 0, we just return the backbone features.
+      x = nn.Dense(
+          self.num_classes,
+          kernel_init=nn.initializers.zeros,
+          name='output_projection')(
+              x)
     return x
 
 
