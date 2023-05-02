@@ -19,7 +19,7 @@ from concurrent import futures
 import json
 import operator
 import threading
-from typing import Any, Callable, Optional, Sequence, Set, Tuple, Union
+from typing import Any, Callable, Optional, Sequence, Set
 
 from absl import logging
 from clu import parameter_overview
@@ -74,9 +74,13 @@ def log_param_shapes(params: Any,
   return total_params
 
 
+# Either a tuple (shape, dtype) or just the shape.
+InputSpecT = tuple[tuple[int, ...], jnp.dtype] | tuple[int, ...]
+
+
 def input_spec_to_jax_shape_dtype_struct(
-    spec: Union[Tuple[Tuple[int, ...], jnp.dtype], Tuple[int, ...]],
-    batch_size: Optional[int] = None) -> jax.ShapeDtypeStruct:
+    spec: InputSpecT, batch_size: Optional[int] = None
+) -> jax.ShapeDtypeStruct:
   """Parse an input specs into a jax.ShapeDtypeStruct."""
   spec = tuple(spec)
   if batch_size and len(spec) == 1:
@@ -91,8 +95,7 @@ def input_spec_to_jax_shape_dtype_struct(
 
 
 def compute_flops(flax_model_apply_fn: Callable[[jnp.ndarray], Any],
-                  input_spec: Sequence[Union[Tuple[Tuple[int, ...], jnp.dtype],
-                                             Tuple[int, ...], None]],
+                  input_spec: Sequence[InputSpecT | None],
                   fuse_multiply_add: bool) -> float:
   """Performs static analysis of the graph to compute theoretical FLOPs.
 
