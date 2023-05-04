@@ -62,18 +62,18 @@ $ python -m scenic.projects.vid2seq.main \
   --workdir=vid2seq_base/
 ```
 
-<!--
+
 ## Model Zoo
 
-We release some pretrained Vid2Seq models trained under different settings. Checkpoints are provided as Scenic checkpoints compatible with [Flax](https://github.com/google/flax).
-Note that the numbers are likely to fluctuate slightly as the test sets vary when videos are taken down.
+We release select pretrained Vid2Seq models trained under different settings. Checkpoints are provided as Scenic checkpoints compatible with [Flax](https://github.com/google/flax).
+Note that numbers are likely to fluctuate slightly as the test sets vary when videos are taken down.
 
 
 | Model           | Dataset       | SODA | Checkpoint                                                                                                                                                                                                                                         |
 |:------------:|:-----------:|:---:|:----------------------------------------------------------------------------------------------------------------:|
-| Vid2Seq | YT-Temporal-1B          | --- | [Checkpoint](https://storage.googleapis.com/scenic-bucket/vid2seq/vid2seq_ytt)  |
-| Vid2Seq | YT-Temporal-1B + ActivityNet-Captions  | 5.8 | [Checkpoint](https://storage.googleapis.com/scenic-bucket/vid2seq/vid2seq_ytt_act)  |
-| Vid2Seq | YT-Temporal-1B + YouCook2  | 7.7 | [Checkpoint](https://storage.googleapis.com/scenic-bucket/vid2seq/vid2seq_ytt_yc) | -->
+| Vid2Seq | YT-Temporal-1B          | --- | [Checkpoint](https://storage.googleapis.com/scenic-bucket/vid2seq/yt-temporal-1b)  |
+| Vid2Seq | YT-Temporal-1B + ActivityNet-Captions  | 5.8 | [Checkpoint](https://storage.googleapis.com/scenic-bucket/vid2seq/anet-captions)  |
+| Vid2Seq | YT-Temporal-1B + YouCook2  | 7.7 | [Checkpoint](https://storage.googleapis.com/scenic-bucket/vid2seq/youcook-2) |
 
 ## Citation
 
