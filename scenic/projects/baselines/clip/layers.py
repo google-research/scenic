@@ -72,7 +72,9 @@ class Bottleneck(nn.Module):
                       (self.stride, self.stride))
     out = bn3(conv3(out))
 
-    downsample = self.stride > 1 or x.shape[-1] != self.features * self.expansion
+    downsample = (
+        self.stride > 1 or x.shape[-1] != self.features * self.expansion
+    )
     if downsample:
       x = Shortcut(features=self.features * self.expansion,
                    stride=self.stride, name='downsample')(x)
@@ -249,18 +251,28 @@ class Transformer(nn.Module):
     features: Number of features.
     num_layers: Number of layers for each block.
     num_heads: Number of heads.
+    use_underscore_module_name: Optionally replace '.' with '_' in parameter
+      naming for PAX checkpoint loading.
   """
   features: int
   num_layers: int
   num_heads: int
+  use_underscore_module_name: bool = False
 
   @nn.compact
   def __call__(self,
                x: jnp.ndarray,
                attn_mask: Optional[jnp.ndarray] = None) -> jnp.ndarray:
+    def _n(name):
+      """A helper function that optionally replace '.' with '_'."""
+      if self.use_underscore_module_name:
+        return name.replace('.', '_')
+      else:
+        return name
+
     for i in range(self.num_layers):
       x = ResidualAttentionBlock(
-          num_heads=self.num_heads, name=f'resblocks.{i}')(x, attn_mask)
+          num_heads=self.num_heads, name=_n(f'resblocks.{i}'))(x, attn_mask)
     return x
 
 
@@ -273,12 +285,15 @@ class VisionTransformer(nn.Module):
     num_layers: Number of transformer blocks (self-attn + MLP).
     num_heads: Number of attention heads.
     out_features: Number of output features. If None, return transformer output.
+    use_underscore_module_name: Optionally replace '.' with '_' in parameter
+      naming for PAX checkpoint loading.
   """
   patch_size: int
   features: int
   num_layers: int
   num_heads: int
   out_features: Optional[int]
+  use_underscore_module_name: bool = False
 
   @nn.compact
   def __call__(self,
@@ -306,6 +321,7 @@ class VisionTransformer(nn.Module):
         features=self.features,
         num_layers=self.num_layers,
         num_heads=self.num_heads,
+        use_underscore_module_name=self.use_underscore_module_name,
         name='transformer')(
             x)
 
@@ -327,12 +343,15 @@ class TextEncoder(nn.Module):
     num_layers: Number of transformer blocks (self-attn + MLP).
     num_heads: Number of attention heads.
     out_features: Size of the final text embedding.
+    use_underscore_module_name: Optionally replace '.' with '_' in parameter
+      naming for PAX checkpoint loading.
   """
   vocab_size: int
   features: int
   num_layers: int
   num_heads: int
   out_features: int
+  use_underscore_module_name: bool = False
 
   @nn.compact
   def __call__(self, text: jnp.ndarray) -> jnp.ndarray:
@@ -344,7 +363,11 @@ class TextEncoder(nn.Module):
     x = nn.Embed(self.vocab_size, self.features, name='token_embedding')(text)
     x = x + positional_embedding[None]
     x = Transformer(
-        self.features, self.num_layers, self.num_heads, name='transformer')(
+        self.features,
+        self.num_layers,
+        self.num_heads,
+        use_underscore_module_name=self.use_underscore_module_name,
+        name='transformer')(
             x, attn_mask=mask)
     x = LayerNorm(name='ln_final')(x)
     x = x[jnp.arange(x.shape[0]), text.argmax(-1)]
@@ -364,6 +387,8 @@ class CLIP(nn.Module):
     vision_features: Number of features in vision transformer.
     vision_num_layers: Number of vision transformer blocks (self-attn + MLP).
     vision_patch_size: Size of patches to embed in vision transformer.
+    use_underscore_module_name: Optionally replace '.' with '_' in parameter
+      naming for PAX checkpoint loading.
   """
   vocab_size: int
   embed_dim: int
@@ -376,6 +401,7 @@ class CLIP(nn.Module):
   vision_num_layers: Union[int, Sequence[int]]
   vision_patch_size: Optional[int] = None
   vision_return_map: bool = False
+  use_underscore_module_name: bool = False
 
   def setup(self):
     if isinstance(self.vision_num_layers, (tuple, list)):
@@ -392,13 +418,15 @@ class CLIP(nn.Module):
           features=self.vision_features,
           num_layers=self.vision_num_layers,
           num_heads=self.vision_num_heads,
-          out_features=None if self.vision_return_map else self.embed_dim)
+          out_features=None if self.vision_return_map else self.embed_dim,
+          use_underscore_module_name=self.use_underscore_module_name)
     self.text = TextEncoder(
         out_features=self.embed_dim,
         vocab_size=self.vocab_size,
         features=self.text_features,
         num_layers=self.text_num_layers,
-        num_heads=self.text_num_heads)
+        num_heads=self.text_num_heads,
+        use_underscore_module_name=self.use_underscore_module_name)
     self.logit_scale = self.param('logit_scale', jax.nn.initializers.zeros, ())
 
   def encode_image(self,
