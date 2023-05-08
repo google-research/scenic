@@ -16,10 +16,10 @@ token are then simply appended to inputs and fed to the transformer encoder.
 ## Reference
 If you use AdaTape, please cite the paper.
 ```
-@article{xxx,
+@inproceedings{xue2023adaptive,
   title={Adaptive Computation with Elastic Input Sequence},
-  author={xxx},
-  journal={xxx},
-  year={2022}
+  author={Xue, Fuzhao and Likhosherstov, Valerii and Arnab, Anurag and Houlsby, Neil and Dehghani, Mostafa and You, Yang},
+  booktitle={International Conference on Machine Learning},
+  year={2023}
 }
 ```

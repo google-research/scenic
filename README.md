@@ -61,6 +61,9 @@ Projects that were developed in Scenic or used it for their experiments:
 * [Token Turing Machines](https://arxiv.org/pdf/2211.09119.pdf)
 * [Vid2Seq: Large-Scale Pretraining of a Visual Language Model for Dense Video Captioning](https://arxiv.org/pdf/2302.14115.pdf)
 * [AVATAR: Unconstrained Audiovisual Speech Recognition](https://arxiv.org/abs/2206.07684)
+* [Adaptive Computation with Elastic Input Sequence](https://arxiv.org/abs/2301.13195)
+
+
 
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 
