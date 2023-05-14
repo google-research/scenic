@@ -86,13 +86,14 @@ def piecewise_linear_scheduler(step, decay_events, decay_factors):
   Returns:
     Scaling factor applied to the learning rate on the given step.
   """
-  boundaries = jnp.array([0] + decay_events + [decay_events[-1]])
+  boundaries = jnp.array([0] + decay_events + [step])
   factors = jnp.array([1.0] + decay_factors + [decay_factors[-1]])
   index = jnp.sum(boundaries[1:] < step)
-  m = (jnp.take(factors, index + 1) - jnp.take(factors, index)) / (
-      jnp.take(boundaries, index + 1) - jnp.take(boundaries, index) + 1e-6)
+  m = jnp.take(factors, index + 1) - jnp.take(factors, index)
+  n = jnp.take(boundaries, index + 1) - jnp.take(boundaries, index)
+  a = m / jnp.clip(n, 1)
   interpolated_factor = (
-      m * (step - jnp.take(boundaries, index)) + jnp.take(factors, index))
+      a * (step - jnp.take(boundaries, index)) + jnp.take(factors, index))
   return interpolated_factor
 
 
@@ -158,7 +159,7 @@ def cosine_decay_scheduler(step, steps_per_cycle, t_mul=1, m_mul=1., alpha=0.):
 
 
 def compound_lr_scheduler(config):
-  """Creates a learning rate scheduler by comnining multiple factors.
+  """Creates a learning rate scheduler by combining multiple factors.
 
   Interprets factors in the factors string which can consist of:
   * constant: interpreted as the constant value,
