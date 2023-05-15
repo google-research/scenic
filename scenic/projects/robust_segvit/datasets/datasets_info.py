@@ -17,15 +17,47 @@ ADE20K_OOD_CLASSES = ['chair', 'armchair', 'swivel chair']
 ADE20K_CORRUPTED_DIR = 'gs://ub-ekb/tensorflow_datasets/ad_e20k_corrupted/tfrecords/v.0.0'
 
 ADE20K_TFDS_NAME = 'ade20k'
-ADE20K_CORRUPTED_DIR = 'gs://ub-ekb/tensorflow_datasets/ade20k/tfrecords/v.0.0'
+ADE20K_DIR = 'gs://ub-ekb/tensorflow_datasets/ad_e20k/tfrecords/v.0.0'
+ADE20K_LABEL_KEY = 'annotations'  # instead of 'segmentation'
+
+CITYSCAPES_DIR = 'gs://ub-ekb/tensorflow_datasets/cityscapes/tfrecords/v.0.0'
+CITYSCAPES_CORRUPTED_DIR = 'gs://ub-ekb/tensorflow_datasets/cityscapes_corrupted/tfrecords/v.0.0'
+FISHYSCAPES_DIR = 'gs://ub-ekb/tensorflow_datasets/fishyscapes/tfrecords/v.0.0'
+STREETHAZARDS_DIR = 'gs://ub-ekb/tensorflow_datasets/street_hazards/tfrecords/v.0.0'
+STREETHAZARDS_CORRUPTED_DIR = 'gs://ub-ekb/tensorflow_datasets/street_hazards_corrupted/tfrecords/v.0.0'
+
 # pylint: enable=line-too-long
 
 # ADE20K-C
 ADE20K_C_SEVERITIES = range(1, 6)
 ADE20K_C_CORRUPTIONS = [
     'gaussian_noise',
+    'brightness',
+    'contrast',
+    'fog',
 ]
 
+# CITYSCAPES_C
+CITYSCAPES_C_SEVERITIES = range(1, 6)
+CITYSCAPES_C_CORRUPTIONS = [
+    'gaussian_noise',
+    'brightness',
+    'contrast',
+    'fog',
+]
+
+# FISHYSCAPES
+FISHYSCAPES_CORRUPTIONS = ['Static']
+
+
+# STREET_HAZARDS_C
+STREETHAZARDS_C_SEVERITIES = range(1, 6)
+STREETHAZARDS_C_CORRUPTIONS = [
+    'gaussian_noise',
+    'brightness',
+    'contrast',
+    'fog',
+]
 
 @dataclasses.dataclass(frozen=True)
 class DatasetInfo:
@@ -145,8 +177,101 @@ CITYSCAPES = DatasetInfo(
     image_key='image_left',
     label_key='segmentation_label',
     classes=CITYSCAPES_CLASSES,
-    pixels_per_class=CITYSCAPES_PIXELS_PER_CID)
+    pixels_per_class=CITYSCAPES_PIXELS_PER_CID,
+    data_dir=CITYSCAPES_DIR,
+)
 
+# ---------------------------------------------------------------------------------
+# Information for Street harzards dataset
+# Based on https://github.com/hendrycks/anomaly-seg
+StreetHazardsClass = collections.namedtuple(
+    'StreetHazardsClass', ['name', 'id', 'train_id', 'ignore_in_eval', 'color'])
+
+STREETHAZARDS_CLASS_NAMES = [
+  'unlabeled', 'building', 'fence', 'other', 'pedestrian', 'pole', 'road line',
+  'road', 'sidewalk', 'vegetation', 'car','wall', 'traffic sign', 'anomaly'
+]
+STREETHAZARDS_CLASS_COLORS = [
+[ 0,   0,   0], # // unlabeled     =   0,
+[ 70,  70,  70], # // building      =   1,
+[190, 153, 153], # // fence         =   2,
+[250, 170, 160], # // other         =   3,
+[220,  20,  60], # // pedestrian    =   4,
+[153, 153, 153], # // pole          =   5,
+[157, 234,  50], # // road line     =   6,
+[128,  64, 128], # // road          =   7,
+[244,  35, 232], # // sidewalk      =   8,
+[107, 142,  35], # // vegetation    =   9,
+[  0,   0, 142], # // car           =  10,
+[102, 102, 156], # // wall          =  11,
+[220, 220,   0], # // traffic sign  =  12,
+[ 60, 250, 240], # // anomaly       =  13,
+]
+
+# -------------------------------
+# Construct streethazards dataset:
+# -------------------------------
+
+# ignoring background, other, and anomaly class
+STREETHAZARDS_CLASSES = []
+train_class=0
+for i in range(14):
+  name = STREETHAZARDS_CLASS_NAMES[i]
+  if name == 'unlabeled' or name == 'anomaly' or name == 'other':
+    train_id = 255
+    ignore_in_eval = True
+  else:
+    train_id = train_class
+    ignore_in_eval = False
+    train_class += 1
+  c = StreetHazardsClass(name, i, train_id, ignore_in_eval, STREETHAZARDS_CLASS_COLORS[i])
+  STREETHAZARDS_CLASSES.append(c)
+
+STREETHAZARDS = DatasetInfo(
+    tfds_name='street_hazards',
+    image_key='image',
+    label_key='annotations',
+    classes=STREETHAZARDS_CLASSES,
+    pixels_per_class=None,
+    data_dir=STREETHAZARDS_DIR)
+
+
+# -------------------------------
+# Construct streethazards_open dataset:
+# -------------------------------
+STREETHAZARDSOPEN_CLASSES = []
+for i in range(14):
+  name = STREETHAZARDS_CLASS_NAMES[i]
+  if name =='anomaly':
+    train_id = 1
+    ignore_in_eval = False
+  elif name == 'background' or  name == 'unlabeled':
+    train_id = 255
+    ignore_in_eval = True
+  else:
+    train_id = 0
+    ignore_in_eval = False
+
+  c = StreetHazardsClass(name, i, train_id, ignore_in_eval, STREETHAZARDS_CLASS_COLORS[i])
+  STREETHAZARDSOPEN_CLASSES.append(c)
+
+# Classes defined as Background/InD/OOD sets.
+c255 = StreetHazardsClass('background', 0, 255, True, [0, 0, 0])
+c0 = StreetHazardsClass('ind', 1, 0, False, [0, 0, 1])
+c1 = StreetHazardsClass('ood', 2, 1, False, [1, 0, 0])
+STREETHAZARDSOPEN_3CLASSES = [c255, c0, c1]
+
+STREETHAZARDSOPEN = DatasetInfo(
+    tfds_name='street_hazards',
+    image_key='image',
+    label_key='annotations',
+    classes=STREETHAZARDSOPEN_3CLASSES,
+    ood_classes=STREETHAZARDSOPEN_CLASSES,
+    pixels_per_class=None,
+    data_dir=STREETHAZARDS_DIR)
+
+
+# ---------------------------------------------------------------------------------
 # Information for ADE20k dataset
 ADE20KClass = collections.namedtuple(
     'ADE20KClass', ['name', 'id', 'train_id', 'ignore_in_eval', 'color'])
@@ -231,7 +356,7 @@ for i in range(151):
 ADE20K = DatasetInfo(
     tfds_name=ADE20K_TFDS_NAME,
     image_key='image',
-    label_key='segmentation',
+    label_key=ADE20K_LABEL_KEY,
     classes=ADE20K_CLASSES,
     pixels_per_class=None,
     data_dir=ADE20K_DIR)
@@ -260,7 +385,7 @@ for i in range(151):
 ADE20KSUBSET = DatasetInfo(
     tfds_name=ADE20K_TFDS_NAME,
     image_key='image',
-    label_key='segmentation',
+    label_key=ADE20K_LABEL_KEY,
     classes=ADE20KSUBSET_CLASSES,
     pixels_per_class=None,
     data_dir=ADE20K_DIR)
@@ -296,11 +421,35 @@ ADE20KOPEN_3CLASSES = [c255, c0, c1]
 ADE20KOPEN = DatasetInfo(
     tfds_name=ADE20K_TFDS_NAME,
     image_key='image',
-    label_key='segmentation',
+    label_key=ADE20K_LABEL_KEY,
     classes=ADE20KOPEN_3CLASSES,
     ood_classes=ADE20KOPEN_CLASSES,
     pixels_per_class=None,
     data_dir=ADE20K_DIR)
+
+
+# ----------------------------------
+# Construct fishyscapes dataset:
+# ----------------------------------
+FishyscapesClass = collections.namedtuple(
+    'FishyscapesClass', ['name', 'id', 'train_id', 'ignore_in_eval', 'color'])
+
+# Classes defined as Background/InD/OOD sets.
+c255 = FishyscapesClass('background', 255, 255, True, [0, 0, 0])
+c0 = FishyscapesClass('ind', 0, 0, False, [0, 0, 1])
+c1 = FishyscapesClass('ood', 1, 1, False, [1, 0, 0])
+FISHYSCAPES_3CLASSES = [c255, c0, c1]
+# the original dataset has classes [0, 1, 255] so we can define classes [2-255] as background.
+FISHYSCAPES_CLASSES = [c0, c1] + [c255] * 254
+
+FISHYSCAPES_STATIC = DatasetInfo(
+    tfds_name='fishyscapes/Static',
+    image_key='image_left',
+    label_key='mask',
+    classes=FISHYSCAPES_3CLASSES,
+    ood_classes=FISHYSCAPES_CLASSES,
+    pixels_per_class=None,
+    data_dir=FISHYSCAPES_DIR)
 
 
 def build_datasets():
@@ -311,7 +460,26 @@ def build_datasets():
       'ade20k': ADE20K,
       'ade20k_ind': ADE20KSUBSET,
       'ade20k_ood_open': ADE20KOPEN,
+      'street_hazards': STREETHAZARDS,
+      'street_hazards_open': STREETHAZARDSOPEN,
+      'fishyscapes/Static': FISHYSCAPES_STATIC,
   }
+
+  # -----------------------------
+  # Construct cityscapes_c dataset:
+  # -----------------------------
+  for severity in CITYSCAPES_C_SEVERITIES:
+    for corruption in CITYSCAPES_C_CORRUPTIONS:
+      tfds_dataset_name = f'cityscapes_corrupted/semantic_segmentation_{corruption}_{severity}'
+      temp_dataset_name = f'cityscapes_c_{corruption}_{severity}'
+      local_dataset[temp_dataset_name] = DatasetInfo(
+        tfds_name=tfds_dataset_name,
+        image_key='image_left',
+        label_key='segmentation_label',
+        classes=CITYSCAPES_CLASSES,
+        pixels_per_class=CITYSCAPES_PIXELS_PER_CID,
+        data_dir=CITYSCAPES_CORRUPTED_DIR,
+      )
 
   # -----------------------------
   # Construct ade20k_c dataset:
@@ -362,7 +530,24 @@ def build_datasets():
           data_dir=ADE20K_CORRUPTED_DIR,
       )
 
+  # ------------------------------------
+  # Construct street_hazards_c dataset:
+  # ------------------------------------
+  for severity in STREETHAZARDS_C_SEVERITIES:
+    for corruption in STREETHAZARDS_C_CORRUPTIONS:
+      tfds_dataset_name = f'street_hazards_corrupted/street_hazards_{corruption}_{severity}'
+      temp_dataset_name = f'street_hazards_c_{corruption}_{severity}'
+      local_dataset[temp_dataset_name] = DatasetInfo(
+        tfds_name=tfds_dataset_name,
+        image_key='image',
+        label_key='annotations',
+        classes=STREETHAZARDS_CLASSES,
+        pixels_per_class=None,
+        data_dir=STREETHAZARDS_CORRUPTED_DIR,
+      )
+
   return local_dataset
+
 
 # ------------------
 # BUILD all datasets

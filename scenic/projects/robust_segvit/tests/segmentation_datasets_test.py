@@ -7,7 +7,9 @@ import ml_collections
 from scenic.projects.robust_segvit.datasets import segmentation_datasets
 
 EXPECTED_DATASETS = [
-    ('ade20k', 'ade20k', 'validation'),
+    ('cityscapes', 'cityscapes', 'validation[:32]'),
+    ('ade20k', 'ade20k', 'validation[:32]'),
+    ('street_hazards', 'street_hazards', 'validation[:32]'),
 ]
 
 
@@ -28,7 +30,7 @@ class SegmentationVariantsTest(parameterized.TestCase):
     config.dataset_configs.name = name
     config.dataset_configs.denoise = None
     config.dataset_configs.use_timestep = 0
-    config.dataset_configs.val_split = val_split
+    config.dataset_configs.validation_split = val_split
     _, dataset, _, _ = segmentation_datasets.get_dataset(**config)
     batch = next(dataset)
     self.assertEqual(
