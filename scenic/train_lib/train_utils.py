@@ -27,7 +27,6 @@ from clu import metric_writers
 import flax
 from flax import jax_utils
 from flax import struct
-from flax.core import pop
 import flax.linen as nn
 from flax.training import checkpoints
 import jax
@@ -122,9 +121,14 @@ def initialize_model(
   @functools.partial(jax.jit, backend='cpu')
   def _initialize_model(rngs):
     """Initialization function to be jitted."""
-    init_model_state, init_params = pop(model_def.init(
-        rngs, *dummy_input, train=train, debug=False, **model_kwargs
-    ), 'params')
+    init_model_state, init_params = flax.core.pop(
+        flax.core.freeze(
+            model_def.init(
+                rngs, *dummy_input, train=train, debug=False, **model_kwargs
+            )
+        ),
+        'params',
+    )
     # Set bias in the head to low value, such that loss is small initially.
     if config.get('init_head_bias', None) is not None:
       init_params = flax.core.unfreeze(init_params)
@@ -232,20 +236,31 @@ def initialize_model_with_pytree(
     # If dummy_input is a dict, we feed inputs as keyword arguments, otherwise
     # feed as position arguments.
     if isinstance(dummy_input, dict):
-      init_model_state, init_params = pop(model_def.init(
-          rngs, **dummy_input, train=False, debug=False, **model_kwargs
-      ), 'params')
+      init_model_state, init_params = flax.core.pop(
+          flax.core.freeze(
+              model_def.init(
+                  rngs, **dummy_input, train=False, debug=False, **model_kwargs
+              )
+          ),
+          'params',
+      )
     else:
-      init_model_state, init_params = pop(model_def.init(
-          rngs, *dummy_input, train=False, debug=False, **model_kwargs
-      ), 'params')
+      init_model_state, init_params = flax.core.pop(
+          flax.core.freeze(
+              model_def.init(
+                  rngs, *dummy_input, train=False, debug=False, **model_kwargs
+              )
+          ),
+          'params',
+      )
     # Set bias in the head to low value, such that loss is small initially.
     if config.get('init_head_bias', None) is not None:
       init_params = flax.core.unfreeze(init_params)
       init_params['output_projection'] = optimizers.tree_map_with_names(
           lambda p: jnp.full_like(p, config.init_head_bias),
           init_params['output_projection'],
-          match_name_fn=lambda name: 'bias' in name)
+          match_name_fn=lambda name: 'bias' in name,
+      )
       init_params = flax.core.freeze(init_params)
     return init_params, init_model_state
 
@@ -408,8 +423,8 @@ def initialize_multitask_model(
   @functools.partial(jax.jit, backend='cpu')
   def _initialize_model(rngs):
     """Initialization function to be jitted."""
-    init_model_state, init_params = pop(nn.init(
-        fn=init_fn, module=model_def)(rngs), 'params')
+    init_model_state, init_params = flax.core.pop(flax.core.freeze(nn.init(
+        fn=init_fn, module=model_def)(rngs)), 'params')
     # Set bias in the head to low value, such that loss is small initially.
     if (config.get('init_head_bias', None) is not None and
         'output_projection' in init_params):
@@ -514,18 +529,23 @@ def sync_model_state_across_replicas(train_state: TrainState) -> TrainState:
   #   statistics like variance. (check the discussion in Flax for fixing this).
   if jax.tree_util.tree_leaves(train_state.model_state):
     # If the model_state is not empty.
-    new_model_state = train_state.model_state.copy(
-        {'batch_stats': pmap_mean(train_state.model_state['batch_stats'])})
+    new_model_state = flax.core.copy(
+        train_state.model_state,
+        {'batch_stats': pmap_mean(train_state.model_state['batch_stats'])},
+    )
     return train_state.replace(  # pytype: disable=attribute-error
-        model_state=new_model_state)
+        model_state=new_model_state
+    )
   else:
     return train_state
 
 
-def save_checkpoint(workdir: str,
-                    train_state: TrainState,
-                    max_to_keep: int = 3,
-                    overwrite: bool = False):
+def save_checkpoint(
+    workdir: str,
+    train_state: TrainState,
+    max_to_keep: int = 3,
+    overwrite: bool = False,
+):
   """Saves a checkpoint.
 
   Args:
