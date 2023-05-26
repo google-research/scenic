@@ -706,7 +706,7 @@ def stack_forest(forest: PyTree) -> PyTree:
   return jax.tree_util.tree_map(stack_args, *forest)
 
 
-def unreplicate_and_get(x: Sequence[PyTree]) -> PyTree:
+def unreplicate_and_get(x: PyTree) -> PyTree:
   return jax.device_get(jax_utils.unreplicate(x))
 
 
