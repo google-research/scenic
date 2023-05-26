@@ -71,12 +71,13 @@ def get_optimizer(
 
   # Skip weight decay for BatchNorm scale or for the bias parameters.
   weight_decay_mask = None
-  if 'skip_scale_and_bias_regularization' in config:
+  if config.get('skip_scale_and_bias_regularization') is not None:
     if (config.skip_scale_and_bias_regularization and
         config.get('weight_decay', 0)):
       if params is None:
         raise ValueError('params must be given to obtain weight_decay_mask.')
       weight_decay_mask = jax.tree_util.tree_map(lambda x: x.ndim != 1, params)
+  if 'skip_scale_and_bias_regularization' in config:
     del config.skip_scale_and_bias_regularization
 
   optim_ops = []
@@ -93,7 +94,7 @@ def get_optimizer(
     config.weight_decay_mask = weight_decay_mask
 
   # Add gradient clipping before optimizer operations.
-  if 'grad_clip' in config:
+  if config.get('grad_clip') is not None:
     grad_clip_config = config.grad_clip
     clip_method = grad_clip_config.get('clip_method', None)
     clip_value = grad_clip_config.get('clip_value', None)
@@ -108,6 +109,7 @@ def get_optimizer(
         optim_ops.append(optax.clip_by_block_rms(clip_value))
       else:
         logging.info('%s is not supported', clip_method)
+  if 'grad_clip' in config:
     del config.grad_clip
 
   # Remove freeze_params_reg_exp here. This should be the last operation to
@@ -115,7 +117,7 @@ def get_optimizer(
   # because all remaining fields in the config are given to the optimizer.
   freeze_mask = None
   unfreeze_mask = None
-  if 'freeze_params_reg_exp' in config:
+  if config.get('freeze_params_reg_exp') is not None:
     if params is None:
       raise ValueError('params must be given to obtain frozen parameters.')
     freeze_mask = tree_mask(params, config.freeze_params_reg_exp)
@@ -126,6 +128,8 @@ def get_optimizer(
     if not num_params_unfrozen:
       raise ValueError('freeze_params_reg_exp matched all parameters in '
                        'the model, which prevents any training from happening.')
+  if 'freeze_params_reg_exp' in config:
+    del config.freeze_params_reg_exp
 
   # Call the optax optimizer with exact arguments as in the config.
   # This throws an error when the config has (spelling) mistakes.
