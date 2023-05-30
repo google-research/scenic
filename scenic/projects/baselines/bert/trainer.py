@@ -1,26 +1,29 @@
 """BERT Training Script."""
 
 import functools
-from typing import Any, Callable, Dict, Tuple, Optional, Type
+from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 from absl import logging
 from clu import metric_writers
 from clu import periodic_actions
+from clu import platform
 from flax import jax_utils
 import flax.linen as nn
 import jax
-from jax.example_libraries import optimizers as jax_optimizers
+from jax.example_libraries.optimizers import clip_grads
 import jax.numpy as jnp
 import jax.profiler
 import ml_collections
 import numpy as np
+import optax
 from scenic.dataset_lib import dataset_utils
 from scenic.projects.baselines.bert import bert_base_model
 from scenic.projects.baselines.bert import train_utils as bert_train_utils
-from scenic.train_lib_deprecated import lr_schedules
-from scenic.train_lib_deprecated import optimizers
-from scenic.train_lib_deprecated import pretrain_utils
-from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib import optax as scenic_optax
+from scenic.train_lib import pretrain_utils
+from scenic.train_lib import train_utils
+
+LrFns = Dict[str, Callable[[jnp.ndarray], jnp.ndarray]]
 
 
 def train_step(
@@ -28,12 +31,14 @@ def train_step(
     batch: bert_base_model.Batch,
     *,
     flax_model: nn.Module,
-    learning_rate_fn: Callable[[int], float],
+    lr_fns: LrFns,
     loss_fn: bert_base_model.LossFn,
     metrics_fn: bert_base_model.MetricFn,
     config: ml_collections.ConfigDict,
-    debug: Optional[bool] = False
-) -> Tuple[train_utils.TrainState, Dict[str, Tuple[float, int]], float]:
+    debug: Optional[bool] = False,
+) -> Tuple[
+    train_utils.TrainState, Dict[str, Tuple[float, int]], Dict[str, Any]
+]:
   """Runs a single step of training.
 
   Given the state of the training and a batch of data, computes
@@ -49,8 +54,7 @@ def train_step(
     batch: A single batch of data. The buffer of this argument can be donated to
       the computation.
     flax_model: A Flax model.
-    learning_rate_fn: Learning rate scheduler which given the global_step
-      generates the learning rate.
+    lr_fns: The learning rate fns used for the optimizer in train_state.
     loss_fn: A loss function that given logits, a batch, and parameters of the
       model calculates the loss.
     metrics_fn: A metrics function that given logits and batch of data,
@@ -61,8 +65,9 @@ def train_step(
       jax.host_callback.
 
   Returns:
-    Updated state of training, computed metrics, and learning rate for logging.
+    Updated state of training and computed metrics and some training logs.
   """
+  training_logs = {}
   new_rng, rng = jax.random.split(train_state.rng)
   # Bind the rng to the host/device we are on.
   dropout_rng = train_utils.bind_rng_to_host_device(
@@ -81,38 +86,45 @@ def train_step(
     return loss, (new_model_state, output)
 
   compute_gradient_fn = jax.value_and_grad(training_loss_fn, has_aux=True)
-  step = train_state.global_step
-  lr = learning_rate_fn(step)
-  (train_cost,
-   (new_model_state,
-    output)), grad = compute_gradient_fn(train_state.optimizer.target)
+  (train_cost, (new_model_state, output)), grad = compute_gradient_fn(
+      train_state.params
+  )
 
   del train_cost
 
   # We clip gradients before pmean in BERT.
   if config.get('max_grad_norm', None) is not None:
-    grad = jax_optimizers.clip_grads(grad, config.max_grad_norm)
+    grad = clip_grads(grad, config.max_grad_norm)
+
   # Re-use same axis_name as in the call to `pmap(...train_step...)` below.
   grad = jax.lax.pmean(grad, axis_name='batch')
-  new_optimizer = train_state.optimizer.apply_gradient(grad, learning_rate=lr)
-  # Explicit weight decay, if necessary.
-  if config.get('explicit_weight_decay', None) is not None:
-    new_optimizer = new_optimizer.replace(
-        target=optimizers.tree_map_with_names(
-            functools.partial(
-                optimizers.decay_weight_fn,
-                lr=lr,
-                decay=config.explicit_weight_decay),
-            new_optimizer.target,
-            match_name_fn=lambda name: 'kernel' in name))
+
+  updates, new_opt_state = train_state.tx.update(
+      grad, train_state.opt_state, train_state.params
+  )
+  new_params = optax.apply_updates(train_state.params, updates)
+
+  training_logs['l2_grads'] = jnp.sqrt(
+      sum([jnp.vdot(g, g) for g in jax.tree_util.tree_leaves(grad)])
+  )
+  ps = jax.tree_util.tree_leaves(new_params)
+  training_logs['l2_params'] = jnp.sqrt(sum([jnp.vdot(p, p) for p in ps]))
+  us = jax.tree_util.tree_leaves(updates)
+  training_logs['l2_updates'] = jnp.sqrt(sum([jnp.vdot(u, u) for u in us]))
+  for name, lr_fn in lr_fns.items():
+    lr_name = 'learning_rate' if name == 'all' else f'learning_rate_{name}'
+    training_logs[lr_name] = lr_fn(train_state.global_step)
 
   metrics = metrics_fn(output, batch)
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=step + 1,
-      optimizer=new_optimizer,
+      global_step=train_state.global_step + 1,
+      opt_state=new_opt_state,
+      params=new_params,
       model_state=new_model_state,
-      rng=new_rng)
-  return new_train_state, metrics, lr
+      rng=new_rng,
+  )
+
+  return new_train_state, metrics, training_logs
 
 
 def eval_step(
@@ -158,12 +170,10 @@ def eval_step(
   Returns:
     Calculated metrics and optionally output, and batch after all_gather.
   """
-  variables = {
-      'params': train_state.optimizer.target,
-      **train_state.model_state
-  }
+  variables = {'params': train_state.params, **train_state.model_state}
   output = flax_model.apply(
-      variables, batch, train=False, mutable=False, debug=debug)
+      variables, batch, train=False, mutable=False, debug=debug
+  )
   metrics = metrics_fn(output, batch)
   if all_gather:
     output = jax.lax.all_gather(output, 'batch')
@@ -197,10 +207,7 @@ def representation_fn(
     Representation learned by the model for the given inputs and the labels and
     masks. If `gather_to_host` is True, these are collected from all hosts.
   """
-  variables = {
-      'params': train_state.optimizer.target,
-      **train_state.model_state
-  }
+  variables = {'params': train_state.params, **train_state.model_state}
 
   representation_layer_parts = representation_layer.split('/')
   filter_rep = lambda mdl, _: mdl.name == representation_layer_parts[-1]
@@ -269,24 +276,31 @@ def train(
        config=config,
        rngs=init_rng)
 
-  # Create optimizer.
-  # We jit this, such that the arrays that are created are created on the same
-  # device as the input is, in this case the CPU. Else they'd be on device[0].
-  optimizer = jax.jit(
-      optimizers.get_optimizer(config).create, backend='cpu')(
-          params)
+  # Create LR schedules and optimizer.
+  schedule_fns = scenic_optax.make_schedule(config.get('schedule'))
+  tx, _ = scenic_optax.make(config.optimizer, schedule_fns, params)
+  opt_state = tx.init(params)
+
   rng, train_rng = jax.random.split(rng)
+
+  # Create chrono class to track and store training statistics and metadata:
+  chrono = train_utils.Chrono()
+
   train_state = train_utils.TrainState(
       global_step=0,
-      optimizer=optimizer,
+      opt_state=opt_state,
+      tx=tx,
+      params=params,
       model_state=model_state,
       rng=train_rng,
-      accum_train_time=0)
+      metadata={'chrono': chrono.save()},
+  )
   start_step = train_state.global_step
   if config.checkpoint:
     train_state, start_step = train_utils.restore_checkpoint(
         workdir, train_state)
-
+  chrono.load(train_state.metadata['chrono'])
+  train_state = train_state.replace(metadata={})
   if (start_step == 0  # Which means "no" checkpoint is restored!
       and config.get('init_from') is not None):
     restored_model_cfg = config.init_from.get('model_config')
@@ -305,18 +319,17 @@ def train(
   # Calculate the total number of training steps.
   total_steps, steps_per_epoch = train_utils.get_num_training_steps(
       config, dataset.meta_data)
-  # Get learning rate scheduler.
-  learning_rate_fn = lr_schedules.get_learning_rate_fn(config)
 
   train_step_pmapped = jax.pmap(
       functools.partial(
           train_step,
           flax_model=model.flax_model,
-          learning_rate_fn=learning_rate_fn,
+          lr_fns={name: lr_fn for _, name, (lr_fn, _) in schedule_fns},
           loss_fn=model.loss_function,
           metrics_fn=model.get_metrics_fn('train'),
           config=config,
-          debug=config.debug_train),
+          debug=config.debug_train,
+      ),
       axis_name='batch',
       # We can donate both buffers of train_state and train_batch.
       donate_argnums=(0, 1),
@@ -363,14 +376,7 @@ def train(
   train_metrics, extra_training_logs = [], []
   train_summary, eval_summary = None, None
 
-  chrono = train_utils.Chrono(
-      first_step=start_step,
-      total_steps=total_steps,
-      steps_per_epoch=steps_per_epoch,
-      global_bs=config.batch_size,
-      accum_train_time=int(jax_utils.unreplicate(train_state.accum_train_time)),
-      example_type='example')
-
+  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
   logging.info('Starting training loop at step %d.', start_step + 1)
   report_progress = periodic_actions.ReportProgress(
       num_train_steps=total_steps,
@@ -378,6 +384,11 @@ def train(
       every_secs=None,
       every_steps=config.get('report_progress_step', log_summary_steps),
   )
+
+  def write_note(note):
+    if lead_host:
+      platform.work_unit().set_notes(note)
+
   hooks = []
   if lead_host:
     hooks.append(report_progress)
@@ -390,10 +401,13 @@ def train(
       step0_log['gflops'] = gflops
     writer.write_scalars(1, step0_log)
 
+  write_note(f'First step compilations...\n{chrono.note}')
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
       train_batch = next(dataset.train_iter)
-      train_state, t_metrics, lr = train_step_pmapped(train_state, train_batch)
+      train_state, t_metrics, t_logs = train_step_pmapped(
+          train_state, train_batch
+      )
       # This will accumulate metrics in TPU memory up to the point that we log
       # them. This is no problem for small metrics but may be a problem for
       # large (e.g. segmentation) metrics. An alternative is to set
@@ -403,14 +417,23 @@ def train(
       # tpu and host, which might slow down the training.
       train_metrics.append(t_metrics)
       # Additional training logs: learning rate:
-      extra_training_logs.append({'learning_rate': lr})
+      t_logs = jax.tree_util.tree_map(jax_utils.unreplicate, t_logs)
+      extra_training_logs.append(t_logs)
+
+    # Quick indication that training is happening.
+    logging.log_first_n(logging.INFO, 'Finished training step %d.', 5, step)
     for h in hooks:
       h(step)
-    chrono.pause()  # Below are once-in-a-while ops -> pause.
-    ###################### LOG TRAIN SUMMARY ########################
-    if (step % log_summary_steps == 1) or (step == total_steps):
+
+    ############### LOG TRAIN SUMMARY ###############
+    if (
+        (step % log_summary_steps == 1)
+        or (step == total_steps)
+        or (lead_host and chrono.warmup)
+    ):
+      chrono.pause(wait_for=(train_metrics))
       if lead_host:
-        chrono.tick(step, writer=writer)
+        chrono.tick(step, writer, write_note)
       # train_metrics is list of a dictionaries of metrics, where the shape of
       # the metrics[key] is [n_local_devices]. However, because metric functions
       # have a psum, we have already summed across the whole sharded batch, and
@@ -418,15 +441,20 @@ def train(
       # So we do unreplicate and fetch them to host using `unreplicate_and_get`.
       train_summary = train_utils.log_train_summary(
           step=step,
-          train_metrics=jax.tree_util.tree_map(train_utils.unreplicate_and_get,
-                                               train_metrics),
+          train_metrics=jax.tree_util.tree_map(
+              train_utils.unreplicate_and_get, train_metrics
+          ),
           extra_training_logs=jax.tree_util.tree_map(
-              train_utils.unreplicate_and_get, extra_training_logs),
-          writer=writer)
+              jax.device_get, extra_training_logs
+          ),
+          writer=writer,
+      )
       # Reset metric accumulation for next evaluation cycle.
       train_metrics, extra_training_logs = [], []
+      chrono.resume()
     ################### EVALUATION #######################
     if (step % log_eval_steps == 1) or (step == total_steps):
+      chrono.pause(wait_for=(train_state.params))
       with report_progress.timed('eval'):
         eval_metrics = []
         # Sync model state across replicas.
@@ -465,21 +493,29 @@ def train(
             writer=writer)
       writer.flush()
       del eval_metrics, eval_global_metrics_summary
+      chrono.resume()  # Un-pause now.
     ##################### CHECKPOINTING ###################
     if ((step % checkpoint_steps == 0 and step > 0) or
         (step == total_steps)) and config.checkpoint:
+      chrono.pause(wait_for=(train_state.params, train_state.opt_state))
       with report_progress.timed('checkpoint'):
         # Sync model state across replicas.
         train_state = train_utils.sync_model_state_across_replicas(train_state)
         if lead_host:
-          train_state.replace(  # pytype: disable=attribute-error
-              accum_train_time=chrono.accum_train_time)
-          train_utils.save_checkpoint(workdir, train_state)
+          # Take the first replica.
+          unrep_train_state = jax_utils.unreplicate(train_state)
+          metadata = unrep_train_state.metadata
+          metadata['chrono'] = chrono.save()
+          unrep_train_state.replace(metadata=metadata)  # pytype: disable=attribute-error
+          train_utils.save_checkpoint(workdir, unrep_train_state)
+          del unrep_train_state
+      chrono.resume()  # Un-pause now.
 
     ##################### FEWSHOT EVALUATION ############################
     if 'fewshot' in config:
       # Compute few-shot on-the-fly evaluation.
       if (step % config.fewshot.log_eval_steps == 1) or (step == total_steps):
+        chrono.pause(wait_for=(train_state.params))
         with report_progress.timed('fewshot'):
           results = fewshotter.run_all(train_state, config.fewshot.datasets)
           fewshotter.log_fewshot_summary(
@@ -487,9 +523,9 @@ def train(
           del results
           writer.write_scalars(step, {'zz/epoch': step / steps_per_epoch})
         writer.flush()
+        chrono.resume()  # Un-pause now.
 
-    chrono.resume()  # un-pause now
   # Wait until computations are done before exiting.
-  jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()
-  # Return the train and eval summary after last step for regresesion testing.
+  train_utils.barrier_across_hosts()
+  # Return the train and eval summary after last step for regression testing.
   return train_state, train_summary, eval_summary
