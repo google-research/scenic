@@ -61,7 +61,7 @@ class TrainState:
   global_step: Optional[int] = 0
   model_state: Optional[Any] = struct.field(default_factory=dict)
   rng: Optional[jnp.ndarray] = None
-  metadata: Optional[Dict[str, Any]] = None
+  metadata: Optional[Dict[str, Any]] = struct.field(default_factory=dict)
 
   def __getitem__(self, item):
     """Make TrainState a subscriptable object."""
@@ -180,6 +180,7 @@ def initialize_model_with_pytree(
     input_spec: PyTree,
     config: ml_collections.ConfigDict,
     rngs: Union[jnp.ndarray, Mapping[str, jnp.ndarray]],
+    unpack_input: bool = True,
     **model_kwargs,
 ) -> Tuple[PyTree, PyTree, int, Optional[float]]:
   """Initializes parameters and model state with a pytree input_spec.
@@ -196,6 +197,7 @@ def initialize_model_with_pytree(
       shape and dtype of the inputs. If unspecified the dtype is float32.
     config: Configurations of the initialization.
     rngs: Jax rng keys.
+    unpack_input: Unpack the pytree when feeding it to the model.
     **model_kwargs: Kwargs passed to flax model initialization.
 
   Returns:
@@ -235,7 +237,7 @@ def initialize_model_with_pytree(
     """Initialization function to be jitted."""
     # If dummy_input is a dict, we feed inputs as keyword arguments, otherwise
     # feed as position arguments.
-    if isinstance(dummy_input, dict):
+    if isinstance(dummy_input, dict) and unpack_input:
       init_model_state, init_params = flax.core.pop(
           flax.core.freeze(
               model_def.init(
@@ -244,11 +246,20 @@ def initialize_model_with_pytree(
           ),
           'params',
       )
-    else:
+    elif isinstance(dummy_input, collections.Sequence) and unpack_input:
       init_model_state, init_params = flax.core.pop(
           flax.core.freeze(
               model_def.init(
                   rngs, *dummy_input, train=False, debug=False, **model_kwargs
+              )
+          ),
+          'params',
+      )
+    else:
+      init_model_state, init_params = flax.core.pop(
+          flax.core.freeze(
+              model_def.init(
+                  rngs, dummy_input, train=False, debug=False, **model_kwargs
               )
           ),
           'params',
@@ -288,6 +299,7 @@ def initialize_model_with_pytree(
             **model_kwargs,
         ),
         input_spec=count_flops.get('input_spec', input_spec),
+        unpack_input=unpack_input,
         fuse_multiply_add=count_flops.get('fuse_multiply_add', True),
     )
     gflops = flops / (10**9)

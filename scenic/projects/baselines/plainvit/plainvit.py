@@ -225,9 +225,11 @@ class PlainViT(classification_model.ClassificationModel):
   def build_flax_model(self)-> nn.Module:
     dtype_str = self.config.get('model_dtype_str', 'float32')
     if dtype_str != 'float32':
-      raise ValueError('`dtype` argument is not propagated properly '
-                       'in the current implmentation, so only '
-                       '`float32` is supported for now.')
+      raise ValueError(
+          '`dtype` argument is not propagated properly '
+          'in the current implementation, so only '
+          '`float32` is supported for now.'
+      )
     return ViT(
         num_classes=self.dataset_meta_data['num_classes'],
         mlp_dim=self.config.model.mlp_dim,

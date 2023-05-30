@@ -127,9 +127,12 @@ def compute_flops(flax_model_apply_fn: Callable[[jnp.ndarray], Any],
   return flops
 
 
-def compute_flops_with_pytree(flax_model_apply_fn: Callable[[jnp.ndarray], Any],
-                              input_spec: PyTree,
-                              fuse_multiply_add: bool) -> float:
+def compute_flops_with_pytree(
+    flax_model_apply_fn: Callable[[jnp.ndarray], Any],
+    input_spec: PyTree,
+    unpack_input: bool = True,
+    fuse_multiply_add: bool = True,
+) -> float:
   """Performs static analysis of the graph to compute theoretical FLOPs.
 
   One can also use the XProf profiler to get the actual FLOPs at runtime
@@ -140,6 +143,7 @@ def compute_flops_with_pytree(flax_model_apply_fn: Callable[[jnp.ndarray], Any],
     flax_model_apply_fn: Apply function of the flax model to be analysed.
     input_spec: A PyTree whose leaves are (shape, dtype) pairs specifying the
       shape and dtype of the inputs. If unspecified the dtype is float32.
+    unpack_input: Unpack the pytree when feeding it to the model.
     fuse_multiply_add: Bool; If true, count a multiply and add (also known as
       "multiply-accumulate" or "MAC") as 1 FLOP rather than 2 (as done by the
       HLO analysis). This is commonly used in literature.
@@ -170,9 +174,9 @@ def compute_flops_with_pytree(flax_model_apply_fn: Callable[[jnp.ndarray], Any],
 
   dummy_input = create_dummy_input(input_spec)
 
-  if isinstance(dummy_input, dict):
+  if isinstance(dummy_input, dict) and unpack_input:
     analysis = jax.jit(flax_model_apply_fn).lower(**dummy_input).cost_analysis()
-  elif isinstance(dummy_input, abc.Sequence):
+  elif isinstance(dummy_input, abc.Sequence) and unpack_input:
     analysis = jax.jit(flax_model_apply_fn).lower(*dummy_input).cost_analysis()
   else:
     analysis = jax.jit(flax_model_apply_fn).lower(dummy_input).cost_analysis()

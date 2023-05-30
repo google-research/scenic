@@ -550,7 +550,7 @@ def train(
           unrep_train_state = jax_utils.unreplicate(train_state)
           metadata = unrep_train_state.metadata
           metadata['chrono'] = chrono.save()
-          unrep_train_state.replace(metadata=metadata)  # pytype: disable=attribute-error
+          unrep_train_state = unrep_train_state.replace(metadata=metadata)  # pytype: disable=attribute-error
           train_utils.save_checkpoint(workdir, unrep_train_state)
           del unrep_train_state
       chrono.resume()  # Un-pause now.
