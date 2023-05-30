@@ -415,6 +415,30 @@ def get_central_crop(crop_size):
   return _crop
 
 
+@Registry.register("preprocess_ops.central_crop_longer", "function")
+@utils.InKeyOutKey()
+@utils.BatchedImagePreprocessing()
+def get_central_crop_longer():
+  """Center crop the longer side so that the image becomes a square.
+
+  Args:
+
+  Returns:
+    A function, that applies central crop.
+  """
+
+  def _crop(image):
+    shape = tf.shape(image)
+    h, w = shape[0], shape[1]
+    crop_fn = tf.image.crop_to_bounding_box
+    return tf.cond(
+        h > w,
+        lambda: crop_fn(image, h // 2 - w // 2, 0, w, w),
+        lambda: crop_fn(image, 0, w // 2 - h // 2, h, h))
+
+  return _crop
+
+
 @Registry.register("preprocess_ops.flip_lr", "function")
 @utils.InKeyOutKey()
 @utils.BatchedImagePreprocessing()
