@@ -21,6 +21,7 @@ from absl import logging
 from clu import metric_writers
 from clu import periodic_actions
 from clu import platform
+import flax
 from flax import jax_utils
 import flax.linen as nn
 import jax
@@ -42,6 +43,8 @@ MetricFn = Callable[[jnp.ndarray, Dict[str, jnp.ndarray]],
                     Dict[str, Tuple[float, int]]]
 LossFn = Callable[[jnp.ndarray, Batch, Optional[jnp.ndarray]], float]
 LrFn = Callable[[jnp.ndarray], jnp.ndarray]
+
+flax.config.update('flax_use_orbax_checkpointing', False)
 
 
 def train_step(
