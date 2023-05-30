@@ -41,6 +41,7 @@ from absl import logging
 
 from clu import metric_writers
 from clu import platform
+import flax
 import flax.linen as nn
 import jax
 from ml_collections import config_flags
@@ -57,6 +58,8 @@ flags.DEFINE_string('workdir', None, 'Work unit directory.')
 flags.DEFINE_string('dataset_service_address', None,
                     'Address of the tf.data service')
 flags.mark_flags_as_required(['config', 'workdir'])
+
+flax.config.update('flax_use_orbax_checkpointing', False)
 
 
 def run(main):
