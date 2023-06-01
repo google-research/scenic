@@ -49,10 +49,12 @@ def sparse_weighted_unnormalized_softmax_cross_entropy(
   labels = (labels + offsets).ravel()
   loss = -jnp.take(logits, labels, axis=0)
   loss = loss * mlm_weights
-  loss = loss.sum(axis=-1) / (mlm_weights.sum(axis=-1) + 1e-8)
-
+  loss = loss.sum(axis=-1, keepdims=True) / (
+      mlm_weights.sum(axis=-1, keepdims=True) + 1e-8
+  )
   if batch_mask_weights is not None:
     loss = model_utils.apply_weights(loss, batch_mask_weights)
+
   return loss
 
 
@@ -78,8 +80,11 @@ def sparse_weighted_softmax_cross_entropy(
     normalization = batch_mask_weights.sum()
   else:
     normalization = mlm_weights.shape[0]  # Batch size.
-  sparse_unnormalized_softmax_ce = sparse_weighted_unnormalized_softmax_cross_entropy(
-      logits, labels, mlm_weights, batch_mask_weights)
+  sparse_unnormalized_softmax_ce = (
+      sparse_weighted_unnormalized_softmax_cross_entropy(  # pylint: disable=line-too-long
+          logits, labels, mlm_weights, batch_mask_weights
+      )
+  )
   return jnp.sum(sparse_unnormalized_softmax_ce) / (normalization + 1e-8)
 
 

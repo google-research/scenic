@@ -35,6 +35,7 @@ def get_config():
   wikibooks_train_loader.use_next_sentence_label = True
   wikibooks_train_loader.use_position_id = False
   wikibooks_train_loader.use_v2_feature_names = False
+  wikibooks_train_loader.file_type = 'tfrecord'
   # Add path to training files containing tf.records.
   wikibooks_train_loader.input_path = ''
   wikibooks_train_loader.drop_remainder = True
@@ -45,15 +46,19 @@ def get_config():
   wikibooks_train_loader.sharding = True
   wikibooks_train_loader.enable_tf_data_service = False
   wikibooks_train_loader.tf_data_service_address = None
-  wikibooks_train_loader.enable_shared_tf_data_service_between_parallel_trainers = False
+  wikibooks_train_loader.enable_shared_tf_data_service_between_parallel_trainers = (
+      False  # pylint: disable=line-too-long
+  )
   wikibooks_train_loader.apply_tf_data_service_before_batching = False
   wikibooks_train_loader.trainer_id = ''
   wikibooks_train_loader.tfds_name = None
   wikibooks_train_loader.tfds_split = None
+  wikibooks_train_loader.tfds_data_dir = None
   wikibooks_train_loader.tfds_as_supervised = False
   wikibooks_train_loader.tfds_skip_decoding_feature = ''
   wikibooks_train_loader.global_batch_size = config.batch_size
   wikibooks_train_loader.prefetch_buffer_size = None  # Autotune.
+  wikibooks_train_loader.autotune_algorithm = None
   # Validation data:
   config.dataset_configs.val_data_loader = ml_collections.ConfigDict()
   wikibooks_val_loader = config.dataset_configs.val_data_loader
@@ -62,6 +67,7 @@ def get_config():
   wikibooks_val_loader.use_next_sentence_label = True
   wikibooks_val_loader.use_position_id = False
   wikibooks_val_loader.use_v2_feature_names = False
+  wikibooks_val_loader.file_type = 'tfrecord'
   # Add path to validation files containing tf.records.
   wikibooks_val_loader.input_path = ''
   wikibooks_val_loader.drop_remainder = False
@@ -71,15 +77,19 @@ def get_config():
   wikibooks_val_loader.sharding = True
   wikibooks_val_loader.enable_tf_data_service = False
   wikibooks_val_loader.tf_data_service_address = None
-  wikibooks_val_loader.enable_shared_tf_data_service_between_parallel_trainers = False
+  wikibooks_val_loader.enable_shared_tf_data_service_between_parallel_trainers = (
+      False  # pylint: disable=line-too-long
+  )
   wikibooks_val_loader.apply_tf_data_service_before_batching = False
   wikibooks_val_loader.trainer_id = ''
   wikibooks_val_loader.tfds_name = None
   wikibooks_val_loader.tfds_split = None
+  wikibooks_val_loader.tfds_data_dir = None
   wikibooks_val_loader.tfds_as_supervised = False
   wikibooks_val_loader.tfds_skip_decoding_feature = ''
   wikibooks_val_loader.global_batch_size = config.batch_size
   wikibooks_val_loader.prefetch_buffer_size = None  # Autotune.
+  wikibooks_val_loader.autotune_algorithm = None
 
   # Model.
   _, model_size = VARIANT.split('-')
@@ -104,28 +114,38 @@ def get_config():
 
   # Training.
   config.trainer_name = 'bert_trainer'
-  config.optimizer = 'adam'  # Change to adamw, when it's available in Scenic.
-  config.optimizer_configs = ml_collections.ConfigDict()
-  config.optimizer_configs.beta1 = 0.9
-  config.optimizer_configs.beta2 = 0.999
-  config.max_grad_norm = 1.0
+  optim = ml_collections.ConfigDict()
+  optim.optax_name = 'scale_by_adam'
+  optim.optax_configs = ml_collections.ConfigDict({  # Optimizer settings.
+      'b1': 0.9,
+      'b2': 0.999,
+  })
+  config.optimizer = optim
   config.num_training_epochs = None
   config.num_training_steps = 1000_000
   config.log_eval_steps = 1000
   config.steps_per_eval = 64
   config.rng_seed = 42
+  config.optimizer = optim
+
+  # Gradient clipping (BERT clips grads before pmean).
+  config.max_grad_norm = 1.0
+  config.optimizer.max_grad_norm = None
 
   # Fewshot.
   config.fewshot = glue_fewshot.get_config(config.batch_size)
   config.fewshot.log_eval_steps = 50_000
 
-  # Learning Rate.
-  config.lr_configs = ml_collections.ConfigDict()
-  config.lr_configs.learning_rate_schedule = 'compound'
-  config.lr_configs.factors = 'constant * linear_warmup * linear_decay'
-  config.lr_configs.warmup_steps = 10000
-  config.lr_configs.total_steps = config.num_training_steps
-  config.lr_configs.base_learning_rate = 1e-4
+  sched = ml_collections.ConfigDict()
+  sched.re = '(.*)'
+  sched.lr_configs = ml_collections.ConfigDict()
+  sched.lr_configs.learning_rate_schedule = 'compound'
+  sched.lr_configs.factors = 'constant * linear_warmup * linear_decay'
+  sched.lr_configs.total_steps = config.num_training_steps
+  sched.lr_configs.steps_per_cycle = sched.lr_configs.total_steps
+  sched.lr_configs.warmup_steps = 10_000
+  sched.lr_configs.base_learning_rate = 1e-4
+  config.schedule = ml_collections.ConfigDict({'all': sched})
 
   # Logging.
   config.write_summary = True

@@ -1,7 +1,7 @@
 """Utilities for BERT trainer."""
 
 import functools
-from typing import Any, Dict, Tuple, Optional, Mapping, Union, List
+from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
 from absl import logging
 from clu import metric_writers
@@ -14,8 +14,8 @@ import jax.profiler
 import ml_collections
 import numpy as np
 from scenic.common_lib import debug_utils
-from scenic.train_lib_deprecated import optimizers
-from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib import optimizers
+from scenic.train_lib import train_utils
 import scipy
 import sklearn.metrics
 
