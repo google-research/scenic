@@ -50,8 +50,9 @@ def enable_jax_debugging_flags():
   logging.info('Global JAX flags: %s', jax.config.values)
 
 
-def log_param_shapes(params: Any,
-                     print_params_nested_dict: bool = False) -> int:
+def log_param_shapes(
+    params: Any, print_params_nested_dict: bool = False
+) -> int:
   """Prints out shape of parameters and total number of trainable parameters.
 
   Args:
@@ -65,18 +66,22 @@ def log_param_shapes(params: Any,
   if print_params_nested_dict:
     shape_dict = tree_map(lambda x: str(x.shape), params)
     # We use json.dumps for pretty printing nested dicts.
-    logging.info('Printing model param shape:/n%s',
-                 json.dumps(shape_dict, sort_keys=True, indent=4))
+    logging.info(
+        'Printing model param shape:/n%s',
+        json.dumps(shape_dict, sort_keys=True, indent=4),
+    )
   parameter_overview.log_parameter_overview(params)
-  total_params = jax.tree_util.tree_reduce(operator.add,
-                                           tree_map(lambda x: x.size, params))
+  total_params = jax.tree_util.tree_reduce(
+      operator.add, tree_map(lambda x: x.size, params)
+  )
   logging.info('Total params: %d', total_params)
   return total_params
 
 
 def input_spec_to_jax_shape_dtype_struct(
     spec: Union[Tuple[Tuple[int, ...], jnp.dtype], Tuple[int, ...]],
-    batch_size: Optional[int] = None) -> jax.ShapeDtypeStruct:
+    batch_size: Optional[int] = None,
+) -> jax.ShapeDtypeStruct:
   """Parse an input specs into a jax.ShapeDtypeStruct."""
   spec = tuple(spec)
   if batch_size and len(spec) == 1:
@@ -90,10 +95,13 @@ def input_spec_to_jax_shape_dtype_struct(
   return jax.ShapeDtypeStruct(shape, dtype)
 
 
-def compute_flops(flax_model_apply_fn: Callable[[jnp.ndarray], Any],
-                  input_spec: Sequence[Union[Tuple[Tuple[int, ...], jnp.dtype],
-                                             Tuple[int, ...], None]],
-                  fuse_multiply_add: bool) -> float:
+def compute_flops(
+    flax_model_apply_fn: Callable[[jnp.ndarray], Any],
+    input_spec: Sequence[
+        Union[Tuple[Tuple[int, ...], jnp.dtype], Tuple[int, ...], None]
+    ],
+    fuse_multiply_add: bool,
+) -> float:
   """Performs static analysis of the graph to compute theoretical FLOPs.
 
   One can also use the XProf profiler to get the actual FLOPs at runtime
@@ -153,10 +161,12 @@ def compute_flops_with_pytree(
   """
 
   def check_leaf_spec(spec: Sequence[PyTree]) -> bool:
-    return ((len(spec) == 2 and isinstance(spec[0], abc.Sequence) and
-             all(isinstance(i, int) for i in spec[0]) and
-             isinstance(spec[1], jnp.dtype)) or
-            (all(isinstance(i, int) for i in spec[0])))
+    return (
+        len(spec) == 2
+        and isinstance(spec[0], abc.Sequence)
+        and all(isinstance(i, int) for i in spec[0])
+        and isinstance(spec[1], jnp.dtype)
+    ) or (all(isinstance(i, int) for i in spec[0]))
 
   def create_dummy_input(spec: PyTree) -> PyTree:
     if isinstance(spec, dict):
@@ -236,7 +246,9 @@ class ConfigDictWithAccessRecord(ml_collections.ConfigDict):
 
 
 class DummyExecutor(futures.Executor):
-  """A mock executor that operates serially. Useful for debugging.
+  """A mock executor that operates serially.
+
+  Useful for debugging.
 
   Example usage:
 
@@ -270,3 +282,39 @@ class DummyExecutor(futures.Executor):
   def shutdown(self, wait: bool = True):  # pytype: disable=signature-mismatch  # overriding-parameter-name-checks
     with self._shutdown_lock:
       self._shutdown = True
+
+
+class StepTraceContextHelper:
+  """Helper class to use jax.profiler.StepTraceAnnotation.
+
+  This will cause a "name" event to show up on the trace timeline if the
+  event occurs while the process is being traced by TensorBoard. In addition,
+  if using accelerators, the device trace timeline will also show a "name"
+  event. Note that "step_num" can be set as a keyword argument to pass the
+  global step number to the profiler. See jax.profiler.StepTraceAnnotation.
+
+  """
+
+  def __init__(self, name: str, init_step_num: int):
+    self.name = name
+    self.step_num = init_step_num
+    self.context = None
+
+  def __enter__(self):
+    self.context = jax.profiler.StepTraceAnnotation(
+        self.name, step_num=self.step_num
+    )
+    self.step_num += 1
+    self.context.__enter__()
+    return self
+
+  def __exit__(self, exc_type, exc_value, tb):
+    assert self.context is not None, 'Exited context without entering.'
+    self.context.__exit__(exc_type, exc_value, tb)
+    self.context = None
+
+  def next_step(self):
+    if self.context is None:
+      raise ValueError('Must call next_step() within a context.')
+    self.__exit__(None, None, None)
+    self.__enter__()
