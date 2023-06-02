@@ -54,14 +54,21 @@ class TrainState:
   instances of this class to be passed into jax transformations like tree_map
   and pmap.
   """
+
   tx: Optional[optax.GradientTransformation] = struct.field(
-      default=None, pytree_node=False)
+      default=None, pytree_node=False
+  )
   opt_state: Optional[optax.OptState] = None
   params: Optional[Any] = struct.field(default_factory=dict)
   global_step: Optional[int] = 0
   model_state: Optional[Any] = struct.field(default_factory=dict)
   rng: Optional[jnp.ndarray] = None
-  metadata: Optional[Dict[str, Any]] = struct.field(default_factory=dict)
+  metadata: Optional[Dict[str, Any]] = None
+  # NOTE: When using the raw TrainState as the target for checkpoint restoration
+  #  in Flax, you should provide the pytree structure, otherwise it might just
+  #  silenty ignore restoring the checkpoint subtree if you use with an empty
+  #  dict when setting `allow_partial_mpa_restoration=True` and if you set it
+  #  to None (e.g., for `metadata`` above), Flax replaces it with a state dict.
 
   def __getitem__(self, item):
     """Make TrainState a subscriptable object."""
@@ -203,14 +210,19 @@ def initialize_model_with_pytree(
   Returns:
     Initial params, Init model_state, number of trainable_params, and gflops.
   """
-  batch_size = (config.batch_size //
-                jax.device_count()) if config.get('batch_size') else None
+  batch_size = (
+      (config.batch_size // jax.device_count())
+      if config.get('batch_size')
+      else None
+  )
 
   def check_leaf_spec(spec: Sequence[PyTree]) -> bool:
-    return ((len(spec) == 2 and isinstance(spec[0], collections.Sequence) and
-             all(isinstance(i, int) for i in spec[0]) and
-             isinstance(spec[1], jnp.dtype)) or
-            (all(isinstance(i, int) for i in spec[0])))
+    return (
+        len(spec) == 2
+        and isinstance(spec[0], collections.Sequence)
+        and all(isinstance(i, int) for i in spec[0])
+        and isinstance(spec[1], jnp.dtype)
+    ) or (all(isinstance(i, int) for i in spec[0]))
 
   def create_dummy_input(spec: PyTree) -> PyTree:
     if isinstance(spec, dict):
@@ -218,7 +230,8 @@ def initialize_model_with_pytree(
     elif isinstance(spec, collections.Sequence):
       if check_leaf_spec(spec):
         in_st = debug_utils.input_spec_to_jax_shape_dtype_struct(
-            spec, batch_size=batch_size)
+            spec, batch_size=batch_size
+        )
         return jnp.zeros(in_st.shape, in_st.dtype)
       else:
         return tuple(create_dummy_input(child) for child in spec)
@@ -286,7 +299,8 @@ def initialize_model_with_pytree(
 
   # Count gflops:
   count_flops = config.get(
-      'count_flops', ml_collections.ConfigDict({'count_flops': True}))
+      'count_flops', ml_collections.ConfigDict({'count_flops': True})
+  )
   if count_flops:
     variables = {'params': init_params, **init_model_state}
     flops = debug_utils.compute_flops_with_pytree(
@@ -350,13 +364,17 @@ def get_dataset(
 
   batch_size = config.batch_size
   if batch_size % device_count > 0:
-    raise ValueError(f'Batch size ({batch_size}) must be divisible by the '
-                     f'number of devices ({device_count})')
+    raise ValueError(
+        f'Batch size ({batch_size}) must be divisible by the '
+        f'number of devices ({device_count})'
+    )
 
   eval_batch_size = config.get('eval_batch_size', batch_size)
   if eval_batch_size % device_count > 0:
-    raise ValueError(f'Eval batch size ({eval_batch_size}) must be divisible '
-                     f'by the number of devices ({device_count})')
+    raise ValueError(
+        f'Eval batch size ({eval_batch_size}) must be divisible '
+        f'by the number of devices ({device_count})'
+    )
 
   local_batch_size = batch_size // jax.process_count()
   eval_local_batch_size = eval_batch_size // jax.process_count()
@@ -366,10 +384,12 @@ def get_dataset(
 
   shuffle_seed = config.get('shuffle_seed', None)
   if dataset_service_address and shuffle_seed is not None:
-    raise ValueError('Using dataset service with a random seed causes each '
-                     'worker to produce exactly the same data. Add '
-                     'config.shuffle_seed = None to your config if you want '
-                     'to run with dataset service.')
+    raise ValueError(
+        'Using dataset service with a random seed causes each '
+        'worker to produce exactly the same data. Add '
+        'config.shuffle_seed = None to your config if you want '
+        'to run with dataset service.'
+    )
 
   dataset_configs = dataset_configs or config.get('dataset_configs', {})
   num_local_shards = num_local_shards or jax.local_device_count()
@@ -382,7 +402,8 @@ def get_dataset(
       shuffle_seed=shuffle_seed,
       dataset_configs=dataset_configs,
       dataset_service_address=dataset_service_address,
-      **kwargs)
+      **kwargs,
+  )
 
   return dataset
 
@@ -390,9 +411,10 @@ def get_dataset(
 def initialize_multitask_model(
     *,
     model_def: nn.Module,
-    input_spec: Dict[Tuple[Tuple[str, Any], ...],
-                     Sequence[Union[Tuple[Tuple[int, ...], jnp.dtype],
-                                    Tuple[int, ...]]]],
+    input_spec: Dict[
+        Tuple[Tuple[str, Any], ...],
+        Sequence[Union[Tuple[Tuple[int, ...], jnp.dtype], Tuple[int, ...]]],
+    ],
     config: ml_collections.ConfigDict,
     rngs: Union[jnp.ndarray, Mapping[str, jnp.ndarray]],
 ) -> Tuple[PyTree, PyTree, int, Optional[Dict[str, float]]]:
@@ -412,7 +434,6 @@ def initialize_multitask_model(
 
   def init_fn(model_def):
     for kwargs, in_spec in input_spec.items():
-
       if config.get('batch_sizes') is not None:
         batch_size = config.batch_sizes.get(dict(kwargs)['dataset'])
       else:
@@ -422,7 +443,9 @@ def initialize_multitask_model(
 
       input_shapetype = [
           debug_utils.input_spec_to_jax_shape_dtype_struct(
-              spec, batch_size=batch_size) for spec in in_spec
+              spec, batch_size=batch_size
+          )
+          for spec in in_spec
       ]
       dummy_input = []
       for in_st in input_shapetype:
@@ -435,16 +458,20 @@ def initialize_multitask_model(
   @functools.partial(jax.jit, backend='cpu')
   def _initialize_model(rngs):
     """Initialization function to be jitted."""
-    init_model_state, init_params = flax.core.pop(flax.core.freeze(nn.init(
-        fn=init_fn, module=model_def)(rngs)), 'params')
+    init_model_state, init_params = flax.core.pop(
+        flax.core.freeze(nn.init(fn=init_fn, module=model_def)(rngs)), 'params'
+    )
     # Set bias in the head to low value, such that loss is small initially.
-    if (config.get('init_head_bias', None) is not None and
-        'output_projection' in init_params):
+    if (
+        config.get('init_head_bias', None) is not None
+        and 'output_projection' in init_params
+    ):
       init_params = flax.core.unfreeze(init_params)
       init_params['output_projection'] = optimizers.tree_map_with_names(
           lambda p: jnp.full_like(p, config.init_head_bias),
           init_params['output_projection'],
-          match_name_fn=lambda name: 'bias' in name)
+          match_name_fn=lambda name: 'bias' in name,
+      )
       init_params = flax.core.freeze(init_params)
     return init_params, init_model_state
 
@@ -471,9 +498,11 @@ def initialize_multitask_model(
               train=False,
               debug=False,
               rngs=rngs,
-              **dict(kwargs)),
+              **dict(kwargs),
+          ),
           input_spec=count_flops.get('input_spec', in_spec),
-          fuse_multiply_add=count_flops.get('fuse_multiply_add', True))
+          fuse_multiply_add=count_flops.get('fuse_multiply_add', True),
+      )
       gflops = flops / (10**9)
       gflops_key = 'gflops/' + '/'.join(f'{x}={y}' for x, y in kwargs)
       gflops_dict[gflops_key] = gflops
@@ -486,8 +515,8 @@ def initialize_multitask_model(
 
 
 def get_num_training_steps(
-    config: ml_collections.ConfigDict,
-    dataset_metadata: Dict[str, Any]) -> Tuple[int, Optional[int]]:
+    config: ml_collections.ConfigDict, dataset_metadata: Dict[str, Any]
+) -> Tuple[int, Optional[int]]:
   """Calculates the total number of training step and possibly steps_per_epoch.
 
   The main raining loop is based on number of training steps. Thus, for datasets
@@ -508,8 +537,9 @@ def get_num_training_steps(
     steps_per_epoch: Number of steps in every epoch.
   """
   # We either use num_training_epochs or num_training_steps.
-  steps_per_epoch = dataset_metadata.get('num_train_examples',
-                                         0) // config.batch_size
+  steps_per_epoch = (
+      dataset_metadata.get('num_train_examples', 0) // config.batch_size
+  )
 
   if config.get('num_training_steps'):
     assert not config.get('num_training_epochs')
@@ -575,7 +605,8 @@ def save_checkpoint(
         checkpoint_state,
         int(checkpoint_state.global_step),
         overwrite=overwrite,
-        keep=max_to_keep)
+        keep=max_to_keep,
+    )
 
 
 SIGNED_FLOAT_RE = re.compile(r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
@@ -599,10 +630,12 @@ def checkpoint_path_step(path: str) -> Optional[float]:
   return None
 
 
-def restore_checkpoint(checkpoint_path: str,
-                       train_state: Optional[TrainState] = None,
-                       assert_exist: bool = False,
-                       step: Optional[int] = None) -> Tuple[TrainState, int]:
+def restore_checkpoint(
+    checkpoint_path: str,
+    train_state: Optional[TrainState] = None,
+    assert_exist: bool = False,
+    step: Optional[int] = None,
+) -> Tuple[TrainState, int]:
   """Restores the last checkpoint.
 
   First restores the checkpoint, which is an instance of TrainState that holds
@@ -622,19 +655,26 @@ def restore_checkpoint(checkpoint_path: str,
   if assert_exist:
     glob_path = os.path.join(checkpoint_path, 'checkpoint_*')
     if not gfile.glob(glob_path):
-      raise ValueError('No checkpoint for the pretrained model is found in: '
-                       f'{checkpoint_path}')
+      raise ValueError(
+          'No checkpoint for the pretrained model is found in: '
+          f'{checkpoint_path}'
+      )
   if train_state is None:
-    raise ValueError('Please use `restore_pretrained_checkpoint` for loading'
-                     'a checkpoint without providing a Scenic TrainState.')
-  train_state = checkpoints.restore_checkpoint(checkpoint_path, train_state,
-                                               step)
+    raise ValueError(
+        'Please use `restore_pretrained_checkpoint` for loading'
+        'a checkpoint without providing a Scenic TrainState.'
+    )
+  train_state = checkpoints.restore_checkpoint(
+      checkpoint_path, train_state, step
+  )
   return train_state, int(train_state.global_step)
 
 
-def bind_rng_to_host_device(rng: jnp.ndarray,
-                            axis_name: Union[str, Tuple[str, ...]],
-                            bind_to: Optional[str] = None) -> jnp.ndarray:
+def bind_rng_to_host_device(
+    rng: jnp.ndarray,
+    axis_name: Union[str, Tuple[str, ...]],
+    bind_to: Optional[str] = None,
+) -> jnp.ndarray:
   """Binds a rng to the host/device we are on.
 
   Must be called from within a pmapped function. Note that when binding to
@@ -657,15 +697,17 @@ def bind_rng_to_host_device(rng: jnp.ndarray,
     return jax.random.fold_in(rng, jax.lax.axis_index(axis_name))
   else:
     raise ValueError(
-        "`bind_to` should be one of the `[None, 'host', 'device']`")
+        "`bind_to` should be one of the `[None, 'host', 'device']`"
+    )
 
 
 class TrainingDivergedError(Exception):
   pass
 
 
-def normalize_metrics_summary(metrics_summary: Dict[str, Tuple[float, int]],
-                              split: str) -> Dict[str, float]:
+def normalize_metrics_summary(
+    metrics_summary: Dict[str, Tuple[float, int]], split: str
+) -> Dict[str, float]:
   """Normalize the metrics in summary by its normalizer.
 
   Args:
@@ -723,8 +765,8 @@ def unreplicate_and_get(x: PyTree) -> PyTree:
 
 
 def process_and_fetch_to_host(
-    pred_or_tgt: Union[jnp.ndarray, Dict[str,
-                                         jnp.ndarray]], batch_mask: jnp.ndarray
+    pred_or_tgt: Union[jnp.ndarray, Dict[str, jnp.ndarray]],
+    batch_mask: jnp.ndarray,
 ) -> Union[Sequence[jnp.ndarray], Dict[str, jnp.ndarray]]:
   """Used to collect predictions and targets of the whole valid/test set.
 
@@ -738,6 +780,7 @@ def process_and_fetch_to_host(
     A list of length n_dev*bs of items, where each item is a dictionary with
     same keys as `pred_or_tgt` & values are normal np-arrays of shape [X,...,Y].
   """
+
   def _split_mini_batches(x):
     # Fetch to host and filter out padded examples.
     x = jax.device_get(x)[np.array(batch_mask).astype(bool)]
@@ -767,17 +810,19 @@ def barrier():
   jax.device_get(_barrier(jnp.ones((jax.local_device_count(),))))
 
 
-def log_eval_summary(step: int,
-                     *,
-                     writer: metric_writers.MetricWriter,
-                     eval_metrics: Sequence[Dict[str, Tuple[float, int]]],
-                     extra_eval_summary: Optional[Mapping[str, float]] = None,
-                     metrics_normalizer_fn: Optional[
-                         Callable[[Dict[str, Tuple[float, int]], str],
-                                  Dict[str, float]]] = None,
-                     prefix: str = 'valid',
-                     key_separator: str = '_',
-                     flush_writer: bool = True) -> Dict[str, float]:
+def log_eval_summary(
+    step: int,
+    *,
+    writer: metric_writers.MetricWriter,
+    eval_metrics: Sequence[Dict[str, Tuple[float, int]]],
+    extra_eval_summary: Optional[Mapping[str, float]] = None,
+    metrics_normalizer_fn: Optional[
+        Callable[[Dict[str, Tuple[float, int]], str], Dict[str, float]]
+    ] = None,
+    prefix: str = 'valid',
+    key_separator: str = '_',
+    flush_writer: bool = True,
+) -> Dict[str, float]:
   """Computes and logs eval metrics.
 
   Args:
@@ -817,28 +862,31 @@ def log_eval_summary(step: int,
   eval_metrics_summary.update(extra_eval_summary)
 
   writer.write_scalars(
-      step, {
+      step,
+      {
           key_separator.join((prefix, key)): val
           for key, val in eval_metrics_summary.items()
-      })
+      },
+  )
 
   if flush_writer:
     writer.flush()
   return eval_metrics_summary
 
 
-def log_train_summary(step: int,
-                      *,
-                      writer: metric_writers.MetricWriter,
-                      train_metrics: Sequence[Dict[str, Tuple[float, int]]],
-                      extra_training_logs: Optional[Sequence[Dict[str,
-                                                                  Any]]] = None,
-                      metrics_normalizer_fn: Optional[
-                          Callable[[Dict[str, Tuple[float, int]], str],
-                                   Dict[str, float]]] = None,
-                      prefix: str = 'train',
-                      key_separator: str = '_',
-                      flush_writer: bool = True) -> Dict[str, float]:
+def log_train_summary(
+    step: int,
+    *,
+    writer: metric_writers.MetricWriter,
+    train_metrics: Sequence[Dict[str, Tuple[float, int]]],
+    extra_training_logs: Optional[Sequence[Dict[str, Any]]] = None,
+    metrics_normalizer_fn: Optional[
+        Callable[[Dict[str, Tuple[float, int]], str], Dict[str, float]]
+    ] = None,
+    prefix: str = 'train',
+    key_separator: str = '_',
+    flush_writer: bool = True,
+) -> Dict[str, float]:
   """Computes and logs train metrics.
 
   Args:
@@ -851,10 +899,10 @@ def log_train_summary(step: int,
     extra_training_logs: List of dictionaries, containing additional training
       logs, from every train step, e.g. learning rate, Time, num parameters,
       etc. Their mean will be logged.
-    metrics_normalizer_fn: Used for normalizing metrics. The API for
-      this function is: `new_metrics_dict = metrics_normalizer_fn(metrics_dict,
-        split)`. If set to None, we use the normalize_metrics_summary which uses
-        the normalizer paired with each metric to normalize it.
+    metrics_normalizer_fn: Used for normalizing metrics. The API for this
+      function is: `new_metrics_dict = metrics_normalizer_fn(metrics_dict,
+      split)`. If set to None, we use the normalize_metrics_summary which uses
+      the normalizer paired with each metric to normalize it.
     prefix: str; Prefix added to the name of the summaries writen by this
       function.
     key_separator: Separator added between the prefix and key.
@@ -868,8 +916,9 @@ def log_train_summary(step: int,
   # Get metrics from devices:
   train_metrics = stack_forest(train_metrics)
   # Compute the sum over all examples in all batches:
-  train_metrics_summary = jax.tree_util.tree_map(lambda x: x.sum(),
-                                                 train_metrics)
+  train_metrics_summary = jax.tree_util.tree_map(
+      lambda x: x.sum(), train_metrics
+  )
   # Normalize metrics by the total number of examples:
   metrics_normalizer_fn = metrics_normalizer_fn or normalize_metrics_summary
   train_metrics_summary = metrics_normalizer_fn(train_metrics_summary, 'train')
@@ -881,13 +930,16 @@ def log_train_summary(step: int,
 
   # Metrics:
   writer.write_scalars(
-      step, {
+      step,
+      {
           key_separator.join((prefix, key)): val
           for key, val in train_metrics_summary.items()
-      })
+      },
+  )
   # Additional logs:
-  writer.write_scalars(step,
-                       {key: val.mean() for key, val in train_logs.items()})
+  writer.write_scalars(
+      step, {key: val.mean() for key, val in train_logs.items()}
+  )
 
   if flush_writer:
     writer.flush()
@@ -896,14 +948,22 @@ def log_train_summary(step: int,
 
 def accumulate_gradients(
     compute_gradient_fn: Callable[
-        [TrainState, Dict[str, jnp.ndarray], jnp.ndarray], Tuple[Any,
-                                                                 jnp.ndarray]],
-    metrics_fn: Callable[[jnp.ndarray, Dict[str, jnp.ndarray]],
-                         Dict[str, Tuple[float, int]]], train_state: TrainState,
-    batch: Dict[str, jnp.ndarray], dropout_rng: jnp.ndarray,
-    accum_steps: Optional[int]
-) -> Tuple[Optional[jnp.ndarray], jnp.ndarray, jnp.ndarray, Dict[str, Tuple[
-    float, int]]]:
+        [TrainState, Dict[str, jnp.ndarray], jnp.ndarray],
+        Tuple[Any, jnp.ndarray],
+    ],
+    metrics_fn: Callable[
+        [jnp.ndarray, Dict[str, jnp.ndarray]], Dict[str, Tuple[float, int]]
+    ],
+    train_state: TrainState,
+    batch: Dict[str, jnp.ndarray],
+    dropout_rng: jnp.ndarray,
+    accum_steps: Optional[int],
+) -> Tuple[
+    Optional[jnp.ndarray],
+    jnp.ndarray,
+    jnp.ndarray,
+    Dict[str, Tuple[float, int]],
+]:
   """Accumulate gradients over multiple steps.
 
   This enables training with larger effective batch sizes.
@@ -937,27 +997,36 @@ def accumulate_gradients(
     microbatch_size = batch_size // accum_steps
     if batch_size % accum_steps != 0:
       raise ValueError(
-          f'Bad accum_steps {accum_steps} for batch size {batch_size}')
-    logging.info('Using microbatches: %d microbatches, %d size', accum_steps,
-                 microbatch_size)
+          f'Bad accum_steps {accum_steps} for batch size {batch_size}'
+      )
+    logging.info(
+        'Using microbatches: %d microbatches, %d size',
+        accum_steps,
+        microbatch_size,
+    )
 
-    def get_microbatch(batch: Dict[str, jnp.ndarray],
-                       idx: int) -> Dict[str, jnp.ndarray]:
+    def get_microbatch(
+        batch: Dict[str, jnp.ndarray], idx: int
+    ) -> Dict[str, jnp.ndarray]:
       """Fetch microbatch slice from the given batch."""
       return jax.tree_map(
-          lambda x: x.reshape((-1, microbatch_size) + x.shape[1:])[idx], batch)
+          lambda x: x.reshape((-1, microbatch_size) + x.shape[1:])[idx], batch
+      )
 
     def per_microbatch_compute_gradient_fn(
-        loop_cnt: int, loop_state: Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray,
-                                         Dict[str, Tuple[float, int]]]
-    ) -> Tuple[jnp.ndarray, jnp.ndarray, Dict[str, Tuple[float, int]],
-               jnp.ndarray]:
+        loop_cnt: int,
+        loop_state: Tuple[
+            jnp.ndarray, jnp.ndarray, jnp.ndarray, Dict[str, Tuple[float, int]]
+        ],
+    ) -> Tuple[
+        jnp.ndarray, jnp.ndarray, Dict[str, Tuple[float, int]], jnp.ndarray
+    ]:
       dropout_rng, grad_accum, train_loss_acc, metrics_acc = loop_state
       dropout_rng, sub_dropout_rng = jax.random.split(dropout_rng)
       mbatch = get_microbatch(batch, loop_cnt)
-      (train_loss,
-       (_, mlogits)), grad = compute_gradient_fn(params, mbatch,
-                                                 sub_dropout_rng)
+      (train_loss, (_, mlogits)), grad = compute_gradient_fn(
+          params, mbatch, sub_dropout_rng
+      )
       metrics = metrics_fn(mlogits, mbatch)
       # Accumulate gradients and metrics.
       grad = jax.tree_util.tree_map(jnp.add, grad_accum, grad)
@@ -968,14 +1037,15 @@ def accumulate_gradients(
     # Initialize gradient accumulation loop state.
     dropout_rng, sub_dropout_rng = jax.random.split(dropout_rng)
     init_mbatch = get_microbatch(batch, 0)
-    (init_train_loss,
-     (model_state,
-      init_logits)), grad_init = compute_gradient_fn(params, init_mbatch,
-                                                     sub_dropout_rng)
+    (init_train_loss, (model_state, init_logits)), grad_init = (
+        compute_gradient_fn(params, init_mbatch, sub_dropout_rng)
+    )
     if jax.tree_leaves(model_state):
       # If the model_state is not empty.
-      raise ValueError('Gradient accumulation is not supported when the '
-                       'model_state is in used (e.g. models w/ batch norm).')
+      raise ValueError(
+          'Gradient accumulation is not supported when the '
+          'model_state is in used (e.g. models w/ batch norm).'
+      )
 
     metrics_init = metrics_fn(init_logits, init_mbatch)
     del init_logits, init_mbatch
@@ -983,14 +1053,15 @@ def accumulate_gradients(
     # Run gradient accumulation loop.
     loop_init = (dropout_rng, grad_init, init_train_loss, metrics_init)
     _, grad_acc, train_loss, metrics_acc = jax.lax.fori_loop(
-        1, accum_steps, per_microbatch_compute_gradient_fn, loop_init)
+        1, accum_steps, per_microbatch_compute_gradient_fn, loop_init
+    )
     grad_acc = jax.tree_util.tree_map(lambda x: x / accum_steps, grad_acc)
     train_loss = jax.tree_util.tree_map(lambda x: x / accum_steps, train_loss)
     return model_state, grad_acc, train_loss, metrics_acc
   else:
-    (train_loss, (model_state,
-                  logits)), grad = compute_gradient_fn(params, batch,
-                                                       dropout_rng)
+    (train_loss, (model_state, logits)), grad = compute_gradient_fn(
+        params, batch, dropout_rng
+    )
     metrics = metrics_fn(logits, batch)
     return model_state, grad, train_loss, metrics
 
@@ -1029,8 +1100,13 @@ class Chrono:
     self.note = 'Chrono n/a'
     self.example_type = example_type
 
-  def inform(self, first_step: int, total_steps: int, global_bs: int,
-             steps_per_epoch: int):
+  def inform(
+      self,
+      first_step: int,
+      total_steps: int,
+      global_bs: int,
+      steps_per_epoch: int,
+  ):
     """Provide some extra info that's only known later in the program."""
     self.prev_step = copy.deepcopy(first_step)
     self.first_step = copy.deepcopy(first_step)
@@ -1042,8 +1118,12 @@ class Chrono:
           f'Steps:{first_step}/{total_steps} [{first_step/total_steps:.1%}]'
       )
 
-  def tick(self, step: int, writer: metric_writers.MetricWriter,
-           write_note: Callable[[str], None]):
+  def tick(
+      self,
+      step: int,
+      writer: metric_writers.MetricWriter,
+      write_note: Callable[[str], None],
+  ):
     """A chronometer tick."""
     summary = {}
 
@@ -1180,7 +1260,6 @@ def handle_checkpointing(
     metadata['chrono'] = chrono.save()
     unrep_train_state = unrep_train_state.replace(metadata=metadata)
     save_checkpoint(
-        workdir,
-        unrep_train_state,
-        max_to_keep=max_checkpoints_to_keep)
+        workdir, unrep_train_state, max_to_keep=max_checkpoints_to_keep
+    )
     del unrep_train_state
