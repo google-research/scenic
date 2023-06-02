@@ -96,7 +96,7 @@ class TokenAddEraseWrite(nn.Module):
     wet = jnp.expand_dims(selected, -1) * jnp.expand_dims(
         et, 2)  # Shape: [bs, n_token, hw, c].
     wet = 1 - wet
-    wet = jnp.product(wet, axis=1)  # Shape: [bs, hw, c].
+    wet = jnp.prod(wet, axis=1)  # Shape: [bs, hw, c].
 
     output = memory * wet
 
