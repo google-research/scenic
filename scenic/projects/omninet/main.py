@@ -9,8 +9,8 @@ import jax.numpy as jnp
 import ml_collections
 from scenic import app
 from scenic.projects.omninet import model
-from scenic.train_lib_deprecated import train_utils
-from scenic.train_lib_deprecated import trainers
+from scenic.train_lib import train_utils
+from scenic.train_lib import trainers
 
 FLAGS = flags.FLAGS
 
