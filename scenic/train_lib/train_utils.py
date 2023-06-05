@@ -587,6 +587,7 @@ def save_checkpoint(
     train_state: TrainState,
     max_to_keep: int = 3,
     overwrite: bool = False,
+    **kwargs,
 ):
   """Saves a checkpoint.
 
@@ -596,6 +597,7 @@ def save_checkpoint(
     max_to_keep: The number of checkpoints to keep.
     overwrite: Overwrite existing checkpoint  if a checkpoint at the current or
       a later step already exits (default: False).
+    **kwargs: Passed on to flax.training.checkpoints.save_checkpoint.
   """
   if jax.process_index() == 0:
     # Get train state from the first replica.
@@ -606,6 +608,7 @@ def save_checkpoint(
         int(checkpoint_state.global_step),
         overwrite=overwrite,
         keep=max_to_keep,
+        **kwargs,
     )
 
 
