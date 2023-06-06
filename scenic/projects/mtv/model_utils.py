@@ -8,7 +8,7 @@ import jax.numpy as jnp
 import ml_collections
 import numpy as np
 from scenic.projects.vivit import model_utils as vivit_utils
-from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib import train_utils
 import scipy.ndimage
 
 _POSITIONAL_EMBEDDING_KEY = 'posembed_input_view'
@@ -153,7 +153,9 @@ def central_frame_init_embedding(
     logging.info('Initializing input kernel to select centre frame.')
     if input_kernel.shape[1:] != restored_kernel.shape:
       logging.info('Kernel sizes do not match. Interpolation is performed.')
-      restored_kernel_h, restored_kernel_w, in_depth, out_depth = restored_kernel.shape
+      (restored_kernel_h, restored_kernel_w, in_depth, out_depth) = (
+          restored_kernel.shape
+      )
       reshaped_kernel = restored_kernel.reshape(restored_kernel_h,
                                                 restored_kernel_w, -1)
       patch_size = config.model.view_configs[view_idx].patches.size
@@ -273,13 +275,12 @@ def initialize_from_mtv_train_state(
     Updated train_state.
   """
 
-  params = flax.core.unfreeze(train_state.optimizer.target)
-  restored_params = flax.core.unfreeze(restored_train_state.optimizer.target)
+  params = flax.core.unfreeze(train_state.params)
+  restored_params = flax.core.unfreeze(restored_train_state.params)
   initialize_from_mtv_parameters(config, params, restored_model_cfg,
                                  restored_params, restore_output_projection,
                                  model_prefix_path)
-  return train_state.replace(
-      optimizer=train_state.optimizer.replace(target=flax.core.freeze(params)))
+  return train_state.replace(params=flax.core.freeze(params))
 
 
 def initialize_one_view_from_vit_parameters(
@@ -383,15 +384,11 @@ def initialize_from_vit_train_states(
   assert len(restored_train_states) == len(restored_model_formats), (
       'restored_train_states must have the same dimension as '
       'restored_model_formats.')
-  params = flax.core.unfreeze(train_state.optimizer.target)
+  params = flax.core.unfreeze(train_state.params)
   for view_idx, restored_state in enumerate(restored_train_states):
-    restored_target = (
-        restored_state.optimizer.target if restored_model_formats[view_idx]
-        == 'scenic' else restored_state.optimizer['target'])
-    restored_model_params = flax.core.unfreeze(restored_target)
+    restored_model_params = flax.core.unfreeze(restored_state.params)
     initialize_one_view_from_vit_parameters(config, params,
                                             restored_model_cfgs[view_idx],
                                             restored_model_params, view_idx)
 
-  return train_state.replace(
-      optimizer=train_state.optimizer.replace(target=flax.core.freeze(params)))
+  return train_state.replace(params=flax.core.freeze(params))

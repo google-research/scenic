@@ -94,7 +94,7 @@ def get_config():
 
   # Training.
   config.trainer_name = 'mtv_trainer'
-  config.optimizer = 'momentum_hp'
+  config.optimizer = 'momentum'
   config.optimizer_configs = ml_collections.ConfigDict()
   config.l2_decay_factor = 0
   config.max_grad_norm = 1

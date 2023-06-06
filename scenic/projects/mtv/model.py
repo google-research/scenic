@@ -1,6 +1,6 @@
 """Implements the MTV model."""
 import functools
-from typing import Any, List, Union, Sequence, Tuple
+from typing import Any, List, Sequence, Tuple, Union
 
 import flax.linen as nn
 import jax
@@ -11,7 +11,7 @@ from scenic.model_lib.layers import nn_layers
 from scenic.projects.baselines import vit
 from scenic.projects.mtv import model_utils
 from scenic.projects.vivit import model as vivit_model
-from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib import train_utils
 
 _DEFAULT_MTV_CONFIG = ml_collections.ConfigDict({
     'dataset_configs': {

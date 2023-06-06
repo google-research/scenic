@@ -10,7 +10,7 @@ import ml_collections
 from scenic import app
 from scenic.projects.mtv import model as mtv_model
 from scenic.projects.mtv import trainer as mtv_trainer
-from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib import train_utils
 
 FLAGS = flags.FLAGS
 

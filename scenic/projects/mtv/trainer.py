@@ -8,6 +8,7 @@ from typing import Any, Dict, Tuple
 from absl import logging
 from clu import metric_writers
 from clu import periodic_actions
+from clu import platform
 from flax import jax_utils
 import jax
 import jax.numpy as jnp
@@ -16,12 +17,13 @@ import ml_collections
 import numpy as np
 from scenic.dataset_lib import dataset_utils
 from scenic.projects.mtv import model as model_lib
+from scenic.projects.mtv import train_utils as mtv_train_utils
 from scenic.projects.vivit import evaluation_lib
 from scenic.projects.vivit import train_utils as vivit_train_utils
-from scenic.train_lib_deprecated import lr_schedules
-from scenic.train_lib_deprecated import optimizers
-from scenic.train_lib_deprecated import pretrain_utils
-from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib import lr_schedules
+from scenic.train_lib import optimizers
+from scenic.train_lib import pretrain_utils
+from scenic.train_lib import train_utils
 import tensorflow as tf
 
 
@@ -126,7 +128,7 @@ def train(
   lead_host = jax.process_index() == 0
   # Build the loss_fn, metrics, and flax_model.
   model = model_cls(config, dataset.meta_data)
-  is_multilabel_model = (config.model_name == 'vivit_multilabel_classification')
+  is_multilabel_model = 'multilabel_classification' in config.model_name
   compute_map = is_multilabel_model and config.get('compute_map', False)
   get_confusion_matrix = (config.get('confusion_matrix_metrics', False)
                           and not is_multilabel_model)
@@ -142,23 +144,34 @@ def train(
        rngs=init_rng)
 
   # Create optimizer.
-  # We jit this, such that the arrays that are created are created on the same
-  # device as the input is, in this case the CPU. Else they'd be on device[0].
-  optimizer = jax.jit(
-      optimizers.get_optimizer(config).create, backend='cpu')(
-          params)
+  lr_fn = lr_schedules.get_learning_rate_fn(config)
+  optimizer_config = optimizers.get_optax_optimizer_config(config)
+  # If the config is already an optax-compatible config, better call directly:
+  #   optimizers.get_optimizer(config.optimizer_configs, lr_fn)
+  tx = optimizers.get_optimizer(optimizer_config, lr_fn, params=params)
+  # We jit this, such that the arrays that are created on the same device as the
+  # input is, in this case the CPU. Else they'd be on device[0].
+  opt_state = jax.jit(tx.init, backend='cpu')(params)
+
   rng, train_rng = jax.random.split(rng)
+  # Create chrono class to track and store training statistics and metadata:
+  chrono = train_utils.Chrono()
+
   train_state = train_utils.TrainState(
       global_step=0,
-      optimizer=optimizer,
+      opt_state=opt_state,
+      tx=tx,
+      params=params,
       model_state=model_state,
       rng=train_rng,
-      accum_train_time=0)
+      metadata={'chrono': chrono.save()},
+  )
   start_step = train_state.global_step
   if config.checkpoint:
     train_state, start_step = train_utils.restore_checkpoint(
         workdir, train_state)
-
+  chrono.load(train_state.metadata['chrono'])
+  del train_state.metadata['chrono']
   if (start_step == 0 and config.get('init_from') is not None):
     model_type = config.init_from.get('model_type', 'mtv')
     if model_type == 'mtv':
@@ -183,25 +196,27 @@ def train(
 
   train_step_pmapped = jax.pmap(
       functools.partial(
-          vivit_train_utils.train_step,
+          mtv_train_utils.train_step,
           flax_model=model.flax_model,
-          learning_rate_fn=learning_rate_fn,
+          lr_fn=learning_rate_fn,
           loss_fn=model.loss_function,
           metrics_fn=model.get_metrics_fn('train'),
           config=config,
-          debug=config.debug_train),
+          debug=config.debug_train,
+      ),
       axis_name='batch',
       # We can donate both buffers of train_state and train_batch.
       donate_argnums=(0, 1),
   )
   eval_step_pmapped = jax.pmap(
       functools.partial(
-          vivit_train_utils.eval_step,
+          mtv_train_utils.eval_step,
           flax_model=model.flax_model,
           metrics_fn=model.get_metrics_fn('validation'),
           return_logits_and_labels=compute_map,
           return_confusion_matrix=get_confusion_matrix,
-          debug=config.debug_eval),
+          debug=config.debug_eval,
+      ),
       axis_name='batch',
       # We can donate the eval_batch's buffer.
       donate_argnums=(1,),
@@ -214,11 +229,12 @@ def train(
 
     test_step_pmapped = jax.pmap(
         functools.partial(
-            vivit_train_utils.test_step,
+            mtv_train_utils.test_step,
             flax_model=model.flax_model,
             metrics_fn=model.get_metrics_fn('test'),
             n_clips=config.get('multicrop_clips_per_device', 2),
-            debug=config.debug_eval),
+            debug=config.debug_eval,
+        ),
         axis_name='batch',
         # We can donate the test_batch's buffer.
         donate_argnums=(1,),
@@ -239,6 +255,7 @@ def train(
   if not log_eval_steps:
     raise ValueError("'log_eval_steps' should be specified in the config.")
   checkpoint_steps = config.get('checkpoint_steps') or log_eval_steps
+  max_checkpoint_keep = config.get('max_checkpoint_keep', 3)
   log_summary_steps = config.get('log_summary_steps') or log_eval_steps
 
   # Ceil rounding such that we include the last incomplete batch.
@@ -250,16 +267,19 @@ def train(
   train_metrics, extra_training_logs = [], []
   train_summary, eval_summary = None, None
 
-  chrono = train_utils.Chrono(
-      first_step=start_step,
-      total_steps=total_steps,
-      steps_per_epoch=steps_per_epoch,
-      global_bs=config.batch_size,
-      accum_train_time=int(jax_utils.unreplicate(train_state.accum_train_time)))
-
+  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
   logging.info('Starting training loop at step %d.', start_step + 1)
   report_progress = periodic_actions.ReportProgress(
-      num_train_steps=total_steps, writer=writer)
+      num_train_steps=total_steps,
+      writer=writer,
+      every_secs=None,
+      every_steps=config.get('report_progress_step', log_summary_steps),
+  )
+
+  def write_note(note):
+    if lead_host:
+      platform.work_unit().set_notes(note)
+
   hooks = []
   if lead_host:
     hooks.append(report_progress)
@@ -284,10 +304,14 @@ def train(
     except RuntimeError:
       logging.warn('Memory defragmentation not possible, use the tfrt runtime')
 
+  write_note(f'First step compilations...\n{chrono.note}')
+
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
       train_batch = next(dataset.train_iter)
-      train_state, t_metrics, lr = train_step_pmapped(train_state, train_batch)
+      train_state, t_metrics, t_logs = train_step_pmapped(
+          train_state, train_batch
+      )
       # This will accumulate metrics in TPU memory up to the point that we log
       # them. This is no problem for small metrics but may be a problem for
       # large (e.g. segmentation) metrics. An alternative is to set
@@ -296,8 +320,9 @@ def train(
       # summaries, but that means in each step, we have data transfer between
       # tpu and host, which might slow down the training.
       train_metrics.append(t_metrics)
-      # Additional training logs: learning rate:
-      extra_training_logs.append({'learning_rate': lr})
+      # Additional training logs: learning rate, l2 grads, etc.
+      t_logs = jax.tree_util.tree_map(jax_utils.unreplicate, t_logs)
+      extra_training_logs.append(t_logs)
 
     for h in hooks:
       # Catch exception in case XProf fails.
@@ -306,33 +331,41 @@ def train(
       except ValueError as error:
         logging.exception('Hook failed: %r', error)
 
-    chrono.pause()  # Below are once-in-a-while ops -> pause.
-
     # Save a pprof after the first step.
     if step == start_step + 1 and lead_host:
       profile = jax.profiler.device_memory_profile()
       with tf.io.gfile.GFile(os.path.join(workdir, 'memory.pprof'), 'wb') as fp:
         fp.write(profile)
     ###################### LOG TRAIN SUMMARY ########################
-    if (step % log_summary_steps == 1) or (step == total_steps):
+    if (
+        (step % log_summary_steps == 1)
+        or (step == total_steps)
+        or (lead_host and chrono.warmup)
+    ):
+      chrono.pause(wait_for=(train_metrics))
       if lead_host:
-        chrono.tick(step, writer=writer)
+        chrono.tick(step, writer, write_note)
       train_summary = train_utils.log_train_summary(
           step=step,
-          train_metrics=jax.tree_util.tree_map(train_utils.unreplicate_and_get,
-                                               train_metrics),
+          train_metrics=jax.tree_util.tree_map(
+              train_utils.unreplicate_and_get, train_metrics
+          ),
           extra_training_logs=jax.tree_util.tree_map(
-              train_utils.unreplicate_and_get, extra_training_logs),
+              jax.device_get, extra_training_logs
+          ),
           writer=writer,
-          key_separator='/')
+          key_separator='/',
+      )
       # Reset metric accumulation for next evaluation cycle.
       train_metrics, extra_training_logs = [], []
       if do_memory_defrag:
         logging.info('Defragmenting memory')
         client.defragment()
+      chrono.resume()
 
     ################### EVALUATION ################################
     if (step % log_eval_steps == 1) or (step == total_steps):
+      chrono.pause(wait_for=(train_state.params))
       with report_progress.timed('eval'):
         if do_memory_defrag:
           logging.info('Defragmenting memory')
@@ -397,21 +430,22 @@ def train(
         if do_memory_defrag:
           logging.info('Defragmenting memory')
           client.defragment()
+      chrono.resume()
 
     ##################### CHECKPOINTING ###########################
-    if ((step % checkpoint_steps == 0 and step > 0) or
+    if ((step % checkpoint_steps == 1 and step > 1) or
         (step == total_steps)) and config.checkpoint:
+      chrono.pause(wait_for=(train_state.params, train_state.opt_state))
       with report_progress.timed('checkpoint'):
-        # Sync model state across replicas.
-        train_state = train_utils.sync_model_state_across_replicas(train_state)
-        if lead_host:
-          train_state.replace(  # pytype: disable=attribute-error
-              accum_train_time=chrono.accum_train_time)
-          train_utils.save_checkpoint(workdir, train_state)
+        train_utils.handle_checkpointing(
+            train_state, chrono, workdir, max_checkpoint_keep
+        )
+      chrono.resume()
 
     ############# MULTICROP TESTING ############################
     if (config.dataset_configs.get('do_multicrop_test') and
         ((step % log_test_steps == 1 and step > 1) or step == total_steps)):
+      chrono.pause(wait_for=(train_state.params))
       with report_progress.timed('test'):
         if do_memory_defrag:
           logging.info('Defragmenting memory')
@@ -445,9 +479,9 @@ def train(
         if do_memory_defrag:
           logging.info('Defragmenting memory')
           client.defragment()
+      chrono.resume()
 
-    chrono.resume()  # un-pause now
   # Wait until computations are done before exiting.
-  jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()
+  train_utils.barrier_across_hosts()
   # Return the train and eval summary after last step for regression testing.
   return train_state, train_summary, eval_summary
