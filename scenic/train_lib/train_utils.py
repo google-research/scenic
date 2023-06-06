@@ -128,7 +128,7 @@ def initialize_model(
   @functools.partial(jax.jit, backend='cpu')
   def _initialize_model(rngs):
     """Initialization function to be jitted."""
-    init_model_state, init_params = flax.core.pop(
+    init_model_state, init_params = flax.core.frozen_dict.pop(
         flax.core.freeze(
             model_def.init(
                 rngs, *dummy_input, train=train, debug=False, **model_kwargs
@@ -251,7 +251,7 @@ def initialize_model_with_pytree(
     # If dummy_input is a dict, we feed inputs as keyword arguments, otherwise
     # feed as position arguments.
     if isinstance(dummy_input, dict) and unpack_input:
-      init_model_state, init_params = flax.core.pop(
+      init_model_state, init_params = flax.core.frozen_dict.pop(
           flax.core.freeze(
               model_def.init(
                   rngs, **dummy_input, train=False, debug=False, **model_kwargs
@@ -260,7 +260,7 @@ def initialize_model_with_pytree(
           'params',
       )
     elif isinstance(dummy_input, collections.Sequence) and unpack_input:
-      init_model_state, init_params = flax.core.pop(
+      init_model_state, init_params = flax.core.frozen_dict.pop(
           flax.core.freeze(
               model_def.init(
                   rngs, *dummy_input, train=False, debug=False, **model_kwargs
@@ -269,7 +269,7 @@ def initialize_model_with_pytree(
           'params',
       )
     else:
-      init_model_state, init_params = flax.core.pop(
+      init_model_state, init_params = flax.core.frozen_dict.pop(
           flax.core.freeze(
               model_def.init(
                   rngs, dummy_input, train=False, debug=False, **model_kwargs
@@ -458,7 +458,7 @@ def initialize_multitask_model(
   @functools.partial(jax.jit, backend='cpu')
   def _initialize_model(rngs):
     """Initialization function to be jitted."""
-    init_model_state, init_params = flax.core.pop(
+    init_model_state, init_params = flax.core.frozen_dict.pop(
         flax.core.freeze(nn.init(fn=init_fn, module=model_def)(rngs)), 'params'
     )
     # Set bias in the head to low value, such that loss is small initially.
