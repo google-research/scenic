@@ -87,7 +87,8 @@ def train_step(
   def loss_fn(params):
     variables = {'params': params, **train_state.model_state}
     logits, new_model_state = linear_probe.apply(
-        variables, representation_fn(batch), mutable=['batch_stats'])
+        variables, representation_fn(batch), mutable=['batch_stats'], train=True
+    )
     loss = scenic_model_utils.weighted_softmax_cross_entropy(
         logits,
         batch['label'],
