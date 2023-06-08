@@ -81,7 +81,7 @@ def extract_image_patches(lhs,
       (data_format, 'HWIO', data_format))[0]
   kernel_shape = [rhs_shape[i] for i in lhs_perm[2:]]
 
-  kernel_size = np.product(kernel_shape)
+  kernel_size = np.prod(kernel_shape)
   conv_filter_shape = kernel_shape[:]
   conv_filter_shape.append(1)
   conv_filter_shape.append(kernel_size * depth)
