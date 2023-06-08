@@ -15,36 +15,39 @@
 """Greedy matcher."""
 import jax
 import jax.numpy as jnp
-import numpy as np
 
 
+@jax.vmap
 def greedy_matcher(cost):
-  """Computes Greedy Matching on cost matrix for a batch of datapoints.
+  """Computes greedy bipartite matching given a cost matrix.
+
+  The code applies to a single matrix; vmap is applied for batching.
 
   Args:
-    cost: jnp.ndarray; Cost matrix for the matching of shape [B, N, M].
+    cost: jnp.ndarray; Cost matrix for the matching of shape [N, M].
 
   Returns:
-    An assignment of size [B, 2, min(N, M)].
+    An assignment of size [2, min(N, M)].
   """
-  # Break potential equalities.
-  cost += jax.random.uniform(jax.random.PRNGKey(0), cost.shape, maxval=1e-4)
-  grid = np.stack(
-      np.meshgrid(
-          np.arange(cost.shape[1]), np.arange(cost.shape[2]), indexing='ij'),
-      -1)
-  grid = jnp.array(grid, dtype=jnp.int32)
+  # Ensure that the shorter dimension comes first:
+  transposed = cost.shape[0] > cost.shape[1]
+  if transposed:
+    cost = jnp.transpose(cost)
 
-  def greedy_select(cost, _):
-    min_element = jnp.min(cost, axis=[1, 2], keepdims=True)
-    selected = cost == min_element
-    indices = jnp.einsum('bnm,nm2->b2', selected, grid)
-    mask = jnp.maximum(
-        selected.max(axis=1, keepdims=True),
-        selected.max(axis=2, keepdims=True))
-    cost += mask * 1e6
-    return cost, indices
+  # Max cost is used for masking:
+  max_cost = jnp.max(cost)
 
-  _, indices = jax.lax.scan(greedy_select, cost, None,
-                            min(cost.shape[1], cost.shape[2]))
-  return indices.transpose([1, 2, 0])
+  def select(cost, _):
+    min_index_flat = jnp.argmin(cost)
+    min_row, min_col = jnp.unravel_index(min_index_flat, cost.shape)
+    cost = cost.at[min_row, :].set(max_cost + 1)
+    cost = cost.at[:, min_col].set(max_cost + 1)
+    return cost, jnp.array([min_row, min_col])
+
+  _, indices = jax.lax.scan(f=select, init=cost, xs=None, length=cost.shape[0])
+
+  if transposed:
+    indices = jnp.flip(indices, axis=1)
+
+  # From [N/M, 2] to [2, N/M]:
+  return jnp.transpose(indices)
