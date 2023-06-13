@@ -13,6 +13,7 @@ from scenic.projects.owl_vit import utils
 from scenic.projects.owl_vit.clip import model as clip_model
 from scenic.projects.owl_vit.clip import tokenizer as clip_tokenizer
 
+
 Params = layers.Params
 
 
@@ -76,6 +77,7 @@ class TextZeroShotDetectionModule(nn.Module):
     return {'params': params}
 
   def setup(self):
+
     self._embedder = layers.ClipImageTextEmbedder(
         self.body_configs, name='backbone')
 
