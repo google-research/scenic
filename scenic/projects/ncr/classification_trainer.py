@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, Optional, Tuple, Type
 from absl import logging
 from clu import metric_writers
 from clu import periodic_actions
+from clu import platform
 from flax import jax_utils
 import flax.linen as nn
 import jax
@@ -21,7 +22,7 @@ import optax
 from scenic.dataset_lib import dataset_utils
 from scenic.model_lib.base_models import base_model
 from scenic.projects.ncr import utils
-from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib import train_utils
 
 
 # Aliases for custom types:
@@ -33,7 +34,7 @@ PyTree = Any
 
 
 def train_step(
-    train_state: utils.TrainState,
+    train_state: train_utils.TrainState,
     batch: Batch,
     use_ncr: bool,
     *,
@@ -43,7 +44,7 @@ def train_step(
     metrics_fn: MetricFn,
     config: ml_collections.ConfigDict,
     debug: Optional[bool] = False
-) -> Tuple[utils.TrainState, Dict[str, Tuple[float, int]]]:
+) -> Tuple[train_utils.TrainState, Dict[str, Tuple[float, int]]]:
   """Runs a single step of training.
 
   Given the state of the training and a batch of data, computes
@@ -162,7 +163,7 @@ def train_step(
 
 
 def eval_step(
-    train_state: utils.TrainState,
+    train_state: train_utils.TrainState,
     batch: Batch,
     *,
     flax_model: nn.Module,
@@ -223,7 +224,8 @@ def train(
     dataset: dataset_utils.Dataset,
     workdir: str,
     writer: metric_writers.MetricWriter,
-) -> Tuple[utils.TrainState, Dict[str, Any], Dict[str, Any]]:
+) -> Tuple[train_utils.TrainState, Dict[str, Any], Dict[str, Any]]:
+
   """Main training loop lives in this function.
 
   Given the model class and dataset, it prepares the items needed to run the
@@ -278,19 +280,26 @@ def train(
 
   opt_state = jax.jit(tx.init, backend='cpu')(params)
 
-  rng, train_rng = jax.random.split(rng)
-  train_state = utils.TrainState(
+  _, train_rng = jax.random.split(rng)
+
+  chrono = train_utils.Chrono()
+
+  train_state = train_utils.TrainState(
       global_step=0,
       opt_state=opt_state,
       tx=tx,
       model_state=model_state,
       params=params,
       rng=train_rng,
-      accum_train_time=0)
+      metadata={'chrono': chrono.save()})
   start_step = train_state.global_step
   if config.checkpoint:
     train_state, start_step = utils.restore_checkpoint(workdir, train_state)
   # Replicate the optimzier, state, and rng.
+
+  chrono.load(train_state.metadata['chrono'])
+  train_state = train_state.replace(metadata={})
+
   train_state = jax_utils.replicate(train_state)
   del params  # Do not keep a copy of the initial params.
 
@@ -339,6 +348,7 @@ def train(
     raise ValueError("'log_eval_steps' should be specified in the config.")
   checkpoint_steps = config.get('checkpoint_steps') or log_eval_steps
   log_summary_steps = config.get('log_summary_steps') or log_eval_steps
+  max_checkpoint_keep = config.get('max_checkpoint_keep', 3)
 
   # Ceil rounding such that we include the last incomplete batch.
   total_eval_steps = int(
@@ -348,16 +358,19 @@ def train(
   train_metrics, extra_training_logs = [], []
   train_summary, eval_summary = None, None
 
-  chrono = train_utils.Chrono(
-      first_step=start_step,
-      total_steps=total_steps,
-      steps_per_epoch=steps_per_epoch,
-      global_bs=config.batch_size,
-      accum_train_time=int(jax_utils.unreplicate(train_state.accum_train_time)))
-
+  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
   logging.info('Starting training loop at step %d.', start_step + 1)
   report_progress = periodic_actions.ReportProgress(
-      num_train_steps=total_steps, writer=writer)
+      num_train_steps=total_steps,
+      writer=writer,
+      every_secs=None,
+      every_steps=config.get('report_progress_step', log_summary_steps),
+  )
+
+  def write_note(note):
+    if lead_host:
+      platform.work_unit().set_notes(note)
+
   hooks = []
   if lead_host:
     hooks.append(report_progress)
@@ -369,6 +382,8 @@ def train(
     if gflops:
       step0_log['gflops'] = gflops
     writer.write_scalars(1, step0_log)
+
+  write_note(f'First step compilations...\n{chrono.note}')
 
   for step in range(start_step + 1, total_steps + 1):
 
@@ -394,11 +409,11 @@ def train(
     for h in hooks:
       h(step)
 
-    chrono.pause()  # Below are once-in-a-while ops -> pause.
     ###################### LOG TRAIN SUMMARY ########################
     if (step % log_summary_steps == 1) or (step == total_steps):
+      chrono.pause(wait_for=(train_metrics))
       if lead_host:
-        chrono.tick(step, writer=writer)
+        chrono.tick(step, writer, write_note)
       # train_metrics is list of a dictionaries of metrics, where the shape of
       # the metrics[key] is [n_local_devices]. However, because metric functions
       # have a psum, we have already summed across the whole sharded batch, and
@@ -414,8 +429,10 @@ def train(
           writer=writer)
       # Reset metric accumulation for next evaluation cycle.
       train_metrics, extra_training_logs = [], []
+      chrono.resume()
     ################### EVALUATION #######################
     if (step % log_eval_steps == 1) or (step == total_steps):
+      chrono.pause(wait_for=(train_state.params))
       with report_progress.timed('eval'):
         eval_metrics = []
         # Sync model state across replicas.
@@ -430,18 +447,16 @@ def train(
             key_separator='/',
             writer=writer)
       writer.flush()
+      chrono.resume()
       del eval_metrics
     ##################### CHECKPOINTING ###################
     if ((step % checkpoint_steps == 0 and step > 0) or
         (step == total_steps)) and config.checkpoint:
+      chrono.pause(wait_for=(train_state.params, train_state.opt_state))
       with report_progress.timed('checkpoint'):
-        # Sync model state across replicas.
-        train_state = utils.sync_model_state_across_replicas(train_state)
-        if lead_host:
-          train_state.replace(  # pytype: disable=attribute-error
-              accum_train_time=chrono.accum_train_time)
-          utils.save_checkpoint(workdir, train_state)
-    chrono.resume()  # un-pause now
+        train_utils.handle_checkpointing(
+            train_state, chrono, workdir, max_checkpoint_keep)
+      chrono.resume()
   # Wait until computations are done before exiting.
   train_utils.barrier_across_hosts()
   # Return the train and eval summary after last step for regresesion testing.

@@ -4,48 +4,17 @@ import os
 
 from typing import Any, Dict, Optional, Tuple
 
-import flax
 from flax import jax_utils
-from flax import struct
 from flax.training import checkpoints
 import jax
 import jax.numpy as jnp
 import numpy as np
-import optax
-from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib import train_utils
 from tensorflow.io import gfile
 
 
-@flax.struct.dataclass
-class TrainState:
-  """Dataclass to keep track of state of training.
-
-  The state of training is structured as a flax.struct.dataclass, which enables
-  instances of this class to be passed into jax transformations like tree_map
-  and pmap.
-  """
-  tx: Optional[optax.GradientTransformation] = struct.field(pytree_node=False)
-  global_step: Optional[int] = 0
-  opt_state: Optional[optax.OptState] = None
-  model_state: Optional[Any] = None
-  params: Optional[Any] = None
-  rng: Optional[jnp.ndarray] = None
-  accum_train_time: Optional[int] = 0
-
-  def __getitem__(self, item):
-    """Make TrainState a subscriptable object."""
-    return getattr(self, item)
-
-  def get(self, keyname: str, default: Optional[Any] = None) -> Any:
-    """Return the value for key if it exists otherwise the default."""
-    try:
-      return self[keyname]
-    except KeyError:
-      return default
-
-
 def save_checkpoint(workdir: str,
-                    train_state: TrainState,
+                    train_state: train_utils.TrainState,
                     max_to_keep: int = 3,
                     overwrite: bool = False):
   """Saves a checkpoint.
@@ -71,7 +40,8 @@ def save_checkpoint(workdir: str,
         keep=max_to_keep)
 
 
-def sync_model_state_across_replicas(train_state: TrainState) -> TrainState:
+def sync_model_state_across_replicas(
+    train_state: train_utils.TrainState) -> train_utils.TrainState:
   """Sync the model_state (like batch statistics) across replicas.
 
   Args:
@@ -94,9 +64,10 @@ def sync_model_state_across_replicas(train_state: TrainState) -> TrainState:
 
 
 def restore_checkpoint(checkpoint_path: str,
-                       train_state: Optional[TrainState] = None,
+                       train_state: Optional[train_utils.TrainState] = None,
                        assert_exist: bool = False,
-                       step: Optional[int] = None) -> Tuple[TrainState, int]:
+                       step: Optional[int] = None) -> Tuple[
+                           train_utils.TrainState, int]:
   """Restores the last checkpoint.
 
   First restores the checkpoint, which is an instance of TrainState that holds

@@ -11,7 +11,7 @@ import ml_collections
 from scenic import app
 from scenic.projects.ncr import classification_trainer
 from scenic.projects.ncr import resnet as ncr_resnet
-from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib import train_utils
 
 FLAGS = flags.FLAGS
 
@@ -31,6 +31,8 @@ def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,
   if config.get('fake_pmap', False):
     fake_pmap = chex.fake_pmap()
     fake_pmap.start()
+  else:
+    fake_pmap = None
 
   model_cls = get_model_cls(config.model_name)
   data_rng, rng = jax.random.split(rng)
@@ -45,7 +47,7 @@ def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,
       workdir=workdir,
       writer=writer)
 
-  if config.get('fake_pmap', False):
+  if fake_pmap is not None:
     fake_pmap.stop()
 
 if __name__ == '__main__':
