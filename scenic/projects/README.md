@@ -63,6 +63,10 @@
     > CLAY is a Transformer-based pipeline for mobile UI layout denoising. Read
     > more about this project in CLAY [paper](https://arxiv.org/abs/2201.04100).
 
+*   [LOCA](loca)
+
+    > LOCA ([paper](https://arxiv.org/abs/2212.02400)) is a self-supervised
+    > method to train spatially-aware vision transformer features.
 
 *   [MBT](mbt)
 
