@@ -63,6 +63,7 @@ Projects that were developed in Scenic or used it for their experiments:
 * [AVATAR: Unconstrained Audiovisual Speech Recognition](https://arxiv.org/abs/2206.07684)
 * [Adaptive Computation with Elastic Input Sequence](https://arxiv.org/abs/2301.13195)
 * [Location-Aware Self-Supervised Transformers for Semantic Segmentation](https://arxiv.org/abs/2212.02400)
+* [How can objects help action recognition?](https://openaccess.thecvf.com/content/CVPR2023/html/Zhou_How_Can_Objects_Help_Action_Recognition_CVPR_2023_paper.html)
 
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 

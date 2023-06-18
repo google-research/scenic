@@ -121,6 +121,11 @@
     > unlabelled narrated videos.
     > Details can be found in the [paper](https://arxiv.org/abs/2302.14115).
 
+*   [ObjectViViT](objectvivit)
+
+    > ObjectViViT uses object detection results from external object detectors
+    > to help action recognition.
+    > Details can be found in the [paper](https://openaccess.thecvf.com/content/CVPR2023/html/Zhou_How_Can_Objects_Help_Action_Recognition_CVPR_2023_paper.html).
 
 
 <a name="projects"></a>
