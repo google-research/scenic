@@ -10,6 +10,7 @@ import jax.numpy as jnp
 import numpy as np
 from scenic.dataset_lib import dataset_utils
 from scenic.dataset_lib import datasets
+from scenic.projects.tasseo import dataset_utils as ts_dataset_utils
 import tensorflow as tf
 
 
@@ -164,7 +165,8 @@ def parse_example(serialized_example):
   feature_description = {
       'chrm_img': tf.io.FixedLenFeature([], tf.string, default_value=''),
       'meta_img': tf.io.FixedLenFeature([], tf.string, default_value=''),
-      'label': tf.io.FixedLenFeature([], tf.string, default_value='')
+      'label': tf.io.FixedLenFeature([], tf.string, default_value=''),
+      'chrm_path': tf.io.FixedLenFeature([], tf.string, default_value=''),
   }
 
   features = tf.io.parse_single_example(serialized_example, feature_description)
@@ -276,6 +278,11 @@ def preprocess(features, label_key, chrm_image_shape):
   labels = labels == class_names  # Creates one-hot label.
 
   return {
-      'inputs': chrm,
-      'label': labels
+      'inputs':
+          chrm,
+      'label':
+          labels,
+      'key':
+          tf.strings.unicode_decode(
+              ts_dataset_utils.pad(features['chrm_path']), 'UTF-8'),
   }
