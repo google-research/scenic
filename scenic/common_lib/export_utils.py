@@ -44,7 +44,7 @@ def convert_and_save_model(
     enable_xla: bool = True,
     compile_model: bool = True,
     saved_model_options: Optional[tf.saved_model.SaveOptions] = None,
-    native_serialization: Optional[str] = "default"
+    native_serialization: Optional[str | bool] = "default"
 ):
   """Converts a JAX function and saves a SavedModel.
 
