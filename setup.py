@@ -16,7 +16,7 @@
 
 Install for development:
 
-  pip intall -e . .[testing]
+  pip install -e . .[testing]
 """
 
 from distutils import cmd
