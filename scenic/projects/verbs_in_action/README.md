@@ -1,9 +1,9 @@
 # Verbs in Action: Improving verb understanding in video-language models
 
-JAX implementation and pretrained models for Verb-Focused Contrastive (VFC) learning of video-text models.
+JAX implementation for Verb-Focused Contrastive (VFC) learning of video-text models.
 For details, see [`arXiv`](https://arxiv.org/abs/2304.06708).
 
-<img src="vfc.png" width="700" height="400" />
+<img src="vfc.png" width="750" height="180" />
 
 
 ## Training
@@ -28,7 +28,7 @@ $ python -m scenic.projects.verbs_in_action.main \
 
 ## Citation
 
-If you use the `verbs in action` project, please cite the following BibTeX entry.
+If you use the `verbs in action` project, please cite the following BibTeX entry:
 
 ```
 @article{momeni2023verbs,
