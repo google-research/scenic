@@ -127,6 +127,11 @@
     > to help action recognition.
     > Details can be found in the [paper](https://openaccess.thecvf.com/content/CVPR2023/html/Zhou_How_Can_Objects_Help_Action_Recognition_CVPR_2023_paper.html).
 
+*   [Verbs in action](verbs_in_action)
+
+    > Verbs in action ([paper](https://arxiv.org/abs/2304.06708)) uses LLMs to
+    > create hard negative pairs for contrastive learning, in order to improve
+    > the verb understanding of video-text models based on CLIP.
 
 <a name="projects"></a>
 ## Scenic projects
