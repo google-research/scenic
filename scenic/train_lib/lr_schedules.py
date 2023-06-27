@@ -128,6 +128,24 @@ def decay_every_scheduler(step, steps_per_decay, decay_factor):
   return decay_factor**(step // steps_per_decay)
 
 
+def exponential_decay_scheduler(step, decay_steps, decay_rate, staircase=False):
+  """Gives a scaling factor based on scheduling with an exponential decay.
+
+  Args:
+    step: int; Current step.
+    decay_steps: int; Number of steps to decay over.
+    decay_rate: float; Rate of exponential decay.
+    staircase: bool; If True, use integer division in scale-computation.
+
+  Returns:
+    Scaling factor applied to the learning rate on the given step.
+  """
+  progress = step / float(decay_steps)
+  if staircase:
+    progress = jnp.floor(progress)
+  return jnp.power(decay_rate, progress)
+
+
 def cosine_decay_scheduler(step, steps_per_cycle, t_mul=1, m_mul=1., alpha=0.):
   """Gives a scaling factor based on scheduling with a cosine decay.
 
@@ -219,6 +237,13 @@ def compound_lr_scheduler(config):
         steps_per_decay = config['steps_per_decay']
         decay_factor = config['decay_factor']
         ratio *= decay_every_scheduler(step, steps_per_decay, decay_factor)
+
+      elif name == 'exponential_decay':
+        decay_steps = config['decay_steps']
+        decay_rate = config['decay_rate']
+        staircase = config.get('staircase', False)
+        ratio *= exponential_decay_scheduler(
+            step, decay_steps, decay_rate, staircase=staircase)
 
       elif name == 'cosine_decay':
         steps_per_cycle = config['steps_per_cycle']

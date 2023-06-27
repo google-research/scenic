@@ -83,6 +83,36 @@ class LearningRateScchedulesTest(absltest.TestCase):
       expected_learning_rate = tf_polynomial_decay(step=step).numpy()
       self.assertAlmostEqual(lr_fn(step), expected_learning_rate)
 
+  def test_exponential_decay(self):
+    """Test exponential schedule works correctly."""
+    for test_params in [
+        {'decay_steps': 200, 'decay_rate': 0.99, 'staircase': True},
+        {'decay_steps': 200, 'decay_rate': 0.99, 'staircase': False},
+    ]:
+      config = ml_collections.ConfigDict(
+          dict(
+              lr_configs={
+                  'learning_rate_schedule': 'compound',
+                  'factors': 'constant*exponential_decay',
+                  'base_learning_rate': 0.1,
+                  'decay_steps': test_params['decay_steps'],
+                  'decay_rate': test_params['decay_rate'],
+                  'staircase': test_params['staircase'],
+              }
+          )
+      )
+      lr_fn = lr_schedules.get_learning_rate_fn(config)
+      config = config.lr_configs
+      tf_exponential_decay = tf.keras.optimizers.schedules.ExponentialDecay(
+          initial_learning_rate=config['base_learning_rate'],
+          decay_steps=config['decay_steps'],
+          decay_rate=config['decay_rate'],
+          staircase=config['staircase'],
+      )
+      for step in range(400):
+        expected_learning_rate = tf_exponential_decay(step=step).numpy()
+        self.assertAlmostEqual(lr_fn(step), expected_learning_rate)
+
   def test_cosine_decay(self):
     """Test cosine schedule works correctly."""
     config = ml_collections.ConfigDict(
