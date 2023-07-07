@@ -51,7 +51,8 @@ def enable_jax_debugging_flags():
 
 
 def log_param_shapes(
-    params: Any, print_params_nested_dict: bool = False
+    params: Any, print_params_nested_dict: bool = False,
+    description: Optional[str] = None,
 ) -> int:
   """Prints out shape of parameters and total number of trainable parameters.
 
@@ -59,6 +60,8 @@ def log_param_shapes(
     params: PyTree of model parameters.
     print_params_nested_dict: If True, it prints parameters in shape of a nested
       dict.
+    description: Optional description to print out before logging the parameter
+      summary.
 
   Returns:
     int; Total number of trainable parameters.
@@ -70,7 +73,7 @@ def log_param_shapes(
         'Printing model param shape:/n%s',
         json.dumps(shape_dict, sort_keys=True, indent=4),
     )
-  parameter_overview.log_parameter_overview(params)
+  parameter_overview.log_parameter_overview(params, msg=description)
   total_params = jax.tree_util.tree_reduce(
       operator.add, tree_map(lambda x: x.size, params)
   )
