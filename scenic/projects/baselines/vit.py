@@ -438,7 +438,7 @@ def _merge_params(params, restored_params, model_cfg, restored_model_cfg):
   for m_key, m_params in restored_params.items():
     if m_key == 'output_projection':
       # For the classifier head, we use a the randomly initialized params and
-      #   ignore the the one from pretrained model.
+      #   ignore the one from pretrained model.
       pass
 
     elif m_key == 'pre_logits':
