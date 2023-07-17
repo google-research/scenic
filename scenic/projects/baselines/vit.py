@@ -133,13 +133,13 @@ class Encoder(nn.Module):
     num_layers: Number of layers.
     mlp_dim: Dimension of the mlp on top of attention block.
     num_heads: The number of heads for multi-head self-attention.
-    positional_embedding: The type of positional embeddings to add to the
-      input tokens. Options are {learned_1d, sinusoidal_2d, none}.
+    positional_embedding: The type of positional embeddings to add to the input
+      tokens. Options are {learned_1d, sinusoidal_1d, sinusoidal_2d, none}.
     dropout_rate: Dropout rate.
-    stochastic_depth: probability of dropping a layer linearly grows
-      from 0 to the provided value. Our implementation of stochastic depth
-      follows timm library, which does per-example layer dropping and uses
-      independent dropping patterns for each skip-connection.
+    stochastic_depth: probability of dropping a layer linearly grows from 0 to
+      the provided value. Our implementation of stochastic depth follows timm
+      library, which does per-example layer dropping and uses independent
+      dropping patterns for each skip-connection.
     dtype: Dtype of activations.
   """
   num_layers: int
@@ -208,23 +208,24 @@ class Encoder(nn.Module):
 class ViT(nn.Module):
   """Vision Transformer model.
 
-    Attributes:
-    num_classes: Number of output classes.
-    mlp_dim: Dimension of the mlp on top of attention block.
-    num_layers: Number of layers.
-    num_heads: Number of self-attention heads.
-    patches: Configuration of the patches extracted in the stem of the model.
-    hidden_size: Size of the hidden state of the output of model's stem.
-    positional_embedding: The type of positional embeddings to add to the
-      tokens at the beginning of the transformer encoder. Options are
-      {learned_1d, sinusoidal_2d, none}.
-    representation_size: Size of the representation layer in the model's head.
-      if None, we skip the extra projection + tanh activation at the end.
-    dropout_rate: Dropout rate.
-    attention_dropout_rate: Dropout for attention heads.
-    classifier: type of the classifier layer. Options are 'gap', 'gmp', 'gsp',
-      'token', 'none'.
-    dtype: JAX data type for activations.
+  Attributes:
+
+  num_classes: Number of output classes.
+  mlp_dim: Dimension of the mlp on top of attention block.
+  num_layers: Number of layers.
+  num_heads: Number of self-attention heads.
+  patches: Configuration of the patches extracted in the stem of the model.
+  hidden_size: Size of the hidden state of the output of model's stem.
+  positional_embedding: The type of positional embeddings to add to the
+    tokens at the beginning of the transformer encoder. Options are
+    {learned_1d, sinusoidal_1d, sinusoidal_2d, none}.
+  representation_size: Size of the representation layer in the model's head.
+    if None, we skip the extra projection + tanh activation at the end.
+  dropout_rate: Dropout rate.
+  attention_dropout_rate: Dropout for attention heads.
+  classifier: type of the classifier layer. Options are 'gap', 'gmp', 'gsp',
+    'token', '0', 'map', 'none'.
+  dtype: JAX data type for activations.
   """
 
   num_classes: int
