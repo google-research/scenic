@@ -267,6 +267,7 @@ def get_decode_jpeg_and_inception_crop(
     resize_size=None,
     area_min=5,
     area_max=100,
+    aspect_ratio_range=None,
     resize_method=tf2.image.ResizeMethod.BILINEAR):
   """Decode jpeg string and make inception-style image crop.
 
@@ -278,6 +279,9 @@ def get_decode_jpeg_and_inception_crop(
     resize_size: Resize image to [resize_size, resize_size] after crop.
     area_min: minimal crop area.
     area_max: maximal crop area.
+    aspect_ratio_range: An optional list of floats. Defaults to [0.75, 1.33].
+      The cropped area of the image must have an aspect ratio = width / height
+      within this range.
     resize_method: The type of interpolation to apply when resizing. Valid
       values those accepted by tf.image.resize.
 
@@ -292,6 +296,7 @@ def get_decode_jpeg_and_inception_crop(
         tf.zeros([0, 0, 4], tf.float32),
         area_range=(area_min / 100, area_max / 100),
         min_object_covered=0,  # Don't enforce a minimum area.
+        aspect_ratio_range=aspect_ratio_range,
         use_image_if_no_bounding_boxes=True)
 
     # Crop the image to the specified bounding box.
