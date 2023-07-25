@@ -78,11 +78,11 @@ def resize_pil(image_or_batch: np.ndarray,
                        'be specified.')
 
   if method == 'linear':
-    resample = Image.BILINEAR
+    resample = Image.Resampling.BILINEAR
   elif method == 'nearest':
-    resample = Image.NEAREST
+    resample = Image.Resampling.NEAREST
   elif method == 'lanczos':
-    resample = Image.LANCZOS
+    resample = Image.Resampling.LANCZOS
   else:
     raise NotImplementedError(f'Method not implemented: {method}')
 
