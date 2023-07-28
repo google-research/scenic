@@ -279,6 +279,8 @@ class TextZeroShotDetectionModule(nn.Module):
       params['class_head'].pop('padding', None)
       params['class_head'].pop('padding_bias', None)
 
+    params = _fix_old_checkpoints(params)
+
     return params
 
 
