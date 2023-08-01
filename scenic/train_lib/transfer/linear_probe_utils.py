@@ -20,6 +20,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Text, Tuple, Ty
 
 from absl import logging
 from clu import metric_writers
+import flax
 from flax import jax_utils
 import flax.linen as nn
 import jax
@@ -227,9 +228,9 @@ class LinearEvaluator:
         'label': None,
         'batch_mask': None
     })
-    model_state, params = linear_probe.init({
-        'params': rng
-    }, dummy_reprs).pop('params')
+    model_state, params = flax.core.pop(
+        linear_probe.init({'params': rng}, dummy_reprs), 'params'
+    )
 
     # Create optimizer.
     lr_fn = lr_schedules.get_learning_rate_fn(config)
