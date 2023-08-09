@@ -253,9 +253,9 @@ def corners_to_cxcywha(corners: jnp.ndarray,
   return cxcywha
 
 
-def intersect_line_segments(lines1: jnp.array,
-                            lines2: jnp.array,
-                            eps: float = 1e-8) -> jnp.array:
+def intersect_line_segments(
+    lines1: jnp.ndarray, lines2: jnp.ndarray, eps: float = 1e-8
+) -> jnp.ndarray:
   """Intersect two line segments.
 
   Given two 2D line segments, where a line segment is defined as two 2D points.

@@ -132,7 +132,7 @@ class ResNetStage(nn.Module):
   stride: int = 1
 
   @nn.compact
-  def __call__(self, x: jnp.array) -> jnp.ndarray:
+  def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
     x = Bottleneck(self.features, self.stride, name='0')(x)
     for i in range(1, self.num_layers):
       x = Bottleneck(self.features, name=str(i))(x)

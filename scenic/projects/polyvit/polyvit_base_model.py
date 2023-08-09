@@ -53,11 +53,10 @@ _MULTIHEADLABEL_METRICS = immutabledict({
 
 
 def bow_classification_metrics_function(
-    logits: jnp.array,
+    logits: jnp.ndarray,
     batch: base_model.Batch,
     target_is_multihot: bool = False,
-    metrics: base_model
-    .MetricNormalizerFnDict = _BOW_CLASSIFICATION_METRICS,
+    metrics: base_model.MetricNormalizerFnDict = _BOW_CLASSIFICATION_METRICS,
 ) -> Dict[str, Tuple[float, int]]:
   """Calcualte metrics for the Bag of Words classification task.
 
@@ -111,8 +110,9 @@ def multihead_classification_metrics_function(
     logits,
     batch,
     metrics: base_model.MetricNormalizerFnDict = _MULTIHEADLABEL_METRICS,
-    class_splits: Optional[jnp.array] = None,
-    split_names: Optional[List[str]] = None) -> Dict[str, Any]:
+    class_splits: Optional[jnp.ndarray] = None,
+    split_names: Optional[List[str]] = None,
+) -> Dict[str, Any]:
   """Returns a callable metric function for the multihead classification task.
 
   Args:

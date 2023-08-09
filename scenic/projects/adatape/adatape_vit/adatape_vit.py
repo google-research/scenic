@@ -262,11 +262,13 @@ class AdaTapeMultiLabelClassificationModel(MultiLabelClassificationModel):
           dtype=model_dtype,
       )
 
-  def loss_function(self,
-                    logits: jnp.array,
-                    batch: base_model.Batch,
-                    model_params: Optional[jnp.array] = None,
-                    auxiliary_outputs: Any = None) -> float:
+  def loss_function(
+      self,
+      logits: jnp.ndarray,
+      batch: base_model.Batch,
+      model_params: Optional[jnp.ndarray] = None,
+      auxiliary_outputs: Any = None,
+  ) -> float:
     """Returns sigmoid cross entropy loss with an L2 penalty (and ponder loss) on the weights.
 
     Args:

@@ -339,11 +339,13 @@ class PonderViTMultiLabelClassificationModel(MultiLabelClassificationModel):
         dtype=model_dtype,
     )
 
-  def loss_function(self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
-                    logits: jnp.array,
-                    auxiliary_outputs: Any,
-                    batch: base_model.Batch,
-                    model_params: Optional[jnp.array] = None) -> float:
+  def loss_function(
+      self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
+      logits: jnp.ndarray,
+      auxiliary_outputs: Any,
+      batch: base_model.Batch,
+      model_params: Optional[jnp.ndarray] = None,
+  ) -> float:
     """Returns sigmoid cross entropy loss with an L2 penalty on the weights.
 
     Args:

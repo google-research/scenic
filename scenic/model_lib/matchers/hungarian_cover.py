@@ -305,9 +305,9 @@ def _improve_assignment(assignment: jnp.ndarray,
   return assignment
 
 
-def _maximum_bipartite_matching(adj_matrix: jnp.array,
-                                assignment: Optional[jnp.array] = None
-                                ) -> Tuple[Dict[str, jnp.array], jnp.array]:
+def _maximum_bipartite_matching(
+    adj_matrix: jnp.ndarray, assignment: Optional[jnp.ndarray] = None
+) -> Tuple[Dict[str, jnp.ndarray], jnp.ndarray]:
   """Performs maximum bipartite matching using augmented paths.
 
   Args:
@@ -345,8 +345,9 @@ def _maximum_bipartite_matching(adj_matrix: jnp.array,
   return state, assignment
 
 
-def _compute_cover(state: Dict[str, jnp.array],
-                   assignment: jnp.array) -> Tuple[jnp.ndarray, jnp.ndarray]:
+def _compute_cover(
+    state: Dict[str, jnp.ndarray], assignment: jnp.ndarray
+) -> Tuple[jnp.ndarray, jnp.ndarray]:
   """Computes a cover for the bipartite graph.
 
   We compute a cover using the construction provided at

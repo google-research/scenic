@@ -244,10 +244,12 @@ class PlainViT(classification_model.ClassificationModel):
         dtype=getattr(jnp, dtype_str),
     )
 
-  def loss_function(self,
-                    logits: jnp.array,
-                    batch: base_model.Batch,
-                    model_params: Optional[jnp.array] = None) -> float:
+  def loss_function(
+      self,
+      logits: jnp.ndarray,
+      batch: base_model.Batch,
+      model_params: Optional[jnp.ndarray] = None,
+  ) -> float:
     """Returns sigmoid or softmax cross entropy loss.
 
     Args:

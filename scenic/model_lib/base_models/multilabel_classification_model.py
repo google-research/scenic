@@ -34,11 +34,10 @@ _MULTI_LABEL_CLASSIFICATION_METRICS = immutabledict({
 
 
 def multilabel_classification_metrics_function(
-    logits: jnp.array,
+    logits: jnp.ndarray,
     batch: base_model.Batch,
     target_is_multihot: bool = False,
-    metrics: base_model
-    .MetricNormalizerFnDict = _MULTI_LABEL_CLASSIFICATION_METRICS,
+    metrics: base_model.MetricNormalizerFnDict = _MULTI_LABEL_CLASSIFICATION_METRICS,
     axis_name: Union[str, Tuple[str, ...]] = 'batch',
 ) -> Dict[str, Tuple[float, int]]:
   """Calculates metrics for the multi-label classification task.
@@ -139,10 +138,12 @@ class MultiLabelClassificationModel(base_model.BaseModel):
                                                       False),
         metrics=_MULTI_LABEL_CLASSIFICATION_METRICS)
 
-  def loss_function(self,
-                    logits: jnp.array,
-                    batch: base_model.Batch,
-                    model_params: Optional[jnp.array] = None) -> float:
+  def loss_function(
+      self,
+      logits: jnp.ndarray,
+      batch: base_model.Batch,
+      model_params: Optional[jnp.ndarray] = None,
+  ) -> float:
     """Returns sigmoid cross entropy loss with an L2 penalty on the weights.
 
     Args:

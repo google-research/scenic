@@ -28,7 +28,7 @@ class SelfAttentionWith1DRelativePos(nn.Module):
   num_heads: int
 
   @nn.compact
-  def __call__(self, x: jnp.array) -> jnp.ndarray:
+  def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
     """Applies multi-head dot product self-attention on the input data.
 
     Args:
@@ -114,7 +114,7 @@ class AxialSelfAttention(nn.Module):
   axial_attention_configs: ml_collections.ConfigDict
 
   @nn.compact
-  def __call__(self, x: jnp.array) -> jnp.ndarray:
+  def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
     """Applies Axial Self Attention module.
 
     Args:
