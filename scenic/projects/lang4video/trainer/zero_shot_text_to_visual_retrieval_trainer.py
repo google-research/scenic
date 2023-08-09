@@ -134,7 +134,7 @@ def _compute_metrics(
 
   # We set the padding columns to -inf, so we can ignore them in the scores.
   batched_scores = batched_scores.at[-1, :, retrieval_batch_size -
-                                     batch_padding_size:].set(jnp.NINF)
+                                     batch_padding_size:].set(-jnp.inf)
 
   scores = batched_scores.reshape(-1, retrieval_batch_size)[:n]
   target = jnp.tile(jnp.arange(retrieval_batch_size), n_batches)[:n]
@@ -143,7 +143,7 @@ def _compute_metrics(
   where = jnp.ones((n_batches, retrieval_batch_size)).astype(jnp.bool_)
   where = where.at[-1, retrieval_batch_size - batch_padding_size:].set(False)
 
-  initial = jnp.full((n_batches,), jnp.NINF)
+  initial = jnp.full((n_batches,), -jnp.inf)
   metrics_summary['loss'] = jax.vmap(loss_fn)(
       batched_scores, where=where, initial=initial).mean(where=where)
 
