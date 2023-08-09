@@ -65,6 +65,7 @@ Projects that were developed in Scenic or used it for their experiments:
 * [Location-Aware Self-Supervised Transformers for Semantic Segmentation](https://arxiv.org/abs/2212.02400)
 * [How can objects help action recognition?](https://openaccess.thecvf.com/content/CVPR2023/html/Zhou_How_Can_Objects_Help_Action_Recognition_CVPR_2023_paper.html)
 * [Verbs in Action: Improving verb understanding in video-language models](https://arxiv.org/abs/2304.06708)
+* [Unified Visual Relationship Detection with Vision and Language Models](https://arxiv.org/abs/2303.08998)
 
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 

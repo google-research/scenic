@@ -133,6 +133,12 @@
     > create hard negative pairs for contrastive learning, in order to improve
     > the verb understanding of video-text models based on CLIP.
 
+*   [UniVRD](univrd)
+
+    > UniVRD is a bottom-up visual relationship detector built upon pre-trained
+    > vision and language models.
+    > Details can be found in the [paper](https://arxiv.org/abs/2303.08998).
+
 <a name="projects"></a>
 ## Scenic projects
 A typical project consists of models, trainers, configs, a runner, and some
