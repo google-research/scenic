@@ -298,7 +298,8 @@ class Transformer(nn.Module):
       x = ResidualAttentionBlock(
           num_heads=self.num_heads,
           droplayer_p=droplayer_p,
-          name=f'resblocks.{i}')(x, attn_mask, deterministic=deterministic)
+          name=f'resblocks_{i}',
+      )(x, attn_mask, deterministic=deterministic)
     return x
 
 
