@@ -73,12 +73,49 @@ def _make_mask_trees(
   return masks, list(zip(names, values))
 
 
+def _fix_sched(sched: tuple[str, tuple[Union[str, None],
+                                       Union[int, float, None]]]):
+  """Preprocess 'sched' such that it can be used for replacing frozen values."""
+  if isinstance(sched, tuple):
+    assert len(sched) == 2, (
+        'Expected "sched" to be a 2-tuple having entries (name, (lr_fn, lr)), '
+        f'got "{sched}" of type "{type(sched)}".'
+    )
+    _, lr_configs = sched  # collect lr_configs
+    assert isinstance(lr_configs, tuple), (
+        f'Expected "lr_configs" to be a tuple, got "{lr_configs}" of type '
+        f'"{type(lr_configs)}".'
+    )
+    assert len(lr_configs) == 2, (
+        'Expected "lr_configs" to be a 2-tuple having entries (lr_fn, lr), got '
+        f'"{lr_configs}" of type "{type(lr_configs)}".'
+    )
+    lr_fn, lr = lr_configs  # collect lr_fn and lr
+    if any((lr_fn, lr)):
+      return None  # Returns None for the cases lr_fn=None, lr=None, lr=0.
+    else:
+      return sched
+  elif isinstance(sched, (int, float)):
+    lr = sched  # 'sched' should be the learning rate, so we check if it's zero.
+    if not lr:
+      return None
+    else:
+      return sched
+  else:  # Just return 'sched' if sched is of different type.
+    # TODO(andreasbaer): Revisit handling of lr_configs = {} [empty dict].
+    # In my opinion it should behave as lr_configs=None, however,
+    # test_replace_frozen (third_party/py/scenic/train_lib/tests/test_optax.py)
+    # suggest to do nothing.
+    return sched
+
+
 def _split_frozen(masks, scheds):
   """Computes `frozen_mask` and updates `masks` and `scheds`."""
   # Specifying `None` as a scheduler freezes params.
   all_false = jax.tree_util.tree_map(lambda *bools: not any(bools), *masks)
   frozen_masks = [
-      mask for mask, sched in zip(masks, scheds) if sched is None]
+      mask for mask, sched in zip(masks, scheds) if _fix_sched(sched) is None]
+      # mask for mask, sched in zip(masks, scheds) if sched is None]
   frozen_mask = jax.tree_util.tree_map(
       lambda *bools: any(bools), *frozen_masks,
       all_false)  # `all_false` is required when `frozen_masks==[]`.
@@ -180,6 +217,7 @@ def make(config: ml_collections.ConfigDict,
   """
 
   masks, scheds = _make_mask_trees(params, schedule, log='schedule')
+  # scheds = [_fix_sched(sched) for sched in scheds]
   frozen_mask, masks, scheds = _split_frozen(masks, scheds)
   not_frozen_mask = jax.tree_util.tree_map(operator.not_, frozen_mask)
   schedule_fns, schedule_base_lr = zip(
@@ -191,7 +229,7 @@ def make(config: ml_collections.ConfigDict,
       # Removes weight decay updates. Note that weight decay already has an
       # independent mask (which cannot be combined easily with a second mask),
       # so instead we multiply updates for frozen params with zero.
-      optax.masked(optax.scale(0.0), frozen_mask)
+      optax.masked(optax.set_to_zero(), frozen_mask)
   ]
 
   # Gradient clipping.
