@@ -12,7 +12,6 @@ from flax import jax_utils
 import flax.linen as nn
 from flax.training import checkpoints
 import jax
-from jax.example_libraries.optimizers import clip_grads
 import jax.numpy as jnp
 import jax.profiler
 import ml_collections
@@ -174,9 +173,6 @@ def train_step(
   del train_cost
   # Re-use same axis_name as in the call to `pmap(...train_step...)` below.
   grad = jax.lax.pmean(grad, axis_name='batch')
-
-  if config.get('max_grad_norm') is not None:
-    grad = clip_grads(grad, config.max_grad_norm)
 
   updates, new_opt_state = train_state.tx.update(grad, train_state.opt_state,
                                                  train_state.params)

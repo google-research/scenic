@@ -108,7 +108,6 @@ def get_config():
   config.trainer_name = 'plainvit_trainer'
   config.loss = 'softmax_xent'
   config.l2_decay_factor = None
-  config.max_grad_norm = 1.
   config.label_smoothing = None
   config.log_eval_steps = 100
   config.log_summary_steps = 50
@@ -132,7 +131,7 @@ def get_config():
   optim = ml_collections.ConfigDict()
   optim.optax_name = 'scenic.momentum_hp'
   # Disable Optax gradient clipping as we handle it ourselves.
-  optim.max_grad_norm = None
+  optim.max_grad_norm = 1.0
   optim.weight_decay = 0.0
   config.optimizer = optim
 
