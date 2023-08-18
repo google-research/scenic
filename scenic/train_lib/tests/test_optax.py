@@ -174,7 +174,7 @@ class OptaxTest(tf.test.TestCase, parameterized.TestCase):
       return float(cfg.lr_configs.lr)
 
     new_schedule = optax.make_schedule(None, lr_fn)
-    target_schedule = [('(.*)', 'all', (None, 1.0))]
+    target_schedule = [('(.*)', 'all', (None, None))]
     self.assertAllEqual(target_schedule, new_schedule)
 
   def test_make(self):

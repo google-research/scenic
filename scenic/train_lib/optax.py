@@ -75,15 +75,25 @@ def _make_mask_trees(
 
 def _split_frozen(masks, scheds):
   """Computes `frozen_mask` and updates `masks` and `scheds`."""
+
+  def _is_none(sched):
+    """Helper to check if sched itself or (fn, base_lr) of sched are None."""
+    if isinstance(sched, (tuple, list)):
+      _, fn_base_lr = sched  # Check only the tuple of fn and base_lr.
+      return not any(fn_base_lr)  # Only false if fn_base_lr = (None, None)
+    else:
+      return sched is None
+
   # Specifying `None` as a scheduler freezes params.
   all_false = jax.tree_util.tree_map(lambda *bools: not any(bools), *masks)
   frozen_masks = [
-      mask for mask, sched in zip(masks, scheds) if sched is None]
+      mask for mask, sched in zip(masks, scheds) if _is_none(sched)]
   frozen_mask = jax.tree_util.tree_map(
       lambda *bools: any(bools), *frozen_masks,
       all_false)  # `all_false` is required when `frozen_masks==[]`.
   masks, scheds = zip(*(
-      (mask, sched) for mask, sched in zip(masks, scheds) if sched is not None))
+      (mask, sched) for mask, sched in zip(masks,
+                                           scheds) if not _is_none(sched)))
   return frozen_mask, masks, scheds
 
 
@@ -153,12 +163,12 @@ def make_schedule(
 
   # Create actual schedules funtions.
   def create_schedule(lr_configs):
+    if lr_configs is None:
+      return None, None  # Parameters are frozen
     fn = get_learning_rate_fn(
         ml_collections.ConfigDict({'lr_configs': lr_configs}))
     # Base LR is used for decoupling WD from LR schedules.
-    base_lr = 1.0
-    if lr_configs is not None:
-      base_lr = lr_configs.get('base_learning_rate', 1.0)
+    base_lr = lr_configs.get('base_learning_rate', 1.0)
     return fn, base_lr
 
   schedule = [(re, name, create_schedule(lr_configs))
@@ -191,7 +201,7 @@ def make(config: ml_collections.ConfigDict,
       # Removes weight decay updates. Note that weight decay already has an
       # independent mask (which cannot be combined easily with a second mask),
       # so instead we multiply updates for frozen params with zero.
-      optax.masked(optax.scale(0.0), frozen_mask)
+      optax.masked(optax.set_to_zero(), frozen_mask)
   ]
 
   # Gradient clipping.

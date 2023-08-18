@@ -307,14 +307,19 @@ def get_learning_rate_fn(config: ml_collections.ConfigDict):
     {'learning_rate': float}, the step-dependent lr.
 
   """
+  if 'base_learning_rate' not in config.lr_configs:
+    raise ValueError(
+        '`base_learning_rate` has to be defined in the lr_config.')
+  if not config.lr_configs.base_learning_rate:
+    raise ValueError(  # raised for {0, False, None, [], (), {}}
+        f'`base_learning_rate = {config.lr_configs.base_learning_rate}` is not '
+        'allowed for training parameters. If your intention was to freeze '
+        'parameters, use Scenic optax and `config.lr_configs = None` instead.')
   if 'learning_rate_schedule' in config.lr_configs:
     # A function that given the current step, returns the LR.
     return lr_fn_dict[config.lr_configs['learning_rate_schedule']](
         config.lr_configs)
   else:
-    if 'base_learning_rate' not in config.lr_configs:
-      raise ValueError(
-          '`base_learning_rate` has to be defined in the lr_config.')
     # LR as a scalar value.
     lr = jnp.asarray(config.lr_configs.base_learning_rate, dtype=jnp.float32)
     return lambda step: lr
