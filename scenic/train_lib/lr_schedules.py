@@ -316,4 +316,5 @@ def get_learning_rate_fn(config: ml_collections.ConfigDict):
       raise ValueError(
           '`base_learning_rate` has to be defined in the lr_config.')
     # LR as a scalar value.
-    return config.lr_configs.base_learning_rate
+    lr = jnp.asarray(config.lr_configs.base_learning_rate, dtype=jnp.float32)
+    return lambda step: lr
