@@ -160,9 +160,9 @@ class BaseModelWithMatching(base_model.BaseModel):  # pytype: disable=ignored-ab
     """
     raise NotImplementedError('Subclasses must implement compute_cost_matrix.')
 
-  def matcher(self,
-              cost: jnp.ndarray,
-              n_cols: Optional[jnp.array] = None) -> jnp.ndarray:
+  def matcher(
+      self, cost: jnp.ndarray, n_cols: Optional[jnp.ndarray] = None
+  ) -> jnp.ndarray:
     """Implements a matching function.
 
     Matching function matches output detections against ground truth detections
