@@ -58,9 +58,9 @@ class BaseModelWithMatching(base_model.BaseModel, metaclass=abc.ABCMeta):
     """
     ...
 
-  def matcher(self,
-              cost: jnp.ndarray,
-              n_cols: Optional[jnp.array] = None) -> jnp.ndarray:
+  def matcher(
+      self, cost: jnp.ndarray, n_cols: Optional[jnp.ndarray] = None
+  ) -> jnp.ndarray:
     """Implements a matching function.
 
     Matching functions match predicted detections against ground truth

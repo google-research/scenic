@@ -145,9 +145,11 @@ def eval_step(
     return_logits_and_labels: bool = False,
     return_confusion_matrix: bool = False,
     debug: Optional[bool] = False
-) -> Union[Tuple[Dict[str, Tuple[float, int]], jnp.ndarray, jnp.array],
-           Tuple[Dict[str, Tuple[float, int]], jnp.ndarray],
-           Dict[str, Tuple[float, int]]]:
+) -> Union[
+    Tuple[Dict[str, Tuple[float, int]], jnp.ndarray, jnp.ndarray],
+    Tuple[Dict[str, Tuple[float, int]], jnp.ndarray],
+    Dict[str, Tuple[float, int]],
+]:
   """Runs a single step of training.
 
   Note that in this code, the buffer of the second argument (batch) is donated
@@ -214,8 +216,10 @@ def test_step(
     return_logits_and_labels: bool = False,
     softmax_logits: bool = False,
     debug: bool = False
-) -> Union[Dict[str, Tuple[float, int]], Tuple[Dict[str, Tuple[float, int]],
-                                               jnp.array, jnp.array]]:
+) -> Union[
+    Dict[str, Tuple[float, int]],
+    Tuple[Dict[str, Tuple[float, int]], jnp.ndarray, jnp.ndarray],
+]:
   """Runs a single step of testing.
 
   For multi-crop testing, we assume that num_crops consecutive entries in the

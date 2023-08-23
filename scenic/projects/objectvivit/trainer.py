@@ -250,8 +250,10 @@ def test_step(
     debug: bool = False,
     learn_token_score: bool = False,
     add_boxes: bool = False,
-) -> Union[Dict[str, Tuple[float, int]], Tuple[Dict[str, Tuple[float, int]],
-                                               jnp.array, jnp.array]]:
+) -> Union[
+    Dict[str, Tuple[float, int]],
+    Tuple[Dict[str, Tuple[float, int]], jnp.ndarray, jnp.ndarray],
+]:
   """Runs a single step of testing.
 
   For multi-crop testing, we assume that num_crops consecutive entries in the

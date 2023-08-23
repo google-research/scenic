@@ -331,7 +331,7 @@ class GroupNorm(nn.Module):
   def __call__(
       self,
       x: jnp.ndarray,
-      spatial_shape: Optional[jnp.array] = None,
+      spatial_shape: Optional[jnp.ndarray] = None,
   ) -> Tuple[jnp.ndarray, Optional[jnp.ndarray]]:
     """Applies group normalization to the input (arxiv.org/abs/1803.08494).
 
