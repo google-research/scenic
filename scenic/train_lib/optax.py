@@ -192,10 +192,9 @@ def make(config: ml_collections.ConfigDict,
     # Collect all base_lrs and transform to bool. Each element of schedule fol-
     # lows the structure (re, name, (fn, base_lr)) [see above].
     base_lrs = [fn_base_lr[1] for _, _, fn_base_lr in schedule]
-    if any([not base_lr for base_lr in base_lrs]):
-      raise ValueError(  # raised if base_lr in {0, False, None, [], (), {}}
-          f'`base_learning_rate` contains unsupported values {base_lrs}. '
-          'Unsupported values are: 0, False, None, [], (), {}. If '
+    if any([base_lr == 0 for base_lr in base_lrs]):
+      raise ValueError(  # raised if base_lr = 0
+          f'`base_learning_rate` contains unsupported values {base_lrs}. If '
           'your intention was to freeze parameters, use Scenic optax and '
           '`config.lr_configs = None` instead.')
 
