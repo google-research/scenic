@@ -304,9 +304,11 @@ def test_step(
     n_clips: int = 2,
     return_logits_and_labels: bool = False,
     softmax_logits: bool = False,
-    debug: bool = False
-) -> Union[Dict[str, Tuple[float, int]], Tuple[Dict[str, Tuple[float, int]],
-                                               jnp.array, jnp.array]]:
+    debug: bool = False,
+) -> Union[
+    Dict[str, Tuple[float, int]],
+    Tuple[Dict[str, Tuple[float, int]], jnp.ndarray, jnp.ndarray],
+]:
   """Runs a single step of testing.
 
   For multi-crop testing, we assume that num_crops consecutive entries in the
