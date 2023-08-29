@@ -139,6 +139,14 @@
     > vision and language models.
     > Details can be found in the [paper](https://arxiv.org/abs/2303.08998).
 
+
+*   [REVEAL](knowledge_visual_language)
+
+    > REVEAL is an Retrieval-Augmented Visual Language Model that
+    > learns to retrieve world knowledge from a diverse set of multimodal
+    > knowledge sources, through end-to-end pre-training.
+    > Details can be found in the [paper](https://arxiv.org/abs/2212.05221).
+
 <a name="projects"></a>
 ## Scenic projects
 A typical project consists of models, trainers, configs, a runner, and some
