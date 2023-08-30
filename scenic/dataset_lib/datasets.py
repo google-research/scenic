@@ -32,40 +32,37 @@ from scenic.dataset_lib import dataset_utils
 #  requires every new dataset to modify this import routing table. Going forward
 #  we should find a way to avoid that.
 _IMPORT_TABLE = {
-    'cifar10':
-        'scenic.dataset_lib.cifar10_dataset',
-    'cityscapes':
-        'scenic.dataset_lib.cityscapes_dataset',
-    'imagenet':
-        'scenic.dataset_lib.imagenet_dataset',
-    'fashion_mnist':
-        'scenic.dataset_lib.fashion_mnist_dataset',
-    'mnist':
-        'scenic.dataset_lib.mnist_dataset',
-    'bair':
-        'scenic.dataset_lib.bair_dataset',
-    'oxford_pets':
-        'scenic.dataset_lib.oxford_pets_dataset',
-    'svhn':
-        'scenic.dataset_lib.svhn_dataset',
-    'video_tfrecord_dataset':
-        'scenic.projects.vivit.data.video_tfrecord_dataset',
-    'av_asr_tfrecord_dataset':
-        'scenic.projects.avatar.datasets.av_asr_tfrecord_dataset',
-    'bit':
-        'scenic.dataset_lib.big_transfer.bit',
-    'bert_wikibooks':
-        'scenic.projects.baselines.bert.datasets.bert_wikibooks_dataset',
-    'bert_glue':
-        'scenic.projects.baselines.bert.datasets.bert_glue_dataset',
-    'coco_detr_detection':
-        'scenic.projects.baselines.detr.input_pipeline_detection',
-    'cityscapes_variants':
-        'scenic.projects.robust_segvit.datasets.cityscapes_variants',
-    'robust_segvit_segmentation':
-        'scenic.projects.robust_segvit.datasets.segmentation_datasets',
-    'robust_segvit_variants':
-        'scenic.projects.robust_segvit.datasets.segmentation_variants',
+    'cifar10': 'scenic.dataset_lib.cifar10_dataset',
+    'cityscapes': 'scenic.dataset_lib.cityscapes_dataset',
+    'imagenet': 'scenic.dataset_lib.imagenet_dataset',
+    'fashion_mnist': 'scenic.dataset_lib.fashion_mnist_dataset',
+    'mnist': 'scenic.dataset_lib.mnist_dataset',
+    'bair': 'scenic.dataset_lib.bair_dataset',
+    'oxford_pets': 'scenic.dataset_lib.oxford_pets_dataset',
+    'svhn': 'scenic.dataset_lib.svhn_dataset',
+    'video_tfrecord_dataset': (
+        'scenic.projects.vivit.data.video_tfrecord_dataset'
+    ),
+    'av_asr_tfrecord_dataset': (
+        'scenic.projects.avatar.datasets.av_asr_tfrecord_dataset'
+    ),
+    'bit': 'scenic.dataset_lib.big_transfer.bit',
+    'bert_wikibooks': (
+        'scenic.projects.baselines.bert.datasets.bert_wikibooks_dataset'
+    ),
+    'bert_glue': 'scenic.projects.baselines.bert.datasets.bert_glue_dataset',
+    'coco_detr_detection': (
+        'scenic.projects.baselines.detr.input_pipeline_detection'
+    ),
+    'cityscapes_variants': (
+        'scenic.projects.robust_segvit.datasets.cityscapes_variants'
+    ),
+    'robust_segvit_segmentation': (
+        'scenic.projects.robust_segvit.datasets.segmentation_datasets'
+    ),
+    'robust_segvit_variants': (
+        'scenic.projects.robust_segvit.datasets.segmentation_variants'
+    ),
 }
 
 
