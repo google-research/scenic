@@ -431,7 +431,7 @@ class MlpBlock(nn.Module):
         bias_init=self.bias_init,
         precision=self.precision)(
             x)
-    x = nn_layers.IdentityLayer(name='mlp2')(x)
+    output = nn_layers.IdentityLayer(name='mlp2')(output)
     output = nn.Dropout(rate=self.dropout_rate)(
         output, deterministic=deterministic)
     return output
