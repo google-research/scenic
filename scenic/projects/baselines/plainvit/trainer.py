@@ -380,9 +380,11 @@ def train(
           train_state, restored_train_state, restored_model_cfg)
       del restored_train_state
 
+  # Do not keep a copy of the initial params.
+  del params, opt_state, model_state
+
   # Replicate the optimzier, state, and rng.
   train_state = jax_utils.replicate(train_state)
-  del params  # Do not keep a copy of the initial params.
 
   # Calculate the total number of training steps.
   total_steps, steps_per_epoch = train_utils.get_num_training_steps(
