@@ -716,7 +716,8 @@ def get_onehot(depth,
       x = tf.scatter_nd(labels[:, None], tf.ones(tf.shape(labels)[0]), (depth,))
       x = tf.clip_by_value(x, 0, 1) * (on - off) + off
     else:
-      assert on + off * (depth - 1) == 1, "All on and off values must sum to 1"
+      assert np.isclose(on + off * (depth - 1), 1), (
+          "All on and off values must sum to 1")
       x = tf.one_hot(labels, depth, on_value=on, off_value=off)
     data[key_result or key] = x
     return data
