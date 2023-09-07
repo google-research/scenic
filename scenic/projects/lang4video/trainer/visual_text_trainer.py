@@ -92,7 +92,7 @@ def train_step(
   if max_grad_norm := config.get('max_grad_norm'):
     grad = clip_grads(grad, max_grad_norm)
 
-  updates, new_opt_state = train_state.tx.update(grad, train_state.opt_state,
+  updates, new_opt_state = train_state.tx.update(grad, train_state.opt_state,  # pytype: disable=attribute-error
                                                  train_state.params)
   new_params = optax.apply_updates(train_state.params, updates)
 
@@ -306,10 +306,11 @@ def train(
   metrics_list, training_logs_list = [], []
 
   write_note('Starting first step (and compilations)…')
+  assert not isinstance(dataset.train_iter, dict)
   for step, batch in zip(
       range(start_step + 1, total_steps + 1), dataset.train_iter):
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
-      if (text := batch.get('text_indices')) is None:
+      if (text := batch.get('text_indices')) is None:  # pytype: disable=attribute-error
         text = batch['label']
       else:
         text = text[:, :, 0]

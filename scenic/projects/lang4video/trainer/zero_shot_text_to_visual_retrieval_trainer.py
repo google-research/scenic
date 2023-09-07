@@ -3,10 +3,8 @@
 Note this "trainer" doesn't actually train but just evaluates.
 """
 
-from collections.abc import Callable
-from collections.abc import Mapping
-from collections.abc import MutableMapping
-from collections.abc import Sequence
+from collections.abc import Callable, Mapping, MutableMapping, Sequence
+import dataclasses
 from typing import Optional
 
 from clu import metric_writers
@@ -32,6 +30,7 @@ from scenic.projects.lang4video.trainer.train_utils import pad_and_batch
 from scenic.projects.lang4video.trainer.train_utils import partial_with_cache
 from scenic.train_lib import train_utils
 from tqdm.auto import tqdm
+
 
 # TODO(sacastro): support multiple clips.
 
@@ -198,7 +197,8 @@ def evaluate(
 
   # Note that different calls of `_replace` with the same contents will yield
   # the same hash.
-  dataset = dataset._replace(meta_data=flax.core.freeze(dataset.meta_data))
+  dataset = dataclasses.replace(
+      dataset, meta_data=flax.core.freeze(dataset.meta_data))
   model, train_state = _create_model_and_train_state(
       config=hashable_config,
       dataset=dataset,

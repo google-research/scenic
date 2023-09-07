@@ -18,9 +18,9 @@ Many of these were originally implemented by: Lucas Beyer, Alex Kolesnikov,
 Xiaohua Zhai and other collaborators from Brain ZRH.
 """
 
-import collections
+import dataclasses
 import functools
-from typing import Any, Dict, Optional, Sequence, Union
+from typing import Any, Dict, Optional, Sequence, Union, Iterator
 
 from absl import logging
 from flax.training import common_utils
@@ -31,37 +31,48 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 
 PyTree = Any
+DatasetIterator = Union[Iterator[Any], Dict[str, Iterator[Any]]]
 
 
-Dataset = collections.namedtuple(
-    # Each instance of the Dataset has three iterators, train_iter, valid_iter,
-    # and test_iter, that yield a batch, where each batch is a (nested) dict of
-    # numpy arrays. These iterators are created by normally applying these
-    # functions on TFDS instances:
-    #
-    #  - dataset_utils.tf_to_numpy -> convert tensors to numpy arrays.
-    #  - dataset_utils.maybe_pad_batch -> pad partial batches and create
-    #   batch_mask if needed.
-    #  - dataset_utils.shard_batches -> shard batch across devices by reshaping
-    #   `[bs, ...]` to `[num_local_devices, bs/(num_local_devices), ...]`.
-    #
-    # Beside these iterators, there is a dictionary that stores the metadata
-    # information about the dataset, that can be used for different purposes.
-    # For instance, these fields are used in most of the datasets:
-    #
-    #   'input_shape': Used during compiling and initializing the model.
-    #   'num_train_examples': Used for computing the number of training steps
-    #      and controlling the train_iter.
-    #   'num_eval_examples': Same as num_train_examples, but for valid_iter.
-    #   'num_test_examples': Same as num_train_examples, but for tes_iter.
-    #   'target_is_onehot': Used in the loss and metric functions.
-    #
-    # Note that each dataset can define its own meta-data field that is used
-    # in the model and/or the trainer, depending on the task. As an example, for
-    # classification tasks, `num_classes` is used for the configuring head of
-    # the model.
-    'Dataset',
-    ['train_iter', 'valid_iter', 'test_iter', 'meta_data'])
+@dataclasses.dataclass(frozen=True)
+class Dataset:
+  """Dataset type.
+
+  Each instance of the Dataset has three iterators, train_iter, valid_iter,
+  and test_iter, that yield a batch, where each batch is a (nested) dict of
+  numpy arrays. These iterators are created by normally applying these
+  functions on TFDS instances:
+
+   - dataset_utils.tf_to_numpy -> convert tensors to numpy arrays.
+   - dataset_utils.maybe_pad_batch -> pad partial batches and create
+    batch_mask if needed.
+   - dataset_utils.shard_batches -> shard batch across devices by reshaping
+    `[bs, ...]` to `[num_local_devices, bs/(num_local_devices), ...]`.
+
+  Beside these iterators, there is a dictionary that stores the metadata
+  information about the dataset, that can be used for different purposes.
+  For instance, these fields are used in most of the datasets:
+
+    'input_shape': Used during compiling and initializing the model.
+    'num_train_examples': Used for computing the number of training steps
+       and controlling the train_iter.
+    'num_eval_examples': Same as num_train_examples, but for valid_iter.
+    'num_test_examples': Same as num_train_examples, but for test_iter.
+    'target_is_onehot': Used in the loss and metric functions.
+
+  Note that each dataset can define its own meta-data field that is used
+  in the model and/or the trainer, depending on the task. As an example, for
+  classification tasks, `num_classes` is used for the configuring head of
+  the model.
+  """
+  train_iter: DatasetIterator | None = None
+  valid_iter: DatasetIterator | None = None
+  test_iter: DatasetIterator | None = None
+  meta_data: Dict[str, Any] = dataclasses.field(default_factory=dict)
+
+  train_ds: Union[tf.data.Dataset, Dict[str, tf.data.Dataset]] | None = None
+  valid_ds: Union[tf.data.Dataset, Dict[str, tf.data.Dataset]] | None = None
+  test_ds: Union[tf.data.Dataset, Dict[str, tf.data.Dataset]] | None = None
 
 
 def maybe_pad_batch(batch: Dict[str, PyTree],

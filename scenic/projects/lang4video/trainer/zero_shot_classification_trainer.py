@@ -4,6 +4,7 @@ Note this "trainer" doesn't actually train but just evaluates.
 """
 
 from collections.abc import Mapping
+import dataclasses
 import functools
 from typing import Optional
 
@@ -186,7 +187,8 @@ def evaluate(
 
   # Note that different calls of `_replace` with the same contents will yield
   # the same hash.
-  dataset = dataset._replace(meta_data=flax.core.freeze(dataset.meta_data))
+  dataset = dataclasses.replace(
+      dataset, meta_data=flax.core.freeze(dataset.meta_data))
   model, train_state = _create_model_and_train_state(
       config=hashable_config,
       dataset=dataset,

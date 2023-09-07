@@ -26,14 +26,15 @@ class SegmentationVariantsTest(parameterized.TestCase):
     config.dataset_configs = ml_collections.ConfigDict()
     config.dataset_configs.train_target_size = (120, 120)
     if corruption_type:
-      config.dataset_configs.name = f'{name}_{corruption_type}_{corruption_level}'
+      config.dataset_configs.name = (
+          f'{name}_{corruption_type}_{corruption_level}')
     else:
       config.dataset_configs.name = name
     config.dataset_configs.denoise = None
     config.dataset_configs.use_timestep = 0
     config.dataset_configs.val_split = val_split
-    _, dataset, _, _ = segmentation_variants.get_dataset(**config)
-    batch = next(dataset)
+    dataset = segmentation_variants.get_dataset(**config)
+    batch = next(dataset.valid_iter)
     self.assertEqual(
         batch['inputs'].shape,
         (num_shards, config.eval_batch_size // num_shards, 120, 120, 3))

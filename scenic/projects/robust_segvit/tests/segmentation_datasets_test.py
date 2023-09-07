@@ -29,8 +29,8 @@ class SegmentationVariantsTest(parameterized.TestCase):
     config.dataset_configs.denoise = None
     config.dataset_configs.use_timestep = 0
     config.dataset_configs.val_split = val_split
-    _, dataset, _, _ = segmentation_datasets.get_dataset(**config)
-    batch = next(dataset)
+    dataset = segmentation_datasets.get_dataset(**config)
+    batch = next(dataset.valid_iter)
     self.assertEqual(
         batch['inputs'].shape,
         (num_shards, config.eval_batch_size // num_shards, 120, 120, 3))
