@@ -20,7 +20,7 @@ Xiaohua Zhai and other collaborators from Brain ZRH.
 
 import dataclasses
 import functools
-from typing import Any, Dict, Optional, Sequence, Union, Iterator
+from typing import Any, Dict, Optional, Sequence, Union, Iterator, Callable
 
 from absl import logging
 from flax.training import common_utils
@@ -32,6 +32,7 @@ import tensorflow_datasets as tfds
 
 PyTree = Any
 DatasetIterator = Union[Iterator[Any], Dict[str, Iterator[Any]]]
+DatasetIteratorProvider = Callable[[], DatasetIterator]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -65,9 +66,9 @@ class Dataset:
   classification tasks, `num_classes` is used for the configuring head of
   the model.
   """
-  train_iter: DatasetIterator | None = None
-  valid_iter: DatasetIterator | None = None
-  test_iter: DatasetIterator | None = None
+  train_iter: DatasetIterator | DatasetIteratorProvider | None = None
+  valid_iter: DatasetIterator | DatasetIteratorProvider | None = None
+  test_iter: DatasetIterator | DatasetIteratorProvider | None = None
   meta_data: Dict[str, Any] = dataclasses.field(default_factory=dict)
 
   train_ds: Union[tf.data.Dataset, Dict[str, tf.data.Dataset]] | None = None
