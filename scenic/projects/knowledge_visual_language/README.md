@@ -20,10 +20,21 @@ approach is that the memory, encoder, retriever and generator are all
 pre-trained end-to-end on a massive amount of data. Furthermore, our approach
 can use a diverse set of multimodal knowledge sources, which is shown to result
 in significant gains. We show that REVEAL achieves state-of-the-art results on
-visual question answering and image captioning.
+visual question answering (e.g., OKVQA) and image captioning.
 
 More details can be found in the [paper](https://arxiv.org/abs/2212.05221)
 published at CVPR 2023 (Highlight).
+
+## Model
+
+The most important model files in this projects are as follow:
+- `fusion_in_decoder_soft.py` is our base VL model
+- `knowledge_fid.py` is our retrieval-augmented VL (main model), in which:
+  - "_dist_mips_across" function is the distributed retrieval operator
+  - "fuse_topk_knowledge" function is the attentive-fusion operator
+- `local_memory.py` defines the basic data structure of in-memory KB
+- `layers.py` defines most neural layers.
+
 
 ## Citation
 
