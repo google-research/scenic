@@ -19,7 +19,10 @@ Params = layers.Params
 
 def _fix_old_layernorm(transformer_params):
   """Fix layer norm numbering of old checkpoints."""
-  if 'ln_0' in transformer_params['resblocks.0']:
+  if (
+      'resblock.0' in transformer_params
+      and 'ln_0' in transformer_params['resblocks.0']
+  ):
     # This checkpoint has the new format.
     return transformer_params
 
@@ -31,13 +34,37 @@ def _fix_old_layernorm(transformer_params):
   return fixed_params
 
 
+def _fix_resblock_naming(transformer_params):
+  """Fix resblock naming of old checkpoints."""
+  if 'resblocks_0' in transformer_params:
+    # This checkpoint is already converted.
+    return transformer_params
+
+  fixed_params = copy.deepcopy(transformer_params)
+  old_keys = list(fixed_params.keys())
+  for old_key in old_keys:
+    new_key = old_key.replace('.', '_')
+    fixed_params[new_key] = fixed_params.pop(old_key)
+
+  return fixed_params
+
+
 def _fix_old_checkpoints(params):
   """Makes old checkpoints forward-compatible."""
   if 'clip' in params['backbone']:
+    # Fix the layer norm indexing.
     params['backbone']['clip']['visual']['transformer'] = _fix_old_layernorm(
         params['backbone']['clip']['visual']['transformer']
     )
     params['backbone']['clip']['text']['transformer'] = _fix_old_layernorm(
+        params['backbone']['clip']['text']['transformer']
+    )
+
+    # Fix the resblock naming.
+    params['backbone']['clip']['visual']['transformer'] = _fix_resblock_naming(
+        params['backbone']['clip']['visual']['transformer']
+    )
+    params['backbone']['clip']['text']['transformer'] = _fix_resblock_naming(
         params['backbone']['clip']['text']['transformer']
     )
   return params
