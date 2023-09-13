@@ -342,9 +342,12 @@ class Encoder(nn.Module):
       grows from 0 to the provided value. Our implementation of stochastic
       depth follows timm library, which does per-example layer dropping and
       uses independent dropping patterns for each skip-connection.
+    positional_embedding: The type of positional embedding to use. Supported
+      values are {learned_1d, sinusoidal_1d, sinusoidal_3d, none}.
+    normalise_output: If True, perform layernorm on the output.
   """
 
-  temporal_dims: int
+  temporal_dims: Optional[int]
   mlp_dim: int
   num_layers: int
   num_heads: int
@@ -353,6 +356,8 @@ class Encoder(nn.Module):
   attention_dropout_rate: float = 0.1
   stochastic_droplayer_rate: float = 0.0
   dtype: jnp.dtype = jnp.float32
+  positional_embedding: str = 'learned_1d'
+  normalise_output: bool = True
 
   @nn.compact
   def __call__(self, inputs: jnp.ndarray, *, train: bool):
@@ -360,9 +365,27 @@ class Encoder(nn.Module):
     assert inputs.ndim == 3  # (batch, len, emb)
     dtype = jax.dtypes.canonicalize_dtype(self.dtype)
 
-    x = vit.AddPositionEmbs(
-        posemb_init=nn.initializers.normal(stddev=0.02),  # from BERT.
-        name='posembed_input')(inputs)
+    if self.positional_embedding == 'learned_1d':
+      x = vit.AddPositionEmbs(
+          posemb_init=nn.initializers.normal(stddev=0.02),  # from BERT.
+          name='posembed_input')(inputs)
+    elif self.positional_embedding == 'sinusoidal_1d':
+      x = attention_layers.Add1DPositionEmbedding(
+          posemb_init=None)(inputs)
+    elif self.positional_embedding == 'sinusoidal_3d':
+      batch, num_tokens, hidden_dim = inputs.shape
+      height = width = int(np.sqrt(num_tokens // self.temporal_dims))
+      if height * width * self.temporal_dims != num_tokens:
+        raise ValueError('Input is assumed to be square for sinusoidal init.')
+      inputs_reshape = inputs.reshape([batch, self.temporal_dims, height, width,
+                                       hidden_dim])
+      x = attention_layers.AddFixedSinCosPositionEmbedding()(inputs_reshape)
+      x = x.reshape([batch, num_tokens, hidden_dim])
+    elif self.positional_embedding == 'none':
+      x = inputs
+    else:
+      raise ValueError(
+          f'Unknown positional embedding {self.positional_embedding}')
     x = nn.Dropout(rate=self.dropout_rate)(x, deterministic=not train)
 
     if self.attention_config is None or self.attention_config.type in [
@@ -404,7 +427,11 @@ class Encoder(nn.Module):
     if self.attention_config.type == 'factorized_dot_product_attention':
       # Reshape back to 3D:
       x = jnp.reshape(x, [b, thw, d])
-    encoded = nn.LayerNorm(name='encoder_norm')(x)
+
+    if self.normalise_output:
+      encoded = nn.LayerNorm(name='encoder_norm')(x)
+    else:
+      encoded = x
 
     return encoded
 
