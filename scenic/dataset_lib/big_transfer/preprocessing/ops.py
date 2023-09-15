@@ -159,7 +159,8 @@ def get_pad(pad_size):
 @Registry.register("preprocess_ops.resize", "function")
 @utils.InKeyOutKey()
 @utils.BatchedImagePreprocessing()
-def get_resize(resize_size, method=tf2.image.ResizeMethod.BILINEAR):
+def get_resize(resize_size, method=tf2.image.ResizeMethod.BILINEAR,
+               antialias=False):
   """Resizes image to a given size.
 
   Args:
@@ -167,6 +168,8 @@ def get_resize(resize_size, method=tf2.image.ResizeMethod.BILINEAR):
       of the resized image, or a list or tuple [H, W] of integers, where H and W
       are new image"s height and width respectively.
     method: The type of interpolation to apply when resizing.
+    antialias: Whether to use an anti-aliasing filter when downsampling an
+      image.
 
   Returns:
     A function for resizing an image.
@@ -181,7 +184,10 @@ def get_resize(resize_size, method=tf2.image.ResizeMethod.BILINEAR):
     # In particular it was not equivariant with rotation and lead to the network
     # to learn a shortcut in self-supervised rotation task, if rotation was
     # applied after resize.
-    return tf.cast(tf2.image.resize(image, resize_size, method), image.dtype)
+    dtype = image.dtype
+    image = tf2.image.resize(
+        images=image, size=resize_size, method=method, antialias=antialias)
+    return tf.cast(image, dtype)
 
   return _resize
 
