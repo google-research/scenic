@@ -1,4 +1,5 @@
 """Tests OWL-ViT models."""
+import functools
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax
@@ -32,8 +33,9 @@ class TextZeroShotDetectionModuleTest(parameterized.TestCase):
     model = models.TextZeroShotDetectionModule(
         body_configs,
         normalize=normalize)
-    out, variables = model.init_with_output(
-        jax.random.PRNGKey(0), images, texts, train=False)
+
+    fn = functools.partial(model.init_with_output, train=False)
+    out, variables = jax.eval_shape(fn, jax.random.PRNGKey(0), images, texts)
 
     self.assertCountEqual(variables.keys(), ['params'])
     expected_shapes = {
