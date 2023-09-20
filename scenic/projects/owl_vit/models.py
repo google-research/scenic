@@ -111,6 +111,11 @@ class TextZeroShotDetectionModule(nn.Module):
     self._embedder = layers.ClipImageTextEmbedder(
         self.body_configs, name='backbone')
 
+    if self.objectness_head_configs is not None:
+      self._objectness_head = layers.PredictorMLP(
+          mlp_dim=None, out_dim=1, num_layers=3,
+          out_activation=None, name='objectness_head')
+
     self._class_head = layers.ClassPredictor(
         out_dim=clip_model.CONFIGS[self.body_configs.variant]['embed_dim'],
         normalize=self.normalize, name='class_head')
