@@ -1,5 +1,5 @@
 # pylint: disable=line-too-long
-r"""CLIP zero-shot text conditional detection fine-tuning config.
+r"""OWL v1 CLIP zero-shot text conditional detection fine-tuning config.
 
 This config fine-tunes an existing OWL-ViT checkpoint to a new datasets. The
 main difference to the training config (clip_b32.py) is that

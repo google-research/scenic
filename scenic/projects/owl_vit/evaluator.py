@@ -19,14 +19,14 @@ python evaluator.py \
   --output_dir=/tmp/evaluator
 
 """
-
+# GOOGLE INTERNAL pylint: disable=g-importing-member
 import collections
+import datetime
 import functools
 import json
 import multiprocessing
 import os
 import re
-import runpy
 import tempfile
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 import urllib
@@ -48,6 +48,7 @@ import ml_collections
 import numpy as np
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
+from scenic.projects.owl_vit import configs
 from scenic.projects.owl_vit import models
 from scenic.projects.owl_vit.preprocessing import image_ops
 from scenic.projects.owl_vit.preprocessing import label_ops
@@ -87,8 +88,6 @@ flags.DEFINE_string(
     required=True)
 flags.DEFINE_string(
     'output_dir', None, 'Directory to write predictions to.', required=True)
-flags.DEFINE_bool(
-    'overwrite', False, 'Whether to overwrite existing results.')
 flags.DEFINE_string(
     'tfds_name',
     'lvis',
@@ -133,6 +132,10 @@ ModelInputs = Any
 Predictions = Any
 
 
+def _timestamp() -> str:
+  return datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')
+
+
 def get_dataset(tfds_name: str,
                 split: str,
                 input_size: int,
@@ -152,12 +155,17 @@ def get_dataset(tfds_name: str,
     raise ValueError(f'Unknown data format: {data_format}.')
   pp_fn = preprocess_spec.PreprocessFn([
       decoder,
-      image_ops.ResizeWithPad(input_size, antialias=True),
+      image_ops.ResizeWithPad(input_size, pad_value=0.0),
       image_ops.Keep(
           [modalities.IMAGE, modalities.IMAGE_ID, modalities.ORIGINAL_SIZE])
   ], only_jax_types=True)
-  num_devices = jax.device_count()
-  return ds.map(pp_fn).batch(1).batch(num_devices), class_names
+  ds = (
+      ds.map(pp_fn, num_parallel_calls=tf.data.AUTOTUNE)
+      .batch(1)
+      .batch(jax.device_count())
+      .prefetch(tf.data.AUTOTUNE)
+  )
+  return ds, class_names
 
 
 def tokenize_queries(tokenize: Callable[[str, int], List[int]],
@@ -649,6 +657,7 @@ def save_examples_images(*, ground_truth_path, pred_path, tfds_name, split,
 def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError('Too many command-line arguments.')
+  logging.info('Starting evaluation.')
 
   # Make CPU cores visible as JAX devices:
   jax.config.update('jax_platform_name', FLAGS.platform)
@@ -666,17 +675,6 @@ def main(argv: Sequence[str]) -> None:
   compilation_cache.initialize_cache('/tmp/jax_compilation_cache')
 
   config_name = os.path.splitext(os.path.basename(FLAGS.config))[0]
-  output_dir = os.path.join(FLAGS.output_dir, config_name, FLAGS.tfds_name)
-  tf.io.gfile.makedirs(output_dir)
-  existing = tf.io.gfile.glob(os.path.join(output_dir, f'*_{FLAGS.split}.json'))
-  if existing:
-    if FLAGS.overwrite:
-      for path in existing:
-        tf.io.gfile.remove(path)
-    else:
-      print(
-          f'Found existing results and --overwrite=false, exiting: {existing}')
-      return
 
   if tf.io.gfile.exists(FLAGS.annotations_path):
     annotations_path = FLAGS.annotations_path
@@ -684,13 +682,17 @@ def main(argv: Sequence[str]) -> None:
     annotations_path = _download_annotations(FLAGS.annotations_path)
 
   predictions = get_predictions(
-      config=runpy.run_path(FLAGS.config)['get_config'](),
+      config=getattr(configs, FLAGS.config).get_config(),
       checkpoint_path=FLAGS.checkpoint_path,
       tfds_name=FLAGS.tfds_name,
       split=FLAGS.split,
       label_shift=FLAGS.label_shift)
 
-  logging.info('Writing predictions...')
+  output_dir = os.path.join(
+      FLAGS.output_dir, config_name, FLAGS.tfds_name, _timestamp()
+  )
+  logging.info('Writing predictions to %s', output_dir)
+  tf.io.gfile.makedirs(output_dir)
   predictions_path = write_predictions(predictions, output_dir, FLAGS.split)
 
   logging.info('Running evaluation...')

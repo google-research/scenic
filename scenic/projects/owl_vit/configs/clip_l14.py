@@ -1,5 +1,5 @@
 # pylint: disable=line-too-long
-r"""CLIP zero-shot text conditional detection training config.
+r"""OWL v1 CLIP zero-shot text conditional detection training config.
 
 Run training:
 python -m scenic.projects.owl_vit.main \

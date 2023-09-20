@@ -4,12 +4,14 @@ OWL-ViT: Open-World Object Detection with Vision Transformers
 
 <img src="data/owl_vit_schematic.png" alt="OWL-ViT model schematic" width="600"/>
 
-OWL-ViT is an **open-vocabulary object detector**. Given an image and a free-text query, it finds objects matching that query in the image. It can also do **one-shot object detection**, i.e. detect objects based on a single example image. OWL-ViT reaches state-of-the-art performance on both tasks, e.g. **31% zero-shot LVIS APr** with a ViT-L/14 backbone.
+OWL-ViT is an **open-vocabulary object detector**. Given an image and a free-text query, it finds objects matching that query in the image. It can also do **one-shot object detection**, i.e. detect objects based on a single example image. OWL-ViT reaches state-of-the-art performance on both tasks, e.g. **44.6% zero-shot LVIS APr** with a OWLv2 ViT-L/14 backbone.
 
-[[Paper]](https://arxiv.org/abs/2205.06230)
+[[OWL-ViT v1 Paper]](https://arxiv.org/abs/2205.06230)
+[[OWL-ViT v2 Paper]](https://arxiv.org/abs/2306.09683)
 [[Minimal Colab]](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb)
 [[Playground Colab]](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_inference_playground.ipynb)
 
+**Update (2023-09-22):** Added code and checkpoints for OWL-ViT v2.
 **Update (2023-03-21):** Added a new checkpoint with a segmentation mask head. See the [Minimal Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb) for a usage example.
 <br>
 **Update (2022-10-14):** Added [training](#training) and [evaluation](#evaluation) code.
@@ -27,6 +29,7 @@ To get started, check out the [minimal example Colab notebook](https://colab.res
 
 Table of contents:
 
+* [Model versions](#model-versions)
 * [Pretrained checkpoints](#pretrained-checkpoints)
 * [Colabs](#colabs)
   * [Minimal example](#minimal-example)
@@ -37,15 +40,65 @@ Table of contents:
 * [Evaluation](#evaluation)
 * [Reference](#reference)
 
+## Model versions
+
+### OWL-ViT v1
+The original OWL-ViT model was introduced in May 2022 and is described in [Simple Open-Vocabulary Object Detection with Vision Transformers](https://arxiv.org/abs/2205.06230).
+
+### OWL-ViT v2
+In June 2023, we introduced an improved architecture and training recipe that uses self-training on Web image-text data as described in [Scaling Open-Vocabulary Object Detection](https://arxiv.org/abs/2306.09683). **OWL-ViT v2 checkpoints are drop-in replacements for v1.** The core inference architecture of v2 is identical to v1, except that v2 adds an **objectness prediction head** which predicts the (query-agnostic) likelihood that a predicted box contains an object (as opposed to background). The objectness score can be used to rank or filter predictions independently of text queries.
+
+OWL-ViT v2 performs significantly better than OWL-ViT v1:
+
+<img src="data/scaling_owl_figure_1.png" alt="OWLv2 comparison plot" style="max-height:300px;height:100%"/>
+
+
 ## Pretrained checkpoints
 
 OWL-ViT models and their pre-trained checkpoints are specified in [configuration files](https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs). Checkpoint files are compatible with [Flax](https://github.com/google/flax). We provide the following variants, both as JAX/Flax checkpoints and as `tf.SavedModel`s:
 
-| Backbone | Pre-training | LVIS AP | LVIS APr | Config | Size | JAX Checkpoint | tf.SavedModel |
-|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| ViT-B/32 | CLIP         | 19.3    | 16.9     | [clip_b32](https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/clip_b32.py) | 583 MiB | [download](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b32_b0203fc) | [gs](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b32_b0203fc_tf_model) |
-| ViT-B/16 | CLIP         | 20.8    | 17.1     | [clip_b16](https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/clip_b16.py) | 581 MiB | [download](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b16_6171dab) | [gs](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b16_6171dab_tf_model) |
-| ViT-L/14 | CLIP         | 34.6    | 31.2     | [clip_l14](https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/clip_l14.py) | 1652 MiB | [download](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_l14_d83d374) | [gs](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_l14_d83d374_tf_model) |
+<!--- Reference links for configs --->
+[v1_b32_config]: https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/clip_b32.py
+[v1_b16_config]: https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/clip_b16.py
+[v1_l14_config]: https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/clip_l14.py
+[v2_b16_config]: https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/owl_v2_clip_b16.py
+[v2_l14_config]: https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/owl_v2_clip_l14.py
+
+<!--- Reference links for Jax checkpoints --->
+[v1_b32_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b32_b0203fc
+[v1_b16_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b16_6171dab
+[v1_l14_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_l14_d83d374
+[v2_b16_st_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-b16-960-st-ngrams_c7e1b9a
+[v2_b16_st_ft_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-b16-960-st-ngrams-ft-lvisbase_d368398
+[v2_b16_ens_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-b16-960-st-ngrams-curated-ft-lvisbase-ens-cold-weight-05_209b65b
+[v2_l14_st_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-l14-1008-st-ngrams_0881fd6
+[v2_l14_st_ft_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-l14-1008-st-ngrams-ft-lvisbase_8ca674c
+[v2_l14_ens_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-l14-1008-st-ngrams-ft-lvisbase-ens-cold-weight-04_8ca674c
+
+<!--- Reference links for tf.SavedModels --->
+[v1_b32_tf]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b32_b0203fc_tf_model
+[v1_b16_tf]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b16_6171dab_tf_model
+[v1_l14_tf]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_l14_d83d374_tf_model
+[v2_b16_st_tf]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-b16-960-st-ngrams_tf_model
+[v2_b16_st_ft_tf]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-b16-960-st-ngrams-ft-lvisbase_tf_model
+[v2_b16_ens_tf]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-b16-960-st-ngrams-curated-ft-lvisbase-ens-cold-weight-05_tf_model
+[v2_l14_st_tf]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-l14-1008-st-ngrams_tf_model
+[v2_l14_st_ft_tf]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-l14-1008-st-ngrams-ft-lvisbase_tf_model
+[v2_l14_ens_tf]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-l14-1008-st-ngrams-ft-lvisbase-ens-cold-weight-04_tf_model
+
+| Model | LVIS AP | LVIS APr | Config | Size | JAX Checkpoint | tf.SavedModel |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|
+| OWLv1 CLIP ViT-B/32        | 19.3    | 16.9     | [clip_b32][v1_b32_config]        |  583 MiB | [download][v1_b32_jax]       | [downolad][v1_b32_tf]       |
+| OWLv1 CLIP ViT-B/16        | 20.8    | 17.1     | [clip_b16][v1_b16_config]        |  581 MiB | [download][v1_b16_jax]       | [downolad][v1_b16_tf]       |
+| OWLv1 CLIP ViT-L/14        | 34.6    | 31.2     | [clip_l14][v1_l14_config]        | 1652 MiB | [download][v1_l14_jax]       | [downolad][v1_l14_tf]       |
+| OWLv2 CLIP B/16 ST         | 26.5    | 29.5     | [owl_v2_clip_b16][v2_b16_config] |  590 MiB | [download][v2_b16_st_jax]    | [download][v2_b16_st_tf]    |
+| OWLv2 CLIP B/16 ST+FT      | 41.4    | 36.2     | [owl_v2_clip_b16][v2_b16_config] |  590 MiB | [download][v2_b16_st_ft_jax] | [download][v2_b16_st_ft_tf] |
+| OWLv2 CLIP B/16 ST/FT ens  | 43.9    | 40.5     | [owl_v2_clip_b16][v2_b16_config] |  590 MiB | [download][v2_b16_ens_jax]   | [download][v2_b16_ens_tf]   |
+| OWLv2 CLIP L/14 ST         | 32.8    | 34.6     | [owl_v2_clip_l14][v2_l14_config] | 1666 MiB | [download][v2_l14_st_jax]    | [download][v2_l14_st_tf]    |
+| OWLv2 CLIP L/14 ST+FT      | 48.8    | 44.0     | [owl_v2_clip_l14][v2_l14_config] | 1666 MiB | [download][v2_l14_st_ft_jax] | [download][v2_l14_st_ft_tf] |
+| OWLv2 CLIP L/14 ST/FT ens  | 44.6    | 42.6     | [owl_v2_clip_l14][v2_l14_config] | 1666 MiB | [download][v2_l14_ens_jax]   | [download][v2_l14_ens_tf]   |
+
+The LVIS metrics were obtained with the [evaluator script](https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/evaluator.py) and may differ slightly from the paper values.
 
 ## Colabs
 
@@ -128,15 +181,28 @@ python -m scenic.projects.owl_vit.evaluator \
   --output_dir=/tmp/evaluator
 ```
 
+## License
+Both the code and the model checkpoints are licensed under the [Apache 2.0 license](https://github.com/google-research/scenic/blob/main/LICENSE).
+
 ## Reference
+If you use OWL-ViT, please cite the papers as appropriate:
 
-If you use OWL-ViT, please cite the [paper](https://arxiv.org/abs/2205.06230):
-
+### OWL-ViT v1
 ```
 @article{minderer2022simple,
   title={Simple Open-Vocabulary Object Detection with Vision Transformers},
   author={Matthias Minderer, Alexey Gritsenko, Austin Stone, Maxim Neumann, Dirk Weissenborn, Alexey Dosovitskiy, Aravindh Mahendran, Anurag Arnab, Mostafa Dehghani, Zhuoran Shen, Xiao Wang, Xiaohua Zhai, Thomas Kipf, Neil Houlsby},
   journal={ECCV},
   year={2022},
+}
+```
+
+### OWL-ViT v2
+```
+@article{minderer2023scaling,
+  title={Scaling Open-Vocabulary Object Detection},
+  author={Matthias Minderer, Alexey Gritsenko, Neil Houlsby},
+  journal={arXiv},
+  year={2023},
 }
 ```

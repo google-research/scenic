@@ -200,7 +200,7 @@ class Model:
     b, _, _, c = feature_map.shape
     features = jnp.reshape(feature_map, (b, -1, c))
     pred_boxes = self.module.apply(
-        self.variables, features, feature_map,
+        self.variables, image_features=features, feature_map=feature_map,
         method=self.module.box_predictor)['pred_boxes']
     class_embeddings = self.module.apply(
         self.variables,

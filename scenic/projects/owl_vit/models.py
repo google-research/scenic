@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Mapping, Optional
 
 import flax.linen as nn
 from flax.training import checkpoints
+import jax
 import jax.numpy as jnp
 import ml_collections
 from scenic.projects.owl_vit import layers
@@ -78,6 +79,7 @@ class TextZeroShotDetectionModule(nn.Module):
 
   Attributes:
     body_configs: Configurations of the image-text module.
+    objectness_head_configs: Configurations for the (optional) objectness head.
     mask_head_configs: Configurations for the (optional) mask head.
     normalize: Whether to normalize the output of the model and the
       label_embeddings before computing the class logits.
@@ -85,6 +87,7 @@ class TextZeroShotDetectionModule(nn.Module):
   """
 
   body_configs: ml_collections.ConfigDict
+  objectness_head_configs: Optional[ml_collections.ConfigDict] = None
   mask_head_configs: Optional[ml_collections.ConfigDict] = None
   normalize: bool = False
   box_bias: str = 'both'
@@ -121,15 +124,44 @@ class TextZeroShotDetectionModule(nn.Module):
           **self.mask_head_configs,  # pylint: disable=not-a-mapping
           name='obj_mask_head')
 
-  def box_predictor(self, image_features: jnp.ndarray,
-                    feature_map: jnp.ndarray) -> Dict[str, jnp.ndarray]:
+  def objectness_predictor(
+      self, image_features: jnp.ndarray, train: bool = False
+  ) -> Dict[str, jnp.ndarray]:
+    """Predicts the probability that each image feature token is an object.
+
+    Args:
+      image_features: Features extracted from the image.
+      train: Whether or not we are in training mode.
+
+    Returns:
+      Objectness scores, in a dictionary.
+    """
+    del train
+    if self.objectness_head_configs is None:
+      raise ValueError('Must pass objectness_configs to use objectness head.')
+    if self.objectness_head_configs.stop_gradient:
+      image_features = jax.lax.stop_gradient(image_features)
+    objectness_logits = self._objectness_head(image_features)
+    return {'objectness_logits': objectness_logits[..., 0]}
+
+  def box_predictor(
+      self,
+      *,
+      image_features: jnp.ndarray,
+      feature_map: jnp.ndarray,
+      keep_image_tokens: Optional[jnp.ndarray] = None,
+  ) -> Dict[str, jnp.ndarray]:
     """Predicts bounding boxes from image features.
 
     Args:
-      image_features: Feature tokens extracted from the image, returned by the
-        `embedder` function.
-      feature_map: A spatial re-arrangement of image_features, also returned by
-        the `embedder` function.
+      image_features: Features extracted from the image, flattened into a 1d
+        sequence of tokens.
+      feature_map: A 2d spatial re-arrangement of image_features.
+      keep_image_tokens: If keep_image_tokens is not None, this indicates that
+        image_features is a subset of tokens of the full grid. keep_image_tokens
+        then contains the 1d indices of the kept tokens within the full token
+        sequence. In that case, feature_map will contain dummy values at the
+        dropped locations.
 
     Returns:
       List of predicted boxes (cxcywh normalized to 0, 1) nested within
@@ -137,10 +169,20 @@ class TextZeroShotDetectionModule(nn.Module):
     """
     # Bounding box detection head [b, num_patches, 4].
     pred_boxes = self._box_head(image_features)
+
     # We compute the location of each token on the grid and use it to compute
     # a bias for the bbox prediction, i.e., each token is biased towards
     # predicting its location on the grid as the center.
-    pred_boxes += utils.compute_box_bias(feature_map, kind=self.box_bias)
+    box_bias = utils.compute_box_bias(
+        feature_map=feature_map, kind=self.box_bias
+    )
+
+    if keep_image_tokens is not None:
+      box_bias = jnp.take_along_axis(
+          box_bias[None, ...], keep_image_tokens[..., None], axis=-2
+      )
+
+    pred_boxes += box_bias
     pred_boxes = nn.sigmoid(pred_boxes)
     return {'pred_boxes': pred_boxes}
 
@@ -251,6 +293,8 @@ class TextZeroShotDetectionModule(nn.Module):
     if not train and true_boxes is not None:
       raise ValueError('True boxes should only be supplied during training.')
 
+    keep_tokens = None
+
     # Embed images:
     feature_map = self.image_embedder(inputs, train)
     b, h, w, d = feature_map.shape
@@ -266,12 +310,35 @@ class TextZeroShotDetectionModule(nn.Module):
         'query_embeddings': query_embeddings,
     }
 
+    # Get objectness scores:
+    if self.objectness_head_configs is not None:
+      outputs.update(self.objectness_predictor(image_features))
+
+    # During training, sample top tokens by objectness:
+    num_instances = image_features.shape[-2]
+    top_k = self.body_configs.get('objectness_top_k', num_instances)
+    if train and (0 < top_k < num_instances):
+      if 'objectness_logits' not in outputs:
+        raise ValueError('Need objectness head to sample by objectness.')
+      outputs['objectness_logits'], keep_tokens = jax.lax.top_k(
+          outputs['objectness_logits'], k=self.body_configs.objectness_top_k
+      )
+      image_features = jnp.take_along_axis(
+          image_features, keep_tokens[..., None], axis=-2
+      )
+
     # Classification [b, num_patches, num_queries]:
     outputs.update(
         self.class_predictor(image_features, query_embeddings, query_mask))
 
     # Predict boxes:
-    outputs.update(self.box_predictor(image_features, feature_map))
+    outputs.update(
+        self.box_predictor(
+            image_features=image_features,
+            feature_map=feature_map,
+            keep_image_tokens=keep_tokens,
+        )
+    )
 
     # Predict masks:
     if self.mask_head_configs is not None:
