@@ -12,6 +12,7 @@ OWL-ViT is an **open-vocabulary object detector**. Given an image and a free-tex
 [[Playground Colab]](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_inference_playground.ipynb)
 
 **Update (2023-09-22):** Added code and checkpoints for OWL-ViT v2.
+<br>
 **Update (2023-03-21):** Added a new checkpoint with a segmentation mask head. See the [Minimal Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb) for a usage example.
 <br>
 **Update (2022-10-14):** Added [training](#training) and [evaluation](#evaluation) code.
@@ -50,7 +51,7 @@ In June 2023, we introduced an improved architecture and training recipe that us
 
 OWL-ViT v2 performs significantly better than OWL-ViT v1:
 
-<img src="data/scaling_owl_figure_1.png" alt="OWLv2 comparison plot" style="max-height:300px;height:100%"/>
+<img src="data/scaling_owl_figure_1.png" alt="OWLv2 comparison plot" height="300"/>
 
 
 ## Pretrained checkpoints
