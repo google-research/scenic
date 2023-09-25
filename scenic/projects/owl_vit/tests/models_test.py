@@ -43,6 +43,7 @@ class TextZeroShotDetectionModuleTest(parameterized.TestCase):
         'pred_boxes': (batch_size, side_patches**2, 4),
         'pred_logits': (batch_size, side_patches**2, num_queries),
         'class_embeddings': (batch_size, side_patches**2, 512),
+        'class_embeddings_augmented': (batch_size, side_patches**2, 513),
         'query_embeddings': (batch_size, num_queries, 512)
     }
     self.assertEqual(expected_shapes, jax.tree_util.tree_map(jnp.shape, out))

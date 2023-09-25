@@ -208,33 +208,57 @@ class ClassPredictor(nn.Module):
 
     image_class_emb = nn.Dense(
         out_dim, kernel_init=nn.initializers.normal(1e-6))(x)
-    if query_embeddings is None:
-      return {'class_embeddings': image_class_emb}
-    assert out_dim == query_embeddings.shape[-1]
 
     if self.normalize:
       image_class_emb /= jnp.linalg.norm(
           image_class_emb, axis=-1, keepdims=True) + 1e-6
+
+    # Get a learnable shift and scale for the logits:
+    logit_shift = nn.Dense(1, name='logit_shift')(x)
+    logit_scale = nn.Dense(1, name='logit_scale')(x)
+    logit_scale = nn.elu(logit_scale) + 1
+
+    # Compute augmented image_class_emb that have the logit shift and scale
+    # built in so that scoring can be done with a simple dot product instead of
+    # requiring the ClassPredictor. To do dot-product scoring, first augment the
+    # query embeddings by (optionally) normalizing and appending a 1.0 at the
+    # end of the embedding dimension, as in the code below. Then:
+    #   pred_logits = jnp.einsum(
+    #       '...pd,...qd->...pq', image_class_emb_aug, query_embeddings_aug).
+    image_class_emb_aug = (
+        jnp.concatenate([image_class_emb, logit_shift], axis=-1) * logit_scale
+    )
+
+    if query_embeddings is None:
+      return {
+          'class_embeddings': image_class_emb,
+          'class_embeddings_augmented': image_class_emb_aug,
+      }
+    assert out_dim == query_embeddings.shape[-1]
+    assert query_embeddings.ndim > 2, ('Expects shape (batch, query, out_dim). '
+                                       f'Got {query_embeddings.shape}')
+
+    if self.normalize:
       query_embeddings /= jnp.linalg.norm(
           query_embeddings, axis=-1, keepdims=True) + 1e-6
 
-    assert query_embeddings.ndim > 2, ('Expects shape (batch, query, out_dim). '
-                                       f'Got {query_embeddings.shape}')
-    pred_logits = jnp.einsum(
-        '...pd,...qd->...pq', image_class_emb, query_embeddings)
+    query_embeddings_aug = jnp.concatenate(
+        [query_embeddings, jnp.ones_like(query_embeddings[..., :1])], axis=-1
+    )
 
-    # Apply a learnable shift and scale to logits:
-    logit_shift = nn.Dense(1, name='logit_shift')(x)
-    logit_scale = nn.Dense(1, use_bias=True, name='logit_scale')(x)
-    logit_scale = nn.elu(logit_scale) + 1
-    pred_logits = (pred_logits + logit_shift) * logit_scale
+    pred_logits = jnp.einsum(
+        '...pd,...qd->...pq', image_class_emb_aug, query_embeddings_aug)
 
     if query_mask is not None:
       if query_mask.ndim > 1:
         query_mask = jnp.expand_dims(query_mask, axis=-2)
       pred_logits = jnp.where(query_mask == 0, -1e6, pred_logits)
 
-    return {'pred_logits': pred_logits, 'class_embeddings': image_class_emb}
+    return {
+        'pred_logits': pred_logits,
+        'class_embeddings': image_class_emb,
+        'class_embeddings_augmented': image_class_emb_aug,
+    }
 
 
 class ImageTextEmbedderBase(nn.Module, metaclass=abc.ABCMeta):

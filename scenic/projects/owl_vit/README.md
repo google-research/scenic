@@ -11,6 +11,8 @@ OWL-ViT is an **open-vocabulary object detector**. Given an image and a free-tex
 [[Minimal Colab]](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb)
 [[Playground Colab]](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_inference_playground.ipynb)
 
+**Update (2023-09-25):** Added image-conditioned detection example to the [Minimal Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb)
+<br>
 **Update (2023-09-22):** Added code and checkpoints for OWL-ViT v2.
 <br>
 **Update (2023-03-21):** Added a new checkpoint with a segmentation mask head. See the [Minimal Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb) for a usage example.
@@ -203,7 +205,7 @@ If you use OWL-ViT, please cite the papers as appropriate:
 @article{minderer2023scaling,
   title={Scaling Open-Vocabulary Object Detection},
   author={Matthias Minderer, Alexey Gritsenko, Neil Houlsby},
-  journal={arXiv},
+  journal={NeurIPS},
   year={2023},
 }
 ```

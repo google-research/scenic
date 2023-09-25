@@ -271,6 +271,31 @@ class TextZeroShotDetectionModule(nn.Module):
     _, text_features = self._embedder(texts=text_queries, train=train)
     return text_features  # pytype: disable=bad-return-type  # jax-ndarray
 
+  def augment_text_embeddings(
+      self, text_embeddings: jnp.ndarray
+  ) -> jnp.ndarray:
+    """Augments embeddings with a 1 at the end, for dot-product scoring.
+
+    The output of this method can be scored against class_embeddings_augmented
+    as follows, without having to call layers.ClassPredictor:
+
+      pred_logits = jnp.einsum(
+          '...pd,...qd->...pq', class_embeddings_augmented,
+          text_embeddings_augmented).
+
+    Args:
+      text_embeddings: Embeddings returned by text_embedder.
+
+    Returns:
+      Augmented text_embeddings that may be normalized and have an additional
+      1.0 at the end of each embedding vector.
+    """
+    if self.normalize:
+      norm = jnp.linalg.norm(text_embeddings, axis=-1, keepdims=True)
+      text_embeddings = text_embeddings / (norm + 1e-6)
+    ones = jnp.ones_like(text_embeddings[..., :1])
+    return jnp.concatenate([text_embeddings, ones], axis=-1)
+
   def __call__(self,
                inputs: jnp.ndarray,
                text_queries: jnp.ndarray,
