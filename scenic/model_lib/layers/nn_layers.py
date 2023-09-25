@@ -195,7 +195,7 @@ class IdentityLayer(nn.Module):
 def get_constant_initializer(constant: float) -> Initializer:
   """Returns an initializer that initializes everything to a given constant."""
 
-  def init_fn(unused_key: jnp.ndarray,
+  def init_fn(unused_key: jnp.ndarray,  # pytype: disable=annotation-type-mismatch  # jnp-type
               shape: Iterable[int],
               dtype: jnp.dtype = np.float32) -> np.ndarray:
     return constant * np.ones(shape, dtype=dtype)

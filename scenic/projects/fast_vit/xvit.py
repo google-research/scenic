@@ -314,7 +314,7 @@ class EncoderAxial(nn.Module):
         raise ValueError('Undefined transformer encoder type: '
                          f'{self.transformer_encoder_type}.')
 
-    return nn.LayerNorm(x, name='encoder_norm')  # pytype: disable=bad-return-type  # jax-ndarray
+    return nn.LayerNorm(x, name='encoder_norm')  # type: ignore  # jnp-type
 
 
 class XViT(nn.Module):

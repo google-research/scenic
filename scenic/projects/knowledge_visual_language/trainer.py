@@ -304,7 +304,7 @@ def eval_step(
   )
   logs = {'eval/retr_loss': retr_loss, 'eval/retr_acc': retr_acc}
 
-  return metrics, logs
+  return metrics, logs  # pytype: disable=bad-return-type  # jnp-type
 
 
 def train_and_eval(

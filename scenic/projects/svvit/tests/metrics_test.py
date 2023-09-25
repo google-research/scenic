@@ -16,19 +16,19 @@ class MetricsTest(parameterized.TestCase):
     super().setUp()
 
   def test_truvari_presicion(self):
-    m = metrics.truvari_precision(self.logits, self.one_hot_targets)
+    m = metrics.truvari_precision(self.logits, self.one_hot_targets)  # pytype: disable=wrong-arg-types  # jnp-type
     self.assertAlmostEqual(m['truvari_precision'], 0.5, places=5)
 
   def test_truvari_recall(self):
-    m = metrics.truvari_recall(self.logits, self.one_hot_targets)
+    m = metrics.truvari_recall(self.logits, self.one_hot_targets)  # pytype: disable=wrong-arg-types  # jnp-type
     self.assertAlmostEqual(m['truvari_recall'], 1.0 / 3.0, places=5)
 
   def test_truvari_presicion_events(self):
-    m = metrics.truvari_precision_events(self.logits, self.one_hot_targets)
+    m = metrics.truvari_precision_events(self.logits, self.one_hot_targets)  # pytype: disable=wrong-arg-types  # jnp-type
     self.assertAlmostEqual(m['truvari_precision_events'], 1.0, places=5)
 
   def test_truvari_recall_events(self):
-    m = metrics.truvari_recall_events(self.logits, self.one_hot_targets)
+    m = metrics.truvari_recall_events(self.logits, self.one_hot_targets)  # pytype: disable=wrong-arg-types  # jnp-type
     self.assertAlmostEqual(m['truvari_recall_events'], 2.0 / 3.0, places=5)
 
 

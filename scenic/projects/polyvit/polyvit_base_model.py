@@ -390,7 +390,7 @@ class PolyVitBaseModel(base_model.BaseModel):
     else:
       l2_loss = model_utils.l2_regularization(model_params)
       total_loss = loss + 0.5 * self.config.l2_decay_factor * l2_loss
-    return total_loss
+    return total_loss  # pytype: disable=bad-return-type  # jnp-type
 
   def build_flax_model(self):
     raise NotImplementedError('Subclasses must implement build_flax_model().')
