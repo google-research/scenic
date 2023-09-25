@@ -64,6 +64,7 @@ OWL-ViT models and their pre-trained checkpoints are specified in [configuration
 [v1_b32_config]: https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/clip_b32.py
 [v1_b16_config]: https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/clip_b16.py
 [v1_l14_config]: https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/clip_l14.py
+[v1_l14m_config]: https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/clip_l14_with_masks.py
 [v2_b16_config]: https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/owl_v2_clip_b16.py
 [v2_l14_config]: https://github.com/google-research/scenic/blob/main/scenic/projects/owl_vit/configs/owl_v2_clip_l14.py
 
@@ -71,6 +72,7 @@ OWL-ViT models and their pre-trained checkpoints are specified in [configuration
 [v1_b32_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b32_b0203fc
 [v1_b16_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_b16_6171dab
 [v1_l14_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_l14_d83d374
+[v1_l14m_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/clip_vit_l14_with_masks_6c17944
 [v2_b16_st_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-b16-960-st-ngrams_c7e1b9a
 [v2_b16_st_ft_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-b16-960-st-ngrams-ft-lvisbase_d368398
 [v2_b16_ens_jax]: https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-b16-960-st-ngrams-curated-ft-lvisbase-ens-cold-weight-05_209b65b
@@ -94,6 +96,7 @@ OWL-ViT models and their pre-trained checkpoints are specified in [configuration
 | OWLv1 CLIP ViT-B/32        | 19.3    | 16.9     | [clip_b32][v1_b32_config]        |  583 MiB | [download][v1_b32_jax]       | [downolad][v1_b32_tf]       |
 | OWLv1 CLIP ViT-B/16        | 20.8    | 17.1     | [clip_b16][v1_b16_config]        |  581 MiB | [download][v1_b16_jax]       | [downolad][v1_b16_tf]       |
 | OWLv1 CLIP ViT-L/14        | 34.6    | 31.2     | [clip_l14][v1_l14_config]        | 1652 MiB | [download][v1_l14_jax]       | [downolad][v1_l14_tf]       |
+| OWLv1 CLIP ViT-L/14 (+masks) | 34.6  | 31.2     | [clip_l14_with_masks][v1_l14m_config] | 1844 MiB | [download][v1_l14m_jax] |                             |
 | OWLv2 CLIP B/16 ST         | 26.5    | 29.5     | [owl_v2_clip_b16][v2_b16_config] |  590 MiB | [download][v2_b16_st_jax]    | [download][v2_b16_st_tf]    |
 | OWLv2 CLIP B/16 ST+FT      | 41.4    | 36.2     | [owl_v2_clip_b16][v2_b16_config] |  590 MiB | [download][v2_b16_st_ft_jax] | [download][v2_b16_st_ft_tf] |
 | OWLv2 CLIP B/16 ST/FT ens  | 43.9    | 40.5     | [owl_v2_clip_b16][v2_b16_config] |  590 MiB | [download][v2_b16_ens_jax]   | [download][v2_b16_ens_tf]   |
