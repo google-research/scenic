@@ -141,11 +141,11 @@ def _fewshot_acc_fn(x: jnp.ndarray,
     top1_idx = jnp.argmax(preds, axis=-1)
     top1_correct = jnp.take_along_axis(y_test, top1_idx[..., None], axis=-1)
     top1_correct = jnp.squeeze(top1_correct)
-    return jnp.mean(top1_correct)
+    return jnp.mean(top1_correct)  # pytype: disable=bad-return-type  # jnp-type
   else:
     # Predict test-set values and measure their accuracy.
     preds = jnp.argmax(x_test_whitened @ w, axis=1)
-    return jnp.mean(preds == y_test)
+    return jnp.mean(preds == y_test)  # pytype: disable=bad-return-type  # jnp-type
 
 
 class FewShotEvaluator:

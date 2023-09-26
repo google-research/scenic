@@ -44,7 +44,7 @@ def get_random_bounding_box(
   y_max = jnp.clip(cy + cut_h // 2, 0, img_h)[0]
   x_min = jnp.clip(cx - cut_w // 2, 0, img_w)[0]
   x_max = jnp.clip(cx + cut_w // 2, 0, img_w)[0]
-  return y_min, y_max, x_min, x_max
+  return y_min, y_max, x_min, x_max  # pytype: disable=bad-return-type  # jnp-type
 
 
 def _do_mixup(inputs: jnp.ndarray, rng: Any,
@@ -189,4 +189,4 @@ def compute_max_norm(tensors: PyTree) -> float:
   leaves, _ = jax.tree_util.tree_flatten(tensors)
   norms = jnp.sqrt(sum(jnp.vdot(x, x) for x in leaves))
   max_norm = jnp.max(norms)
-  return max_norm
+  return max_norm  # pytype: disable=bad-return-type  # jnp-type

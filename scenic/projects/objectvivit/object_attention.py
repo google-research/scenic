@@ -112,7 +112,7 @@ class ObjectBlock(nn.Module):
 
     # MLP block.
     y = nn.LayerNorm(dtype=self.dtype)(x)
-    y = attention_layers.MlpBlock(
+    y = attention_layers.MlpBlock(  # pytype: disable=wrong-arg-types  # jnp-type
         mlp_dim=self.mlp_dim,
         dtype=self.dtype,
         dropout_rate=self.dropout_rate,
