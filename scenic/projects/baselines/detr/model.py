@@ -383,7 +383,7 @@ class EncoderBlock(nn.Module):
         use_bias=True,
         dtype=self.dtype)
 
-    mlp = MlpBlock(
+    mlp = MlpBlock(  # pytype: disable=wrong-arg-types  # jnp-type
         mlp_dim=self.mlp_dim,
         activation_fn=nn.relu,
         dtype=self.dtype,
@@ -495,7 +495,7 @@ class DecoderBlock(nn.Module):
         use_bias=True,
         dtype=self.dtype)
 
-    mlp = MlpBlock(
+    mlp = MlpBlock(  # pytype: disable=wrong-arg-types  # jnp-type
         mlp_dim=self.mlp_dim,
         activation_fn=nn.relu,
         dtype=self.dtype,
