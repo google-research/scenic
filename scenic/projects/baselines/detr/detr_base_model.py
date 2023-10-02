@@ -336,7 +336,7 @@ class BaseModelWithMatching(base_model.BaseModel):  # pytype: disable=ignored-ab
         if batch_weights is not None:
           batch_num_inputs = batch_weights.sum()
         else:
-          batch_num_inputs = tgt_labels_onehot.shape[0]
+          batch_num_inputs = jnp.asarray(tgt_labels_onehot.shape[0])
         max_logits = jnp.max(orig_src_logits, axis=-2)
         tgt_labels_multihot = jnp.max(orig_tgt_labels_onehot, axis=-2)
         prec_at_one = model_utils.weighted_top_one_correctly_classified(
