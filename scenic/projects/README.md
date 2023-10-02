@@ -23,6 +23,13 @@
     > trained end-to-end from spectrograms and full-frame RGB for the task of
     > audiovisual speech recognition (AV-ASR).
 
+*   [Audiovisual Masked Autoencoders](av-mae)
+
+    > Audiovisual Masked Autoencoders performs self-supervised learning on
+    > multiple modalities (audio and video) to improve representation learning
+    > for both unimodal and multimodal downstream tasks. Details can be found
+    > in the [paper](https://arxiv.org/abs/2212.05922).
+
 *   [ViViT](vivit)
 
     > ViViT is a family of pure-transformer based models for video
