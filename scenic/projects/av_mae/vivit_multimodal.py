@@ -455,7 +455,7 @@ class ViViTMultiMaskedAutoencoder(nn.Module):
   def shuffle_tokens_and_token_mask(self,
                                     x_tokens_dict: ArrayDict,
                                     token_mask_dict: ArrayDict,
-                                    rng: jax.random.KeyArray,
+                                    rng: jax.Array,
                                     ) -> Tuple[ArrayDict, ArrayDict]:
     """Shuffle the tokens and the token masks."""
     # For the inpainting strategy, we add the unmasked token (from a different

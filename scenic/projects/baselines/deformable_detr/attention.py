@@ -15,7 +15,6 @@ import flax.linen as nn
 import jax
 from jax.core import Shape
 import jax.numpy as jnp
-from jax.random import KeyArray
 import ml_collections
 import numpy as np
 
@@ -201,7 +200,7 @@ class MultiScaleDeformableAttention(nn.Module):
     # (1, 1, 1, nlevels, 1, 2)
     self.offset_norm = self.offset_norm[None, None, None, :, None, :]
 
-  def pos_grid_init(self, key: KeyArray, shape: Shape,
+  def pos_grid_init(self, key: jax.Array, shape: Shape,
                     dtype: jnp.dtype) -> Array:
     """Initializes deformable attention sampling offsets."""
     del key, shape

@@ -15,7 +15,7 @@ Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 def shuffle_and_partition(n_batch: int,
                           n_tokens: int,
                           n_masked: int,
-                          rng: jax.random.KeyArray):
+                          rng: jax.Array):
   """Implements random shuffling and partitioning necessary for MAE.
 
   Args:
@@ -47,7 +47,7 @@ def shuffle_and_partition(n_batch: int,
 def get_mask_indices(n_batch: int,
                      n_tokens: int,
                      n_masked: int,
-                     rng: jax.random.KeyArray):
+                     rng: jax.Array):
   """Returns indices to use for masking in MAE.
 
   Args:
@@ -74,7 +74,7 @@ def get_tube_mask_indices(n_batch: int,
                           n_tokens: int,
                           token_mask_probability: float,
                           temporal_dims: int,
-                          rng: jax.random.KeyArray):
+                          rng: jax.Array):
   """Returns indices to use for tube masking in VideoMAE.
 
   The difference between the random and tube masking is that the tube masking
