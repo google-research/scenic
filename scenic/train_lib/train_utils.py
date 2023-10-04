@@ -541,7 +541,7 @@ def get_num_training_steps(
       dataset_metadata.get('num_train_examples', 0) // config.batch_size
   )
 
-  if config.get('num_training_steps'):
+  if config.get('num_training_steps') is not None:
     assert not config.get('num_training_epochs')
     return config.num_training_steps, steps_per_epoch or None
   else:
