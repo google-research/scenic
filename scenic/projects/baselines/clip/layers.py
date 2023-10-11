@@ -386,6 +386,7 @@ class CLIP(nn.Module):
     text_num_heads: Number of heads in text transformer.
     vision_features: Number of features in vision transformer.
     vision_num_layers: Number of vision transformer blocks (self-attn + MLP).
+    vision_head_dim: Number of features per vision transformer attention head.
     vision_patch_size: Size of patches to embed in vision transformer.
     use_underscore_module_name: Optionally replace '.' with '_' in parameter
       naming for PAX checkpoint loading.
@@ -399,20 +400,21 @@ class CLIP(nn.Module):
   # Vision.
   vision_features: int
   vision_num_layers: Union[int, Sequence[int]]
+  vision_head_dim: int = 64
   vision_patch_size: Optional[int] = None
   vision_return_map: bool = False
   use_underscore_module_name: bool = False
 
   def setup(self):
     if isinstance(self.vision_num_layers, (tuple, list)):
-      self.vision_num_heads = self.vision_features * 32 // 64
+      self.vision_num_heads = self.vision_features * 32 // self.vision_head_dim
       self.visual = ModifiedResNet(
           num_layers=self.vision_num_layers,
           features=self.vision_features,
           num_heads=self.vision_num_heads,
           out_features=None if self.vision_return_map else self.embed_dim)
     else:
-      self.vision_num_heads = self.vision_features // 64
+      self.vision_num_heads = self.vision_features // self.vision_head_dim
       self.visual = VisionTransformer(
           patch_size=self.vision_patch_size,
           features=self.vision_features,
