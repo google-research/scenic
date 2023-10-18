@@ -57,7 +57,7 @@ def _fewshot_acc_fn(
     num_classes: int,
     target_is_one_hot: bool = False,
     stddev_constant: float = 1e-5,
-) -> float:
+) -> jax.Array:
   """Computes (x,y) linear regression accuracy on (x_test, y_test).
 
   Args:
