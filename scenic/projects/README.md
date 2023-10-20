@@ -75,6 +75,12 @@
     > LOCA ([paper](https://arxiv.org/abs/2212.02400)) is a self-supervised
     > method to train spatially-aware vision transformer features.
 
+*   [MatViT](matvit)
+    > MatViT ([paper](https://arxiv.org/abs/2310.07707)) is a nested ViT
+    > architecture designed to offer elasticity in a variety of deployment
+    > constraints, where each Feed Forward Network (FFN) block of a MatViT
+    > model is jointly optimized with a few nested smaller FFN blocks.
+
 *   [MBT](mbt)
 
     > MBT presents a transformer based architecture that uses "fusion
