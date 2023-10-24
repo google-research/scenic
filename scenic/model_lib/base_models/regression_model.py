@@ -61,7 +61,7 @@ def regression_metrics_function(
   evaluated_metrics = {}
   for key, val in metrics.items():
     evaluated_metrics[key] = model_utils.psum_metric_normalizer(
-        (val[0](targets, predictions, weights), val[1](targets, predictions,  # pytype: disable=wrong-arg-types  # jax-ndarray
+        (val[0](predictions, targets, weights), val[1](predictions, targets,  # pytype: disable=wrong-arg-types  # jax-ndarray
                                                        weights)),
         axis_name=axis_name)
   return evaluated_metrics  # pytype: disable=bad-return-type  # jax-ndarray
