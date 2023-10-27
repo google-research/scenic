@@ -18,9 +18,11 @@ Many of these were originally implemented by: Lucas Beyer, Alex Kolesnikov,
 Xiaohua Zhai and other collaborators from Brain ZRH.
 """
 
+import collections
 import dataclasses
 import functools
-from typing import Any, Dict, Optional, Sequence, Union, Iterator, Callable
+import itertools
+from typing import Any, Callable, Dict, Iterator, Optional, Sequence, Union
 
 from absl import logging
 from flax.training import common_utils
@@ -170,6 +172,8 @@ def maybe_pad_batch(batch: Dict[str, PyTree],
 def shard(pytree, n_devices=None):
   """Reshapes all arrays in the pytree to add a leading n_devices dimension.
 
+  To be used for pmap-based data-parallelism.
+
   Note: We assume that all arrays in the pytree have leading dimension divisible
   by n_devices and reshape (host_batch_size, height, width, channel) to
   (local_devices, device_batch_size, height, width, channel).
@@ -188,6 +192,65 @@ def shard(pytree, n_devices=None):
     return array.reshape((n_devices, -1) + array.shape[1:])
 
   return jax.tree_util.tree_map(_shard_array, pytree)
+
+
+def shard_jit(data: PyTree, global_devices: np.ndarray) -> PyTree:
+  """Shards data for use in jit-based pipelines.
+
+  Note that the order of global devices for sharding data is important and
+  should be compatible with device order used in the rest of the trainer for
+  models params, state, etc.
+
+
+  Args:
+    data: PyTree of data
+    global_devices: List of global devices to shard over.
+
+  Returns:
+    Sharded data.
+  """
+
+  def _shard_array(x):
+    mesh = jax.sharding.Mesh(global_devices, ('devices',))
+    sharding = jax.sharding.NamedSharding(
+        mesh, jax.sharding.PartitionSpec('devices'))
+    local_ds = mesh.local_devices
+
+    x = np.asarray(memoryview(x))  # No-copy: http://shortn/_KM5whIEtWI
+    xs = jax.device_put(np.split(x, len(local_ds), axis=0), local_ds)
+
+    global_shape = (x.shape[0] * jax.process_count(), *x.shape[1:])
+    return jax.make_array_from_single_device_arrays(global_shape, sharding, xs)
+
+  return jax.tree_util.tree_map(_shard_array, data)
+
+
+def prefetch_iterator(it, n):
+  """Prefetches batches from an iterator.
+
+  Runs iterator `it` ahead for `n` steps.
+
+
+  Args:
+    it: Iterator
+    n: Number of steps to prefect for.
+
+  Yields:
+    Original items from the iterator which have been prefetched.
+  """
+  if not n:
+    yield from it
+    return
+  queue = collections.deque()
+
+  def enqueue(n_steps):  # Enqueues *up to* `n` elements from the iterator.
+    for data in itertools.islice(it, n_steps):
+      queue.append(data)
+
+  enqueue(n)  # Fill up the buffer.
+  while queue:
+    yield queue.popleft()
+    enqueue(1)
 
 
 def unshard(pytree):
