@@ -53,7 +53,8 @@ def get_dataset(*,
                 shuffle_seed=0,
                 rng=None,
                 dataset_configs=None,
-                dataset_service_address: Optional[str] = None):
+                dataset_service_address: Optional[str] = None,
+                devices: Optional[np.ndarray] = None):
   """Returns generators for train and validation sets for a specified dataset.
 
   Args:
@@ -66,6 +67,9 @@ def get_dataset(*,
     dataset_configs: dict; Dataset specific configurations.
     dataset_service_address: If set, will distribute the training dataset using
       the given tf.data service at the given address.
+    devices: Numpy array of Jax devices with mesh_shape which is used for
+      sharding the data. Optional, and required for jit-based pipelines. Should
+      not be used for pmap-based data parallelism.
 
   Returns:
     A dataset_utils.Dataset() which includes a train_iter, a valid_iter,
@@ -122,15 +126,20 @@ def get_dataset(*,
 
   maybe_pad_batches_train = functools.partial(
       dataset_utils.maybe_pad_batch, train=True, batch_size=batch_size)
-  shard_batches = functools.partial(dataset_utils.shard, n_devices=num_shards)
+  if devices is None:
+    shard_batches = functools.partial(dataset_utils.shard, n_devices=num_shards)
+    prefetch_fn = jax_utils.prefetch_to_device
+  else:
+    shard_batches = functools.partial(dataset_utils.shard_jit,
+                                      global_devices=devices)
+    prefetch_fn = dataset_utils.prefetch_iterator
 
   train_iter = iter(train_ds)
   train_iter = map(dataset_utils.tf_to_numpy, train_iter)
   train_iter = map(maybe_pad_batches_train, train_iter)
   train_iter = map(shard_batches, train_iter)
-  if dataset_configs.prefetch_to_device:
-    train_iter = jax_utils.prefetch_to_device(
-        train_iter, dataset_configs.prefetch_to_device)
+  if dataset_configs.get('prefetch_to_device'):
+    train_iter = prefetch_fn(train_iter, dataset_configs.prefetch_to_device)
 
   logging.info('Loading validation split of the %s'
                'from bit dataset.', dataset_configs.dataset)
@@ -154,8 +163,7 @@ def get_dataset(*,
     valid_iter = map(maybe_pad_batches_eval, valid_iter)
     valid_iter = map(shard_batches, valid_iter)
     if dataset_configs.prefetch_to_device:
-      valid_iter = jax_utils.prefetch_to_device(
-          valid_iter, dataset_configs.prefetch_to_device)
+      valid_iter = prefetch_fn(valid_iter, dataset_configs.prefetch_to_device)
 
     return valid_iter
 
