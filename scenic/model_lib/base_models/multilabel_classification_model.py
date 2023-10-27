@@ -138,6 +138,23 @@ class MultiLabelClassificationModel(base_model.BaseModel):
                                                       False),
         metrics=_MULTI_LABEL_CLASSIFICATION_METRICS)
 
+  def get_metrics_fn_jit(self,
+                         split: Optional[str] = None) -> base_model.MetricFn:
+    """Returns a callable metric function for the model.
+
+    Args:
+      split: The split for which we calculate the metrics. It should be one of
+        the ['train',  'validation', 'test'].
+    Returns: A metric function with the following API: ```metrics_fn(logits,
+      batch)```
+    """
+    del split  # For all splits, we return the same metric functions.
+    return functools.partial(
+        base_model.metrics_function_jit,
+        target_is_multihot=self.dataset_meta_data.get('target_is_onehot',
+                                                      False),
+        metrics=_MULTI_LABEL_CLASSIFICATION_METRICS)
+
   def loss_function(
       self,
       logits: jnp.ndarray,

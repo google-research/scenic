@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, Mapping, Optional, Tuple
 
 from absl import logging
 import flax.linen as nn
+from flax.training import common_utils
 import jax.numpy as jnp
 import ml_collections
 
@@ -28,6 +29,54 @@ MetricNormalizerFnDict = Mapping[
                Callable[[jnp.ndarray, bool, Optional[jnp.ndarray]], float]]]
 MetricFn = Callable[[jnp.ndarray, Dict[str, jnp.ndarray]],
                     Dict[str, Tuple[float, int]]]
+
+
+def metrics_function_jit(
+    logits: jnp.ndarray,
+    batch: Batch,
+    target_is_one_or_multihot: bool,
+    metrics,
+) -> Dict[str, Tuple[float, int]]:
+  """Calculates metrics for the multi-label classification task for jit.
+
+  Currently we assume each metric_fn has the API:
+    ```metric_fn(logits, targets, weights)```
+  and returns an array of shape [batch_size].
+
+  Pmap-based trainers assume that to compute the aggregate metric, one should
+  sum across all batches, then divide by the total samples seen.
+
+  We follow the same API here, but note that summing should no longer use
+  lax.psum, but rather a jnp.sum suffices as jit uses global arrays.
+
+  Args:
+   logits: Output of model in shape [batch, length, num_classes].
+   batch: Batch of data that has 'label' and optionally 'batch_mask'.
+   target_is_one_or_multihot: If the target is a one-hot or multi-hot vector.
+   metrics: The metrics to evaluate. The key is the name of the metric,
+   and the value is the metrics function.
+
+  Returns:
+    A dict of metrics, in which keys are metrics name and values are tuples of
+    (metric, normalizer).
+  """
+  if target_is_one_or_multihot:
+    one_or_multihot_target = batch['label']
+  else:
+    # This is to support running a multi-label classification model on
+    # single-label classification tasks:
+    one_or_multihot_target = common_utils.onehot(batch['label'],
+                                                 logits.shape[-1])
+  weights = batch.get('batch_mask')  # batch_mask might not be defined
+
+  evaluated_metrics = {}
+  for key, metric in metrics.items():
+    fn, normaliser = metric
+    metric_value = fn(logits, one_or_multihot_target, weights)
+    norm_value = normaliser(logits, one_or_multihot_target, weights)
+    evaluated_metrics[key] = (jnp.sum(metric_value), jnp.sum(norm_value))
+
+  return evaluated_metrics  # pytype: disable=bad-return-type  # jax-types
 
 
 class BaseModel:
@@ -81,6 +130,9 @@ class BaseModel:
   def get_metrics_fn(self, split: Optional[str] = None) -> MetricFn:
     """Returns a callable metric function for the model.
 
+    The metrics function is for pmap-based models, where we need to normalise
+    by doing p-sums over other devices.
+
     Args:
       split: The split for which we calculate the metrics. It should be one of
         the ['train',  'validation', 'test'].
@@ -90,6 +142,22 @@ class BaseModel:
       batch)```
     """
     raise NotImplementedError('Subclasses must implement get_metrics_fn.')
+
+  def get_metrics_fn_jit(self, split: Optional[str] = None) -> MetricFn:
+    """Returns a callable metric function for the model.
+
+    The metrics function is for jit-based models, where we normalise by doing
+    sums over global arrays.
+
+    Args:
+      split: The split for which we calculate the metrics. It should be one of
+        the ['train',  'validation', 'test'].
+
+    Returns:
+      A metric function with the following API: ```metrics_fn(logits,
+      batch)```
+    """
+    raise NotImplementedError('Subclasses must implement get_metrics_fn_jit.')
 
   def loss_function(self,
                     logits: jnp.ndarray,
