@@ -17,7 +17,7 @@
 """
 
 import functools
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from absl import logging
 from clu import metric_writers
@@ -31,6 +31,7 @@ from scenic.train_lib import train_utils
 import tensorflow_datasets as tfds
 
 _BIAS_CONSTANT = 100.0
+PyTree = Any
 
 
 def prepare_data(xs, pad=None, num_devices=None):
@@ -67,10 +68,34 @@ def prepare_data(xs, pad=None, num_devices=None):
   return {'inputs': xs['image'], 'label': xs['label'], 'batch_mask': xs['mask']}
 
 
-def start_input_pipeline(data, pad=None, num_devices=None):
+def prepare_data_jit(xs, pad: Optional[int], global_devices: np.ndarray):
+  """Prepare data-pipeline for jit-based backend."""
+
+  if pad is not None:
+    xs['mask'] = np.full(len(xs['image']), 1.0)
+
+  def _pad(x):
+    if pad is not None and len(x) != pad:
+      x = np.asarray(memoryview(x))
+      # Append `pad - len(x)` rows of zeros.
+      x = np.r_[x, np.zeros((pad - len(x),) + x.shape[1:], x.dtype)]
+
+    return x
+
+  xs = jax.tree_util.tree_map(_pad, xs)
+  xs = dataset_utils.shard_jit(xs, global_devices)
+  return {'inputs': xs['image'], 'label': xs['label'], 'batch_mask': xs['mask']}
+
+
+def start_input_pipeline(data, pad=None, num_devices=None, backend='pmap',
+                         devices: Optional[np.ndarray] = None):
   train_iter = iter(data)
-  train_iter = map(lambda x: prepare_data(x, pad, num_devices=num_devices),
-                   train_iter)
+  if backend == 'pmap':
+    train_iter = map(
+        lambda x: prepare_data(x, pad, num_devices=num_devices), train_iter)
+  elif backend == 'jit':
+    train_iter = map(
+        lambda x: prepare_data_jit(x, pad, global_devices=devices), train_iter)
   return train_iter
 
 
@@ -151,16 +176,34 @@ def _fewshot_acc_fn(x: jnp.ndarray,
 class FewShotEvaluator:
   """Class for few-shot evaluation."""
 
-  def __init__(self, representation_fn, fewshot_config):
+  def __init__(self, representation_fn, fewshot_config,
+               backend: str = 'pmap', devices: Optional[jnp.ndarray] = None,
+               out_shardings: Optional[PyTree] = None):
     self.shots = fewshot_config.shots
     self.l2_regs = fewshot_config.l2_regs
     self.local_batch_size = fewshot_config.batch_size // jax.process_count()
-    self.repr_fn = jax.pmap(
-        representation_fn, donate_argnums=(1,), axis_name='batch')
     self.pp_tr = fewshot_config.pp_train
     self.pp_te = fewshot_config.pp_eval
     self.walk_first = fewshot_config.walk_first
     self._datasets = {}  # This will be our cache for lazy loading.
+
+    self.backend = backend
+    assert self.backend in {
+        'pmap',
+        'jit',
+    }, f'Unsupported backend: {self.backend}. Must be one of [pmap, jit].'
+    if self.backend == 'jit':
+      assert devices is not None, 'Devices must be provided when using jit.'
+    self.devices = devices
+
+    if self.backend == 'pmap':
+      self.repr_fn = jax.pmap(
+          representation_fn, donate_argnums=(1,), axis_name='batch'
+      )
+    elif self.backend == 'jit':
+      self.repr_fn = jax.jit(
+          representation_fn, donate_argnums=(1,), out_shardings=out_shardings
+      )
 
   # Setup input pipeline.
   def _get_dataset(self, dataset, train_split, test_split):
@@ -192,25 +235,42 @@ class FewShotEvaluator:
     """Compute representation for the whole dataset."""
     pre_logits_list = []
     labels_list = []
-    for batch in start_input_pipeline(data, pad=self.local_batch_size):
+    for batch in start_input_pipeline(data,
+                                      pad=self.local_batch_size,
+                                      backend=self.backend,
+                                      devices=self.devices):
       pre_logits, labels, mask = self.repr_fn(train_state, batch)
       # We need to unreplicate the output of `lax.all_gather`.
       # Shapes at this point are:
       #   pre_logits: `[hosts, devices, global_batch, features]`.
       #   labels: `[hosts, devices, global_batch]`.
       #   mask: `[hosts, devices, global_batch]`.
-      pre_logits = jax_utils.unreplicate(pre_logits)
-      if pre_logits.ndim != 3:
-        raise ValueError('Shape of the representations sent to the linear '
-                         'fewshot should be `[num_devices, bs, features]`.')
+      if self.backend == 'pmap':
+        pre_logits = jax_utils.unreplicate(pre_logits)
+
+        if pre_logits.ndim != 3:
+          raise ValueError('Shape of the representations sent to the linear '
+                           'fewshot should be `[num_devices, bs, features]`.')
+
+        mask = np.array(jax_utils.unreplicate(mask)).astype(bool)
+        pre_logits_list.append(np.array(pre_logits)[mask])
+        labels_list.append(np.array(jax_utils.unreplicate(labels))[mask])
+      else:
+        pre_logits = jax.device_get(pre_logits)
+
+        if pre_logits.ndim != 2:
+          raise ValueError('Shape of the representations sent to the linear '
+                           'fewshot should be `[bs, features]`.')
+
+        mask = np.array(jax.device_get(mask)).astype(bool)
+        pre_logits_list.append(np.array(pre_logits)[mask])
+        labels_list.append(np.array(jax.device_get(labels))[mask])
+
       if pre_logits.shape[-1] > 2048:
         logging.warning(
             'The feature size for the representations is too large'
             '(feature size = %d). This might cause severe slowdown '
             'of solving the linear equation.', pre_logits.shape[-1])
-      mask = np.array(jax_utils.unreplicate(mask)).astype(bool)
-      pre_logits_list.append(np.array(pre_logits)[mask])
-      labels_list.append(np.array(jax_utils.unreplicate(labels))[mask])
 
     pre_logits = np.concatenate(pre_logits_list, axis=0)
     labels = np.concatenate(labels_list, axis=0)
