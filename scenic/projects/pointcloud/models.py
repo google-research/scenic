@@ -62,6 +62,7 @@ class SelfAttentionLayer(nn.Module):
   def __call__(self,
                inputs,
                coords=None,
+               mask=None,
                numerical_stabilizer=1e-9,
                train: bool = False):
     """Applies self attention on the input data.
@@ -70,6 +71,8 @@ class SelfAttentionLayer(nn.Module):
       inputs: Input tensor of shape [batch_size, num_points, feature_dim]
       coords: Input tensor of point positions of the shape [batch_size,
         num_points, 3]
+      mask: Binary array of shape broadcastable to `inputs` tensor, indicating
+        the positions for which self attention should be computed.
       numerical_stabilizer: takes into account stability when inputs are zero.
       train: Whether it is training or not.
 
@@ -95,6 +98,11 @@ class SelfAttentionLayer(nn.Module):
     if self.attention_fn_configs is None or self.attention_fn_configs[
         'attention_kind'] == 'regular':
       attention = jnp.einsum('...MC,...NC->...MN', input_q, input_k)
+      if mask is not None:
+        mask = nn.make_attention_mask(mask, mask)
+        mask = mask.squeeze(axis=-3)
+        big_neg = jnp.finfo(attention.dtype).min
+        attention = jnp.where(mask, attention, big_neg)
       attention = nn.softmax(attention, axis=-1)
       attention = attention / (
           numerical_stabilizer + jnp.sum(attention, axis=1, keepdims=True))
@@ -103,6 +111,7 @@ class SelfAttentionLayer(nn.Module):
       query = jnp.expand_dims(input_q, axis=-2)
       key = jnp.expand_dims(input_k, axis=-2)
       value = jnp.expand_dims(input_v, axis=-2)
+      # TODO(kchoro): Include point cloud masking in performer attention
       if self.attention_fn_configs['performer']['masking_type'] == 'nomask':
         output = performer.regular_performer_dot_product_attention(
             query,
@@ -159,19 +168,25 @@ class PointCloudTransformerEncoder(nn.Module):
   mask_function: Optional[str] = 'linear'
 
   @nn.compact
-  def __call__(self, inputs, train: bool = False, debug: bool = False):
+  def __call__(
+      self,
+      inputs,
+      mask: jnp.ndarray | None = None,
+      train: bool = False,
+      debug: bool = False,
+  ):
     output = nn.Conv(
         self.feature_dim,
         kernel_size=(self.kernel_size, self.kernel_size),
-        use_bias=True)(
-            inputs)
-    output = nn.BatchNorm(use_running_average=not train)(output)
+        use_bias=True,
+    )(inputs)
+    output = nn.BatchNorm(use_running_average=not train)(output, mask=mask)
     output = nn.Conv(
         self.feature_dim,
         kernel_size=(self.kernel_size, self.kernel_size),
-        use_bias=True)(
-            output)
-    output = nn.BatchNorm(use_running_average=not train)(output)
+        use_bias=True,
+    )(output)
+    output = nn.BatchNorm(use_running_average=not train)(output, mask=mask)
 
     # Self-attention blocks, input_shape= [B, N, D]
     attention_outputs = []
@@ -180,7 +195,7 @@ class PointCloudTransformerEncoder(nn.Module):
           in_channels=self.feature_dim,
           out_channels=self.feature_dim,
           attention_fn_configs=self.attention_fn_configs)(
-              output, inputs)
+              output, inputs, mask=mask)
       attention_outputs.append(output)
 
     output = jnp.concatenate(attention_outputs, axis=-1)
@@ -191,7 +206,7 @@ class PointCloudTransformerEncoder(nn.Module):
         kernel_size=(self.kernel_size, self.kernel_size),
         use_bias=True)(
             output)
-    output = nn.BatchNorm(use_running_average=not train)(output)
+    output = nn.BatchNorm(use_running_average=not train)(output, mask=mask)
     output = nn.leaky_relu(output, negative_slope=0.2)
     return output
 
