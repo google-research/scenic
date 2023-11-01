@@ -645,7 +645,7 @@ def restore_checkpoint(
   the state of training.
 
   Args:
-    checkpoint_path: Directory to restore the checkpoint.
+    checkpoint_path: Directory or filename to restore the checkpoint from.
     train_state: An instance of TrainState that holds the state of training.
     assert_exist: Assert that there is at least one checkpoint in the given
       path.
@@ -656,7 +656,10 @@ def restore_checkpoint(
     training state and an int which is the current step.
   """
   if assert_exist:
-    glob_path = os.path.join(checkpoint_path, 'checkpoint_*')
+    if 'checkpoint_' in checkpoint_path.split('/')[-1]:
+      glob_path = checkpoint_path
+    else:
+      glob_path = os.path.join(checkpoint_path, 'checkpoint_*')
     if not gfile.glob(glob_path):
       raise ValueError(
           'No checkpoint for the pretrained model is found in: '
