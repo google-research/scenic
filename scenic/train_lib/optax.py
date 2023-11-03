@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Optax utils for Scenic."""
+"""Optax utils for Scenic.
 
+This is a fork of
+https://github.com/google-research/big_vision/blob/main/big_vision/optax.py.
+"""
 
 import itertools
 import numbers

@@ -200,13 +200,18 @@ def restore_pretrained_checkpoint(
   return train_state
 
 
+# pylint: disable=g-doc-args,g-doc-return-or-yield
 def inspect_params(*,
                    expected_params: PyTree,
                    restored_params: PyTree,
                    fail_if_extra: bool = True,
                    fail_if_missing: bool = True,
                    fail_if_shapes_mismatch: bool = False) -> PyTree:
-  """Inspects whether the params are consistent with the expected keys."""
+  """Inspects whether the params are consistent with the expected keys.
+
+  Based on
+  https://github.com/google-research/big_vision/blob/main/big_vision/model/common.py.
+  """
 
   def _flatten_params(d, parent_key='', sep='/'):
     """Flattens a dictionary, keeping empty leaves."""
@@ -268,6 +273,7 @@ def inspect_params(*,
         f'Restored params from checkpoint: {restored_flat.keys()}.\n'
         f'Expected params from code: {expected_flat.keys()}.')
   return restored_params
+# pylint: enable=g-doc-args,g-doc-return-or-yield
 
 
 def convert_big_vision_to_scenic_checkpoint(

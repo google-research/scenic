@@ -201,6 +201,8 @@ def shard_jit(data: PyTree, global_devices: np.ndarray) -> PyTree:
   should be compatible with device order used in the rest of the trainer for
   models params, state, etc.
 
+  Based on:
+  https://github.com/google-research/big_vision/blob/main/big_vision/input_pipeline.py.
 
   Args:
     data: PyTree of data
@@ -230,6 +232,8 @@ def prefetch_iterator(it, n):
 
   Runs iterator `it` ahead for `n` steps.
 
+  Adapted from big_vision:
+  https://github.com/google-research/big_vision/blob/main/big_vision/input_pipeline.py.
 
   Args:
     it: Iterator

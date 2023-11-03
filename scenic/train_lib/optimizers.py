@@ -12,7 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Defines different optimizers with optax."""
+"""Defines different optimizers with optax.
+
+Based on
+https://github.com/google-research/big_vision/blob/main/big_vision/optax.py
+and
+https://github.com/google-research/big_vision/blob/main/big_vision/utils.py
+"""
 import copy
 import dataclasses
 import operator
