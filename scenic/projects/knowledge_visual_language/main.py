@@ -41,7 +41,7 @@ def main(
   logging.info('global_num_shards= %d', jax.device_count())
   logging.info('num_shards= %d', jax.local_device_count())
   logging.info('cpu info')
-  logging.info(jax.devices(backend='cpu'))
+  logging.info(jax.local_devices(backend='cpu'))
   logging.info(jax.local_devices(backend='cpu'))
   logging.info('****************** Dataset metadata *****************')
   logging.info(dataset.meta_data)
