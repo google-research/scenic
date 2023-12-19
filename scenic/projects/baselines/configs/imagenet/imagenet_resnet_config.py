@@ -50,12 +50,9 @@ def get_config():
   config.lr_configs.base_learning_rate = base_lr
 
   # Logging.
-  config.write_summary = True
-  config.xprof = True  # Profile using xprof.
-  config.checkpoint = True  # Do checkpointing.
+  config.checkpoint = config.xprof = config.write_summary = True # Profile using xprof. Do checkpointing.
   config.checkpoint_steps = 10 * steps_per_epoch
-  config.debug_train = False  # Debug mode during training.
-  config.debug_eval = False  # Debug mode during eval.
+  config.debug_eval = config.debug_train = False  # Debug mode during training. Debug mode during eval.
   return config
 
 
