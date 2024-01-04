@@ -152,6 +152,11 @@
     > vision and language models.
     > Details can be found in the [paper](https://arxiv.org/abs/2303.08998).
 
+*   [UnLoc](unloc)
+
+    > UnLoc proposes a unified architecture for video localization tasks,
+    > e.g., Temporal Action Localization, Moment Retrieval, and Action
+    > Segmentation. More details can be found in the [paper](https://openaccess.thecvf.com/content/ICCV2023/papers/Yan_UnLoc_A_Unified_Framework_for_Video_Localization_Tasks_ICCV_2023_paper.pdf).
 
 *   [REVEAL](knowledge_visual_language)
 
