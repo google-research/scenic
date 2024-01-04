@@ -141,6 +141,7 @@ class Encoder(nn.Module):
       follows timm library, which does per-example layer dropping and uses
       independent dropping patterns for each skip-connection.
     dtype: Dtype of activations.
+    has_cls_token: Whether or not the sequence is prepended with a CLS token.
   """
   num_layers: int
   mlp_dim: int
@@ -150,6 +151,7 @@ class Encoder(nn.Module):
   attention_dropout_rate: float = 0.1
   stochastic_depth: float = 0.0
   dtype: Any = jnp.float32
+  has_cls_token: bool = False
 
   @nn.compact
   def __call__(self, inputs: jnp.ndarray, *, train: bool = False):
@@ -176,12 +178,22 @@ class Encoder(nn.Module):
       x = attention_layers.Add1DPositionEmbedding(posemb_init=None)(inputs)
     elif self.positional_embedding == 'sinusoidal_2d':
       batch, num_tokens, hidden_dim = inputs.shape
+      if self.has_cls_token:
+        num_tokens -= 1
       height = width = int(np.sqrt(num_tokens))
       if height * width != num_tokens:
         raise ValueError('Input is assumed to be square for sinusoidal init.')
-      inputs_reshape = inputs.reshape([batch, height, width, hidden_dim])
-      x = attention_layers.AddFixedSinCosPositionEmbedding()(inputs_reshape)
-      x = x.reshape([batch, num_tokens, hidden_dim])
+      if self.has_cls_token:
+        inputs_reshape = inputs[:, 1:].reshape(
+            [batch, height, width, hidden_dim]
+        )
+        x = attention_layers.AddFixedSinCosPositionEmbedding()(inputs_reshape)
+        x = x.reshape([batch, num_tokens, hidden_dim])
+        x = jnp.concatenate([inputs[:, :1], x], axis=1)
+      else:
+        inputs_reshape = inputs.reshape([batch, height, width, hidden_dim])
+        x = attention_layers.AddFixedSinCosPositionEmbedding()(inputs_reshape)
+        x = x.reshape([batch, num_tokens, hidden_dim])
     elif self.positional_embedding == 'none':
       x = inputs
     else:
@@ -196,11 +208,11 @@ class Encoder(nn.Module):
           num_heads=self.num_heads,
           dropout_rate=self.dropout_rate,
           attention_dropout_rate=self.attention_dropout_rate,
-          stochastic_depth=(lyr / max(self.num_layers - 1, 1)) *
-          self.stochastic_depth,
+          stochastic_depth=(lyr / max(self.num_layers - 1, 1))
+          * self.stochastic_depth,
           name=f'encoderblock_{lyr}',
-          dtype=dtype)(
-              x, deterministic=not train)
+          dtype=dtype,
+      )(x, deterministic=not train)
     encoded = nn.LayerNorm(name='encoder_norm')(x)
     return encoded
 
@@ -270,8 +282,9 @@ class ViT(nn.Module):
         attention_dropout_rate=self.attention_dropout_rate,
         stochastic_depth=self.stochastic_depth,
         dtype=self.dtype,
-        name='Transformer')(
-            x, train=train)
+        has_cls_token=self.classifier == 'token',
+        name='Transformer',
+    )(x, train=train)
 
     if self.classifier in ('token', '0'):
       x = x[:, 0]
