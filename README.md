@@ -66,6 +66,7 @@ Projects that were developed in Scenic or used it for their experiments:
 * [How can objects help action recognition?](https://openaccess.thecvf.com/content/CVPR2023/html/Zhou_How_Can_Objects_Help_Action_Recognition_CVPR_2023_paper.html)
 * [Verbs in Action: Improving verb understanding in video-language models](https://arxiv.org/abs/2304.06708)
 * [Unified Visual Relationship Detection with Vision and Language Models](https://arxiv.org/abs/2303.08998)
+* [UnLoc: A Unified Framework for Video Localization Tasks](https://arxiv.org/abs/2308.11062)
 * [REVEAL: Retrieval-Augmented Visual-Language Pre-Training with Multi-Source Multimodal Knowledge Memory](https://arxiv.org/abs/2212.05221)
 * [Audiovisual Masked Autoencoders](https://arxiv.org/abs/2212.05922)
 * [MatFormer: Nested Transformer for Elastic Inference](https://arxiv.org/abs/2310.07707)
