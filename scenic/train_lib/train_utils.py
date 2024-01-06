@@ -1172,6 +1172,8 @@ class Chrono:
 
     # Measurement with micro-timings of current training steps speed.
     # Time between ticks (ignoring pause)
+    if self.prev_time is None:
+      raise ValueError('prev_time is None, possible warmup was skipped')
     dt = now - self.prev_time - self.paused_time
     ncores = jax.device_count()  # Global device count
     summary.update({

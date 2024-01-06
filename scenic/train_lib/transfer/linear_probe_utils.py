@@ -107,23 +107,34 @@ def train_step(
   if max_grad_norm is not None:
     grad = clip_grads(grad, max_grad_norm)
 
-  updates, new_opt_state = train_state.tx.update(grad, train_state.opt_state,
-                                                 train_state.params)
+  tx = train_state.tx
+  if tx is None:
+    raise ValueError('train_state.tx, the Gradient Transformation, is None')
+
+  updates, new_opt_state = tx.update(
+      grad, train_state.opt_state, train_state.params
+  )
   new_params = optax.apply_updates(train_state.params, updates)
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
       global_step=train_state.global_step + 1,
       opt_state=new_opt_state,
       params=new_params,
-      model_state=new_model_state)
+      model_state=new_model_state,
+  )
   metrics = classification_model.classification_metrics_function(
-      logits, batch, target_is_onehot=True)
+      logits, batch, target_is_onehot=True
+  )
   return new_train_state, metrics
 
 
-def eval_step(train_state: train_utils.TrainState, batch: Batch, *,
-              representation_fn: Callable[[Batch],
-                                          jnp.ndarray], linear_probe: nn.Module,
-              metrics_fn: classification_trainer.MetricFn) -> Metric:
+def eval_step(
+    train_state: train_utils.TrainState,
+    batch: Batch,
+    *,
+    representation_fn: Callable[[Batch], jnp.ndarray],
+    linear_probe: nn.Module,
+    metrics_fn: classification_trainer.MetricFn,
+) -> Metric:
   """Runs a single step of training.
 
   Assumed API of metrics_fn is:
