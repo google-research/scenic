@@ -30,6 +30,11 @@
     > for both unimodal and multimodal downstream tasks. Details can be found
     > in the [paper](https://arxiv.org/abs/2212.05922).
 
+*   [Boundary Attention](boundary_attention)
+
+    > A differentiable model for detecting boundaries in high noise at any
+    > resolution.
+
 *   [ViViT](vivit)
 
     > ViViT is a family of pure-transformer based models for video
