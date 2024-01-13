@@ -42,12 +42,15 @@ FINAL_CKPT_ARTIFACT_DESCRIPTION = 'Final checkpoint'
 models.ALL_MODELS['image_text'] = ImageTextModel
 
 trainers.ALL_TRAINERS['visual_text_trainer'] = visual_text_trainer.train
-trainers.ALL_TRAINERS[
-    'visual_text_with_text_pretraining_trainer'] = visual_text_with_text_pretraining_trainer.train
-trainers.ALL_TRAINERS[
-    'zero_shot_classification_trainer'] = zero_shot_classification_trainer.evaluate
-trainers.ALL_TRAINERS[
-    'zero_shot_text_to_visual_retrieval_trainer'] = zero_shot_text_to_visual_retrieval_trainer.evaluate
+trainers.ALL_TRAINERS['visual_text_with_text_pretraining_trainer'] = (
+    visual_text_with_text_pretraining_trainer.train
+)
+trainers.ALL_TRAINERS['zero_shot_classification_trainer'] = (
+    zero_shot_classification_trainer.evaluate
+)
+trainers.ALL_TRAINERS['zero_shot_text_to_visual_retrieval_trainer'] = (
+    zero_shot_text_to_visual_retrieval_trainer.evaluate
+)
 
 
 
@@ -81,14 +84,9 @@ def main(rng: Optional[jnp.ndarray], config: ml_collections.ConfigDict,
 
     if (config.get('use_jax_compilation_cache', True) and
         hasattr(jax.devices()[0].client, 'runtime_type')):
-      if compilation_cache.is_initialized():
-        logging.info('JAX compilation cache already initialized.')
-      else:
-        jax_cache_dir = os.path.join(workdir, 'jax_cache', 'ttl=30d')
-        logging.info('JAX compilation cache path: %s', jax_cache_dir)
-        compilation_cache.initialize_cache(jax_cache_dir)
-    else:
-      logging.info('JAX compilation cache not initialized.')
+      jax_cache_dir = os.path.join(workdir, 'jax_cache', 'ttl=30d')
+      logging.info('JAX compilation cache path: %s', jax_cache_dir)
+      compilation_cache.set_cache_dir(jax_cache_dir)
 
     model_cls = models.get_model_cls(config.model_name)
     assert model_cls is ImageTextModel

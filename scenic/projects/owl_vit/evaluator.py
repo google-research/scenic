@@ -672,7 +672,7 @@ def main(argv: Sequence[str]) -> None:
   # it unavailable to JAX.
   tf.config.experimental.set_visible_devices([], 'GPU')
 
-  compilation_cache.initialize_cache('/tmp/jax_compilation_cache')
+  compilation_cache.set_cache_dir('/tmp/jax_compilation_cache')
 
   config_name = os.path.splitext(os.path.basename(FLAGS.config))[0]
 
