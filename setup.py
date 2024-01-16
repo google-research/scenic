@@ -19,10 +19,10 @@ Install for development:
   pip intall -e . .[testing]
 """
 
-from distutils import cmd
 import os
 import urllib.request
 
+from setuptools import Command
 from setuptools import find_packages
 from setuptools import setup
 from setuptools.command import install
@@ -31,7 +31,7 @@ SIMCLR_DIR = "simclr/tf2"
 DATA_UTILS_URL = "https://raw.githubusercontent.com/google-research/simclr/master/tf2/data_util.py"
 
 
-class DownloadSimCLRAugmentationCommand(cmd.Command):
+class DownloadSimCLRAugmentationCommand(Command):
   """Downloads SimCLR data_utils.py as it's not built into an egg."""
   description = __doc__
   user_options = []
@@ -65,7 +65,7 @@ install_requires_projects = [
     "sklearn",
     "lingvo==0.12.6",
     "seaborn>=0.11.2",
-    "dmvr @ git+https://github.com/deepmind/dmvr.git",
+    "dmvr @ git+https://github.com/google-deepmind/dmvr.git",
 ]
 
 install_requires_core = [
@@ -80,7 +80,7 @@ install_requires_core = [
     "immutabledict>=2.2.1",
     "clu>=0.0.6",
     "tensorflow-datasets",
-    "optax @ git+https://github.com/deepmind/optax.git@master",
+    "optax @ git+https://github.com/google-deepmind/optax.git@main",
 ]
 
 tests_require = [
