@@ -80,7 +80,7 @@ install_requires_core = [
     "immutabledict>=2.2.1",
     "clu>=0.0.6",
     "tensorflow-datasets",
-    "optax @ git+https://github.com/deepmind/optax.git@master",
+    "optax @ git+https://github.com/deepmind/optax.git@main",
 ]
 
 tests_require = [
