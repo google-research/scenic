@@ -5,7 +5,6 @@ import functools
 from typing import Any, Callable, Optional, Sequence, Union
 
 from clip.simple_tokenizer import SimpleTokenizer
-import jax.numpy as jnp
 import numpy as np
 from scenic.projects.baselines.clip import download
 
@@ -18,7 +17,7 @@ MAX_TEXT_LENGTH = 77
 
 
 def _tokenize(texts: Union[str, Sequence[str]], tokenizer: Any,
-              context_length: int, truncate: bool = False) -> jnp.ndarray:
+              context_length: int, truncate: bool = False) -> np.ndarray:
   """Tokenizes texts using tokenizer."""
   if isinstance(texts, str):
     texts = [texts]
@@ -37,7 +36,7 @@ def _tokenize(texts: Union[str, Sequence[str]], tokenizer: Any,
             f'Input {texts[i]} is too long for context length {context_length}')
 
     result[i, :len(tokens)] = np.asarray(tokens)
-  return jnp.asarray(result)
+  return result
 
 
 def build_tokenizer(
