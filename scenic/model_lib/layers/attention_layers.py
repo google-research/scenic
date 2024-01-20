@@ -55,7 +55,7 @@ def _attention_dropout(attn_weights: jnp.ndarray,
   Returns:
     Weights after dropout.
   """
-  keep_prob = jax.lax.tie_in(attn_weights, 1.0 - rate)
+  keep_prob = 1.0 - rate
   if broadcast:
     # Dropout is broadcast across the batch+head+non-attention dimension.
     dropout_shape = list(attn_weights.shape)

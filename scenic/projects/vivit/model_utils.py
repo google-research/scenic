@@ -127,7 +127,7 @@ def factorized_dot_product_attention(
     if not deterministic and dropout_rate > 0.:
       if dropout_rng is None:
         raise ValueError('Did not provide `rng` to dot_product_attention().')
-      keep_prob = jax.lax.tie_in(attn_weights, 1.0 - dropout_rate)
+      keep_prob = 1.0 - dropout_rate
       if broadcast_dropout:
         # Dropout is broadcast across the batch+head+non-attention dimension.
         dropout_shape = list(attn_weights.shape)
@@ -547,7 +547,9 @@ def init_embedding(to_params, from_params, config):
           'All filter dimensions besides the temporal dimension should be'
           'equal. {} vs {}'.format(input_kernel.shape, restored_kernel.shape))
 
-      kernel_init_method = config.model.temporal_encoding_config.kernel_init_method
+      kernel_init_method = (
+          config.model.temporal_encoding_config.kernel_init_method
+      )
       if kernel_init_method == 'average_frame_initializer':
         # This corresponds to "filter inflation" in
         # J Carreira and A Zisserman. Quo vadis, action recognition?
