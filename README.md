@@ -90,6 +90,7 @@ Baselines that were reproduced in Scenic:
 * [PonderNet](https://arxiv.org/abs/2107.05407)
 * [Masked Autoencoders Are Scalable Vision Learners](https://arxiv.org/abs/2111.06377)
 * [Rethinking Attention with Performers](https://arxiv.org/abs/2009.14794)
+* [(CenterNet) Objects as Points](https://arxiv.org/abs/1904.07850)
 
 
 More information can be found in [baseline models](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines#scenic-baseline-models).
