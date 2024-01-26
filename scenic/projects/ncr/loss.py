@@ -61,7 +61,7 @@ def pairwise_kl_loss(logits: Array,
     normalization = example_weights.sum()
   else:
     normalization = n
-  return jnp.sum(kldiv_loss_per_example) / (normalization + epsilon)
+  return jnp.sum(kldiv_loss_per_example) / (normalization + epsilon)  # pytype: disable=bad-return-type  # dataclasses-replace
 
 
 def l2_normalize(tensor: Array, axis: int = -1, epsilon: float = 1e-6):
