@@ -142,14 +142,20 @@ def convert_and_save_model(
     # If there are more signatures, trace and cache a TF function for each one.
     tf_graph.get_concrete_function(input_signature)
   wrapper = _ReusableSavedModelWrapper(tf_graph, param_vars)
+
+  if saved_model_options:
+    saved_model_options.function_aliases = {"inference_func": tf_graph}
+  else:
+    saved_model_options = tf.saved_model.SaveOptions(
+        function_aliases={"inference_func": tf_graph}
+    )
+
   if with_gradient:
-    if not saved_model_options:
-      saved_model_options = tf.saved_model.SaveOptions(
-          experimental_custom_gradients=True)
-    else:
-      saved_model_options.experimental_custom_gradients = True
-  tf.saved_model.save(wrapper, model_dir, signatures=signatures,
-                      options=saved_model_options)
+    saved_model_options.experimental_custom_gradients = True
+
+  tf.saved_model.save(
+      wrapper, model_dir, signatures=signatures, options=saved_model_options
+  )
 
 
 class _ReusableSavedModelWrapper(tf.train.Checkpoint):
