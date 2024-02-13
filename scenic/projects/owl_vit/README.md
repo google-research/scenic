@@ -6,29 +6,35 @@ OWL-ViT: Open-World Object Detection with Vision Transformers
 
 OWL-ViT is an **open-vocabulary object detector**. Given an image and a free-text query, it finds objects matching that query in the image. It can also do **one-shot object detection**, i.e. detect objects based on a single example image. OWL-ViT reaches state-of-the-art performance on both tasks, e.g. **44.6% zero-shot LVIS APr** with a OWLv2 ViT-L/14 backbone.
 
+<!--- General reference links --->
+[Minimal Colab]: https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb
+[Playground Colab]: https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_inference_playground.ipynb
+
 [[OWL-ViT v1 Paper]](https://arxiv.org/abs/2205.06230)
 [[OWL-ViT v2 Paper]](https://arxiv.org/abs/2306.09683)
-[[Minimal Colab]](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb)
-[[Playground Colab]](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_inference_playground.ipynb)
+[[Minimal Colab]]
+[[Playground Colab]]
 
-**Update (2023-09-25):** Added image-conditioned detection example to the [Minimal Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb)
+**Update (2024-02-13):** Added support for changing image size at inference. Also added [information about speed benchmarking](#inference-speed) to the README and the [Minimal Colab].
+<br>
+**Update (2023-09-25):** Added image-conditioned detection example to the [Minimal Colab]
 <br>
 **Update (2023-09-22):** Added code and checkpoints for OWL-ViT v2.
 <br>
-**Update (2023-03-21):** Added a new checkpoint with a segmentation mask head. See the [Minimal Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb) for a usage example.
+**Update (2023-03-21):** Added a new checkpoint with a segmentation mask head. See the [Minimal Colab] for a usage example.
 <br>
 **Update (2022-10-14):** Added [training](#training) and [evaluation](#evaluation) code.
 <br>
 **Update (2022-07-06):** Extended TensorFlow-conversion [Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_Export_JAX_model_to_TensorFlow_SavedModel.ipynb) with examples for conversion to TFLite.
 <br>
-**Update (2022-06-22):** Added [Playground Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_inference_playground.ipynb) for interactive exploration of the model, including image-conditioned detection.
+**Update (2022-06-22):** Added [Playground Colab] for interactive exploration of the model, including image-conditioned detection.
 <br>
 **Update (2022-05-31):** Added [Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_Export_JAX_model_to_TensorFlow_SavedModel.ipynb) showing how to export models to TensorFlow.
 
 ## Contents
 Below, we provide pretrained checkpoints, example Colabs, training code and evaluation code.
 
-To get started, check out the [minimal example Colab notebook](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb), which shows all steps necessary for running inference, including installing Scenic, instantiating a model, loading a checkpoint, preprocessing input images, getting predictions, and visualizing them.
+To get started, check out the [Minimal Colab], which shows all steps necessary for running inference, including installing Scenic, instantiating a model, loading a checkpoint, preprocessing input images, getting predictions, and visualizing them.
 
 Table of contents:
 
@@ -41,7 +47,9 @@ Table of contents:
 * [Installation](#installation)
 * [Training](#training)
 * [Evaluation](#evaluation)
-* [Reference](#reference)
+* [Inference speed](#inference-speed)
+* [License](#license)
+* [References](#references)
 
 ## Model versions
 
@@ -109,10 +117,10 @@ The LVIS metrics were obtained with the [evaluator script](https://github.com/go
 ## Colabs
 
 ### Minimal example
-The [Minimal Example Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_minimal_example.ipynb) shows all steps necessary for running inference, including installing Scenic, instantiating a model, loading a checkpoint, preprocessing input images, getting predictions, and visualizing them.
+The [Minimal Colab] shows all steps necessary for running inference, including installing Scenic, instantiating a model, loading a checkpoint, preprocessing input images, getting predictions, and visualizing them.
 
 ### Inference Playground
-The [Playground Colab](https://colab.research.google.com/github/google-research/scenic/blob/main/scenic/projects/owl_vit/notebooks/OWL_ViT_inference_playground.ipynb) allows interactive exploration of the model. It supports both text-conditioned (open-vocabulary) and image-conditioned (one-shot) prediction:
+The [Playground Colab] allows interactive exploration of the model. It supports both text-conditioned (open-vocabulary) and image-conditioned (one-shot) prediction:
 
 <img src="data/text_cond_wiki_stillife_1.gif" alt="OWL-ViT text inference demo" height="200" style="margin:0px 30px"/>
 <img src="data/image_cond_wiki_circuits_1.gif" alt="OWL-ViT image inference demo" height="200"/>
@@ -187,10 +195,22 @@ python -m scenic.projects.owl_vit.evaluator \
   --output_dir=/tmp/evaluator
 ```
 
+## Inference speed
+
+OWL-ViT is highly efficient and can be used for **real-time detection** (depending on image resolution and accelerator hardware).
+
+Inference speed is dominated by the image and text encoders. The detection heads only add a small overhead. If text embeddings can be pre-computed, inference speed is therefore nearly equivalent to standard Vision Transformers.
+
+To trade off accuracy and speed, the image size can be changed at inference time to match your latency requirements. The only resolution-specific parameters in the model are the position embeddings. To support variable inference resolution, we simply truncate the position embedding grid at the bottom/right (only resolutions equal to or less than the training resolution are supported). Detection accuracy is robust to image size because OWL-ViT v2 is trained with heavy size augmentation.
+
+The plot below shows inference speed vs. accuracy for OWLv2 CLIP models fine-tuned on Objects365 and Visual Genome. For comparability to the literature, these checkpoints were not fine-tuned on LVIS. Also, these checkpoints were trained without random prompting and evaluated without prompt ensembling (the models are queried only with the class name, without `'a photo of a {}'`). Model checkpoints used for this plot: [OWLv2-ST+FT(O365+VG) CLIP B/16](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-b16-960-st-ngrams-ft-o365vg_925e87d) and [OWLv2-ST+FT(O365+VG) CLIP L/14](https://storage.googleapis.com/scenic-bucket/owl_vit/checkpoints/owl2-l14-1008-st-ngrams-ft-o365vg_ea5f719). Speed benchmarking code is provided in the [Minimal Colab]. For these tests, text embeddings are pre-computed.
+
+<img src="data/owl_v2_speed.png" alt="OWLv2 inference speed" height="300"/>
+
 ## License
 Both the code and the model checkpoints are licensed under the [Apache 2.0 license](https://github.com/google-research/scenic/blob/main/LICENSE).
 
-## Reference
+## References
 If you use OWL-ViT, please cite the papers as appropriate:
 
 ### OWL-ViT v1

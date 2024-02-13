@@ -8,8 +8,9 @@ support.
 """
 
 import functools
-from typing import Sequence, Optional, Union, Tuple
+from typing import Optional, Sequence, Tuple, Union
 
+from absl import logging
 import flax.linen as nn
 import jax
 import jax.numpy as jnp
@@ -313,6 +314,13 @@ class VisionTransformer(nn.Module):
     num_heads: Number of attention heads.
     out_features: Number of output features. If None, return transformer output.
     stochastic_droplayer_rate: Stochastic depth rate.
+    posemb_grid_size: If unset (the default), the size of the position
+      embeddings is chosen based on the size of the input image. If set,
+      posemb_grid_size specifies the width of the 2D grid of patches
+      corresponding to the "native" posemb size of the model. If the input image
+      grid is smaller than posemb_grid_size, the posemb grid will be truncated
+      at the bottom right. This allows running inference at smaller resolutions
+      than the training resolution.
   """
   patch_size: int
   features: int
@@ -320,6 +328,7 @@ class VisionTransformer(nn.Module):
   num_heads: int
   out_features: Optional[int]
   stochastic_droplayer_rate: float = 0.0
+  posemb_grid_size: Optional[int] = None
 
   @nn.compact
   def __call__(self,
@@ -339,10 +348,32 @@ class VisionTransformer(nn.Module):
     x = jnp.concatenate((jnp.tile(class_embedding[None, None, :],
                                   (x.shape[0], 1, 1)), x),
                         axis=1)
-    positional_embedding = self.param('positional_embedding',
-                                      jax.nn.initializers.normal(stddev=scale),
-                                      (x.shape[1], self.features))
-    x = x + positional_embedding[None]
+
+    posemb_size = (
+        self.posemb_grid_size**2 + 1 if self.posemb_grid_size else x.shape[1]
+    )
+
+    posemb = self.param(
+        'positional_embedding',
+        jax.nn.initializers.normal(stddev=scale),
+        (posemb_size, self.features),
+    )
+
+    # If posemb_grid_size differs from the image grid size, we truncate the
+    # position embeddings to match the input image. We use the top left area,
+    # which matches how we pad images.
+    if self.posemb_grid_size:
+      native_size = self.posemb_grid_size
+      img_size = int((x.shape[1] - 1) ** 0.5)
+      if img_size != native_size:
+        assert img_size**2 == (x.shape[1] - 1), f'Not square: {x.shape}.'
+        logging.info('Truncating posemb from %s to %s.', native_size, img_size)
+        posemb2d = posemb[1:, :].reshape(native_size, native_size, -1)
+        posemb2d_trunc = posemb2d[:img_size, :img_size, :]
+        posemb_trunc = posemb2d_trunc.reshape(-1, self.features)
+        posemb = jnp.concatenate((posemb[:1, :], posemb_trunc), axis=0)
+
+    x = x + posemb[None]
 
     x = LayerNorm(name='ln_pre')(x)
     x = feature_map = Transformer(
@@ -417,6 +448,13 @@ class CLIP(nn.Module):
     vision_features: Number of features in vision transformer.
     vision_num_layers: Number of vision transformer blocks (self-attn + MLP).
     vision_patch_size: Size of patches to embed in vision transformer.
+    vision_native_grid_size: If unset (the default), the size of the position
+      embeddings is chosen based on the size of the input image. If set,
+      posemb_grid_size specifies the width of the 2D grid of patches
+      corresponding to the "native" posemb size of the model. If the input image
+      grid is smaller than posemb_grid_size, the posemb grid will be truncated
+      at the bottom right. This allows running inference at smaller resolutions
+      than the training resolution.
   """
   vocab_size: int
   embed_dim: int
@@ -432,6 +470,7 @@ class CLIP(nn.Module):
   # Stochastic depth.
   text_stochastic_droplayer_rate: float = 0.0
   vision_stochastic_droplayer_rate: float = 0.0
+  vision_native_grid_size: Optional[int] = None
 
   def setup(self):
     if isinstance(self.vision_num_layers, (tuple, list)):
@@ -451,7 +490,8 @@ class CLIP(nn.Module):
           num_layers=self.vision_num_layers,
           num_heads=self.vision_num_heads,
           out_features=None if self.vision_return_map else self.embed_dim,
-          stochastic_droplayer_rate=self.vision_stochastic_droplayer_rate)
+          stochastic_droplayer_rate=self.vision_stochastic_droplayer_rate,
+          posemb_grid_size=self.vision_native_grid_size)
     self.text = TextEncoder(
         out_features=self.embed_dim,
         vocab_size=self.vocab_size,

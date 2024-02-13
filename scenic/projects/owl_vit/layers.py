@@ -280,11 +280,17 @@ class ClipImageTextEmbedder(ImageTextEmbedderBase):
 
     model_config = clip_model.CONFIGS[self.embed_configs['variant']]
     model_config['vision_return_map'] = True
-    # Copy over additional CLIP config settings.
+    # Copy over required CLIP config settings:
     for name in [
-        'text_stochastic_droplayer_rate', 'vision_stochastic_droplayer_rate']:
+        'text_stochastic_droplayer_rate',
+        'vision_stochastic_droplayer_rate',
+    ]:
       if self.embed_configs.get(name) is not None:
         model_config[name] = self.embed_configs[name]
+    # Copy over optional CLIP config settings:
+    model_config['vision_native_grid_size'] = self.embed_configs.get(
+        'native_image_grid_size'
+    )
     model = clip_layers.CLIP(**model_config, name='clip')
     # Input images should have range (0.0, 1.0). Shift them to CLIP range:
     if images is not None:
