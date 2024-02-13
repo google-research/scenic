@@ -81,17 +81,17 @@ class SelfAttentionLayer(nn.Module):
     """
     input_q = nn.Conv(
         self.out_channels,
-        kernel_size=(self.kernel_size, self.kernel_size),
+        kernel_size=(self.kernel_size,),
         use_bias=True)(
             inputs)
     input_k = nn.Conv(
         self.out_channels,
-        kernel_size=(self.kernel_size, self.kernel_size),
+        kernel_size=(self.kernel_size,),
         use_bias=True)(
             inputs)
     input_v = nn.Conv(
         self.out_channels,
-        kernel_size=(self.kernel_size, self.kernel_size),
+        kernel_size=(self.kernel_size,),
         use_bias=True)(
             inputs)
 
@@ -145,10 +145,10 @@ class SelfAttentionLayer(nn.Module):
     output = (inputs - output) if self.attention_type == 'offset' else output
     output = nn.Conv(
         self.out_channels,
-        kernel_size=(self.kernel_size, self.kernel_size),
+        kernel_size=(self.kernel_size,),
         use_bias=True)(
             output)
-    output = nn.BatchNorm(use_running_average=not train)(output)
+    output = nn.LayerNorm(reduction_axes=-2)(output)
     output = nn.relu(output)
     return output + inputs
 
@@ -178,16 +178,16 @@ class PointCloudTransformerEncoder(nn.Module):
   ):
     output = nn.Conv(
         self.feature_dim,
-        kernel_size=(self.kernel_size, self.kernel_size),
+        kernel_size=(self.kernel_size,),
         use_bias=True,
     )(inputs)
-    output = nn.BatchNorm(use_running_average=not train)(output, mask=mask)
+    output = nn.LayerNorm(reduction_axes=-2)(output, mask=mask)
     output = nn.Conv(
         self.feature_dim,
-        kernel_size=(self.kernel_size, self.kernel_size),
+        kernel_size=(self.kernel_size,),
         use_bias=True,
     )(output)
-    output = nn.BatchNorm(use_running_average=not train)(output, mask=mask)
+    output = nn.LayerNorm(reduction_axes=-2)(output, mask=mask)
 
     # Self-attention blocks, input_shape= [B, N, D]
     attention_outputs = []
@@ -201,22 +201,18 @@ class PointCloudTransformerEncoder(nn.Module):
 
     output = jnp.concatenate(attention_outputs, axis=-1)
 
-    # conv-batchnorm-relu block
     output = nn.Conv(
         self.encoder_feature_dim,
-        kernel_size=(self.kernel_size, self.kernel_size),
+        kernel_size=(self.kernel_size,),
         use_bias=True)(output)
-    output = nn.BatchNorm(use_running_average=not train)(output, mask=mask)
-    output = nn.leaky_relu(output, negative_slope=0.2)
 
     if self.out_dim is not None:
-      # conv-batchnorm-relu block
+      output = nn.LayerNorm(reduction_axes=-2)(output, mask=mask)
+      output = nn.leaky_relu(output, negative_slope=0.2)
       output = nn.Conv(
           self.out_dim,
-          kernel_size=(self.kernel_size, self.kernel_size),
+          kernel_size=(self.kernel_size,),
           use_bias=True)(output)
-      output = nn.BatchNorm(use_running_average=not train)(output, mask=mask)
-      output = nn.leaky_relu(output, negative_slope=0.2)
     return output
 
 
@@ -252,12 +248,12 @@ class PointCloudTransformerClassifier(nn.Module):
     output = jnp.max(output, axis=1, keepdims=False)
     # LBR Block 1
     output = nn.Dense(4 * self.feature_dim, use_bias=True)(output)
-    output = nn.BatchNorm(use_running_average=not train)(output)
+    output = nn.LayerNorm(reduction_axes=-2)(output)
     output = nn.leaky_relu(output, negative_slope=0.2)
     output = nn.Dropout(rate=self.dropout_rate, deterministic=not train)(output)
     # LBR Block 2
     output = nn.Dense(2 * self.feature_dim, use_bias=True)(output)
-    output = nn.BatchNorm(use_running_average=not train)(output)
+    output = nn.LayerNorm(reduction_axes=-2)(output)
     output = nn.leaky_relu(output, negative_slope=0.2)
     output = nn.Dropout(rate=self.dropout_rate, deterministic=not train)(output)
     # Classification head
