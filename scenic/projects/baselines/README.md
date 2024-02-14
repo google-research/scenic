@@ -18,6 +18,7 @@ They include:
  * [Universal Transformers](https://arxiv.org/abs/1807.03819) for sequence modeling with adaptive computation.
  * [PonderNet](https://arxiv.org/abs/2107.05407) for sequence modeling with adaptive computation.
  * [CenterNet](https://arxiv.org/abs/1904.07850) and [CenterNet2](https://arxiv.org/abs/2103.07461) for object detection.
+ * [SAM](https://arxiv.org/abs/2304.02643) for prompt-based segmentation
 
 ## Model Zoo
 
@@ -102,3 +103,6 @@ Please check [PonderNet directory](pondernet) for more information.
 Please check [CenterNet directory](centernet) for more information and link to download
 pretrained checkpoints.
 
+### SAM
+Please check [SAM directory](segment_anything) for more information and link to
+download pretrained checkpoints.

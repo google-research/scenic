@@ -91,6 +91,7 @@ Baselines that were reproduced in Scenic:
 * [Masked Autoencoders Are Scalable Vision Learners](https://arxiv.org/abs/2111.06377)
 * [Rethinking Attention with Performers](https://arxiv.org/abs/2009.14794)
 * [(CenterNet) Objects as Points](https://arxiv.org/abs/1904.07850)
+* [(SAM) Segment Anything](https://arxiv.org/abs/2304.02643)
 
 
 More information can be found in [baseline models](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines#scenic-baseline-models).
