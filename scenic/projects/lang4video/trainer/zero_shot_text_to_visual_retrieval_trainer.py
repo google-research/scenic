@@ -197,7 +197,7 @@ def evaluate(
 
   # Note that different calls of `_replace` with the same contents will yield
   # the same hash.
-  dataset = dataclasses.replace(
+  dataset = dataclasses.replace(  # pytype: disable=wrong-arg-types  # dataclasses-replace-types
       dataset, meta_data=flax.core.freeze(dataset.meta_data))
   model, train_state = _create_model_and_train_state(
       config=hashable_config,
