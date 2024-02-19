@@ -22,7 +22,7 @@ import collections
 import dataclasses
 import functools
 import itertools
-from typing import Any, Callable, Dict, Iterator, Optional, Sequence, Union
+from typing import Any, Callable, Dict, Iterator, Optional, Sequence, Tuple, Union
 
 from absl import logging
 from flax.training import common_utils
@@ -148,7 +148,6 @@ def maybe_pad_batch(batch: Dict[str, PyTree],
     raise ValueError('In this codebase, we assumed that we always drop the '
                      'last partial batch of the train set. Please use '
                      '` drop_remainder=True` for the training set.')
-
   # Most batches will not need padding, so we quickly return to avoid slowdown.
   if train or batch_pad == 0:
     if 'batch_mask' not in batch:
@@ -194,7 +193,11 @@ def shard(pytree, n_devices=None):
   return jax.tree_util.tree_map(_shard_array, pytree)
 
 
-def shard_jit(data: PyTree, global_devices: np.ndarray) -> PyTree:
+def shard_jit(
+    data: PyTree,
+    global_devices: np.ndarray,
+    mesh_axis: Tuple[str, ...] = ('devices',),
+) -> PyTree:
   """Shards data for use in jit-based pipelines.
 
   Note that the order of global devices for sharding data is important and
@@ -207,15 +210,17 @@ def shard_jit(data: PyTree, global_devices: np.ndarray) -> PyTree:
   Args:
     data: PyTree of data
     global_devices: List of global devices to shard over.
+    mesh_axis: specify axis separately.
 
   Returns:
     Sharded data.
   """
 
   def _shard_array(x):
-    mesh = jax.sharding.Mesh(global_devices, ('devices',))
+    mesh = jax.sharding.Mesh(global_devices, mesh_axis)
     sharding = jax.sharding.NamedSharding(
-        mesh, jax.sharding.PartitionSpec('devices'))
+        mesh, jax.sharding.PartitionSpec(mesh_axis)
+    )
     local_ds = mesh.local_devices
 
     x = np.asarray(memoryview(x))  # No-copy: http://shortn/_KM5whIEtWI
