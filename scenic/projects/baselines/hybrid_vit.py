@@ -47,9 +47,12 @@ class HybridViT(nn.Module):
 
   @nn.compact
   def __call__(self, x: jnp.ndarray, *, train: bool, debug: bool = False):
+    patches_ = self.patches
+    assert patches_ is not None
 
-    if self.resnet is not None:
-      width = int(64 * self.resnet.width_factor)
+    res_net = self.resnet
+    if res_net is not None:
+      width = int(64 * res_net.width_factor)
       # Root block.
       x = bit_resnet.StdConv(
           width, (7, 7), strides=(2, 2), use_bias=False, name='conv_root')(
@@ -58,21 +61,22 @@ class HybridViT(nn.Module):
       x = nn.relu(x)
       x = nn.max_pool(x, (3, 3), strides=(2, 2), padding='SAME')
       # ResNet stages.
-      if self.resnet.num_layers:
+      if res_net.num_layers:
         x = bit_resnet.ResNetStage(
-            block_size=self.resnet.num_layers[0],
+            block_size=res_net.num_layers[0],
             nout=width,
             first_stride=(1, 1),
             name='block1')(
                 x)
-        for i, block_size in enumerate(self.resnet.num_layers[1:], 1):
+        for i, block_size in enumerate(res_net.num_layers[1:], 1):
           x = bit_resnet.ResNetStage(
               block_size=block_size,
               nout=width * 2**i,
               first_stride=(2, 2),
               name=f'block{i + 1}')(
                   x)
-    fh, fw = self.patches.size
+
+    fh, fw = patches_.size
     x = nn.Conv(
         self.hidden_size, (fh, fw),
         strides=(fh, fw),
