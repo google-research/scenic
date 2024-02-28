@@ -1015,7 +1015,7 @@ def accumulate_gradients(
         batch: Dict[str, jnp.ndarray], idx: int
     ) -> Dict[str, jnp.ndarray]:
       """Fetch microbatch slice from the given batch."""
-      return jax.tree_map(
+      return jax.tree_util.tree_map(
           lambda x: x.reshape((-1, microbatch_size) + x.shape[1:])[idx], batch
       )
 
@@ -1046,7 +1046,7 @@ def accumulate_gradients(
     (init_train_loss, (model_state, init_logits)), grad_init = (
         compute_gradient_fn(params, init_mbatch, sub_dropout_rng)
     )
-    if jax.tree_leaves(model_state):
+    if jax.tree_util.tree_leaves(model_state):
       # If the model_state is not empty.
       raise ValueError(
           'Gradient accumulation is not supported when the '

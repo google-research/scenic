@@ -162,12 +162,22 @@ def train_step(
 
   # Log additional statistics. These are the L2 norms of the entire flattened
   # vector.
-  metrics['l2_grads'] = (jnp.sqrt(
-      sum([jnp.vdot(g, g) for g in jax.tree_leaves(grad)])), 1)
-  metrics['l2_params'] = (jnp.sqrt(
-      sum([jnp.vdot(p, p) for p in jax.tree_leaves(new_params)])), 1)
-  metrics['l2_updates'] = (jnp.sqrt(
-      sum([jnp.vdot(u, u) for u in jax.tree_leaves(updates)])), 1)
+  metrics['l2_grads'] = (
+      jnp.sqrt(sum([jnp.vdot(g, g) for g in jax.tree_util.tree_leaves(grad)])),
+      1,
+  )
+  metrics['l2_params'] = (
+      jnp.sqrt(
+          sum([jnp.vdot(p, p) for p in jax.tree_util.tree_leaves(new_params)])
+      ),
+      1,
+  )
+  metrics['l2_updates'] = (
+      jnp.sqrt(
+          sum([jnp.vdot(u, u) for u in jax.tree_util.tree_leaves(updates)])
+      ),
+      1,
+  )
 
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
       global_step=train_state.global_step + 1,
@@ -586,10 +596,12 @@ def train(
         chrono.tick(step, writer, custom_train_utils.log_note)
       train_summary = train_utils.log_train_summary(
           step=step,
-          train_metrics=jax.tree_map(train_utils.unreplicate_and_get,
-                                     train_metrics),
+          train_metrics=jax.tree_util.tree_map(
+              train_utils.unreplicate_and_get, train_metrics
+          ),
           extra_training_logs=extra_training_logs,
-          writer=writer)
+          writer=writer,
+      )
       # Reset metric accumulation for next evaluation cycle.
       train_metrics, extra_training_logs = [], []
       chrono.resume()

@@ -179,9 +179,11 @@ def loca_train_step(
     new_params = optax.apply_updates(train_state.params, updates)
 
     # update the teacher weights
-    new_ema_params = jax.tree_map(
+    new_ema_params = jax.tree_util.tree_map(
         lambda s, t: momentum_parameter * t + (1 - momentum_parameter) * s,
-        new_params, train_state.ema_params)
+        new_params,
+        train_state.ema_params,
+    )
 
     new_train_state = train_state.replace(  # pytype: disable=attribute-error
         global_step=step + 1,
@@ -237,7 +239,7 @@ def train(
       config.momentum_rate)
 
   # Create optimizer.
-  weight_decay_mask = jax.tree_map(lambda x: x.ndim != 1, params)
+  weight_decay_mask = jax.tree_util.tree_map(lambda x: x.ndim != 1, params)
   tx = optax.inject_hyperparams(optax.adamw)(
       learning_rate=learning_rate_fn, weight_decay=config.weight_decay,
       mask=weight_decay_mask,)

@@ -676,10 +676,14 @@ def eval_and_log_summary(
 
       # Do not gather at this stage to run dvc_eval before gathering
       eval_pack['pred'] = preds
-      eval_pack = jax.tree_map(
-          lambda x: x.reshape((np.prod(x.shape[:2]),) + x.shape[2:]), eval_pack)
-      logging.info('eval_pack %d shapes: %s',
-                   step, jax.tree_map(lambda x: x.shape, eval_pack))
+      eval_pack = jax.tree_util.tree_map(
+          lambda x: x.reshape((np.prod(x.shape[:2]),) + x.shape[2:]), eval_pack
+      )
+      logging.info(
+          'eval_pack %d shapes: %s',
+          step,
+          jax.tree_util.tree_map(lambda x: x.shape, eval_pack),
+      )
 
       gts_timestamps = [[
           [s, e] for s, e in zip(ls, le)
@@ -819,8 +823,9 @@ def eval_and_log_summary(
     # Gather and filter by mask
     res = train_utils.unreplicate_and_get(
         jax.pmap(lambda x: jax.lax.all_gather(x, 'batch'), 'batch')(res))
-    res = jax.tree_map(
-        lambda x: x.reshape((np.prod(x.shape[:2]),) + x.shape[2:]), res)
+    res = jax.tree_util.tree_map(
+        lambda x: x.reshape((np.prod(x.shape[:2]),) + x.shape[2:]), res
+    )
     mask = res['mask'].astype(bool)
     pred = res['pred'][mask]
     pred = [dvc_eval.convert_uint8_array_to_string(x) for x in pred]
@@ -874,8 +879,9 @@ def eval_and_log_summary(
     full_res[x] = full_res[x].reshape((ndevh, full_res[x].shape[0] // ndevh))
   full_res = train_utils.unreplicate_and_get(
       jax.pmap(lambda x: jax.lax.all_gather(x, 'batch'), 'batch')(full_res))
-  full_res = jax.tree_map(
-      lambda x: x.reshape((np.prod(x.shape[:2]),) + x.shape[2:]), full_res)
+  full_res = jax.tree_util.tree_map(
+      lambda x: x.reshape((np.prod(x.shape[:2]),) + x.shape[2:]), full_res
+  )
   logging.info(full_res[list(full_res)[0]].shape)
 
   # compute averaged statistics

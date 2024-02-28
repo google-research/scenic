@@ -46,9 +46,14 @@ def init_from_pretrain_weights(
   model_params = train_state.optimizer.target
   logging.info(
       'model_params: %s',
-      jax.tree_map(lambda x: x.shape, flax.core.unfreeze(model_params)))
-  logging.info('restored_params: %s',
-               jax.tree_map(lambda x: x.shape, restored_params))
+      jax.tree_util.tree_map(
+          lambda x: x.shape, flax.core.unfreeze(model_params)
+      ),
+  )
+  logging.info(
+      'restored_params: %s',
+      jax.tree_util.tree_map(lambda x: x.shape, restored_params),
+  )
   model_params = replace_dict(model_params, restored_params, ckpt_prefix_path,
                               model_prefix_path, name_mapping, skip_regex, True)
   new_optimizer = train_state.optimizer.replace(target=model_params)

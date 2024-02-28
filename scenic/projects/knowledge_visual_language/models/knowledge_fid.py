@@ -295,11 +295,11 @@ class KnowledgeFIDModule(fusion_in_decoder_soft.FusionInDecoderSoftModule):
 
     logging.info('_gather_val!!!')
 
-    ret_memory = jax.tree_map(
+    ret_memory = jax.tree_util.tree_map(
         lambda local_val: _gather_val(local_val, global_memory_ids), ret_memory
     )
 
-    ret_data = jax.tree_map(
+    ret_data = jax.tree_util.tree_map(
         lambda local_val: _gather_val(local_val, global_data_ids), ret_data
     )
 
@@ -832,7 +832,9 @@ class KnowledgeFIDModel(base_model.BaseModel):
     beam_expand_fn = functools.partial(
         decoding.flat_batch_beam_expand, beam_size=num_decodes
     )
-    encoded_inputs = jax.tree_map(beam_expand_fn, out_dict['fused_emb'])
+    encoded_inputs = jax.tree_util.tree_map(
+        beam_expand_fn, out_dict['fused_emb']
+    )
     encoded_masks = jax.tree_util.tree_map(
         beam_expand_fn, out_dict['fused_mask']
     )

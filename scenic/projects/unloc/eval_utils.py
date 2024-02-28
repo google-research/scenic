@@ -358,9 +358,9 @@ def run_classification_test_steps_and_save_eval_summary(
   for step in range(total_eval_steps):
     test_batch = next(dataset.test_iter)
     logits, label, batch_mask, vids = test_step_pmapped(train_state, test_batch)
-    (logits, label, batch_mask,
-     vids) = jax.tree_map(jax_utils.unreplicate,
-                          (logits, label, batch_mask, vids))
+    (logits, label, batch_mask, vids) = jax.tree_util.tree_map(
+        jax_utils.unreplicate, (logits, label, batch_mask, vids)
+    )
     all_logits.append(logits)
     all_labels.append(label)
     all_batch_masks.append(batch_mask)
@@ -429,7 +429,7 @@ def run_action_segmentation_test_steps_and_save_eval_summary(
     test_batch = next(dataset.test_iter)
     logits, label, batch_mask, frame_mask, vids = test_step_pmapped(
         train_state, test_batch)
-    (logits, label, batch_mask, frame_mask, vids) = jax.tree_map(
+    (logits, label, batch_mask, frame_mask, vids) = jax.tree_util.tree_map(
         train_utils.unreplicate_and_get,
         (logits, label, batch_mask, frame_mask, vids),
     )

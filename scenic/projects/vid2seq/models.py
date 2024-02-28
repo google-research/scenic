@@ -366,8 +366,12 @@ class EncoderWithT5DecoderModel(base_model.BaseModel):
         an auxiliary dictionary of decoder scores
     """
     # Prepare zeroed-out autoregressive cache.
-    encoder_inputs = jax.tree_map(jnp.ones_like, batch['encoder_inputs'])
-    decoder_inputs = jax.tree_map(jnp.ones_like, batch['decoder_inputs'])
+    encoder_inputs = jax.tree_util.tree_map(
+        jnp.ones_like, batch['encoder_inputs']
+    )
+    decoder_inputs = jax.tree_util.tree_map(
+        jnp.ones_like, batch['decoder_inputs']
+    )
     _, variables_with_cache = self.flax_model.apply(
         params,
         encoder_inputs,
@@ -391,7 +395,9 @@ class EncoderWithT5DecoderModel(base_model.BaseModel):
         batch['encoder_inputs'],
         train=False,
         method=self.flax_model.encode)
-    encoded_inputs = jax.tree_map(beam_expand_fn, non_expanded_encoded)
+    encoded_inputs = jax.tree_util.tree_map(
+        beam_expand_fn, non_expanded_encoded
+    )
     if isinstance(encoded_inputs, dict):  # set decoder mask
       batch['decoder_inputs']['encoder_input_tokens'] = encoded_inputs['mask']
       encoded_inputs = encoded_inputs['encoded']

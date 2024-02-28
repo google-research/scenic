@@ -61,8 +61,10 @@ def froze_param_optax(
   """
   if frozen_patterns and not_frozen_patterns is None:
     frozen_masks = bv_utils.make_mask_trees(params, frozen_patterns)
-    frozen_mask = jax.tree_map(lambda *bools: any(bools), *frozen_masks)
-    not_frozen_mask = jax.tree_map(operator.not_, frozen_mask)
+    frozen_mask = jax.tree_util.tree_map(
+        lambda *bools: any(bools), *frozen_masks
+    )
+    not_frozen_mask = jax.tree_util.tree_map(operator.not_, frozen_mask)
     tx = optax.chain(
         optax.masked(tx, not_frozen_mask),
         optax.masked(optax.set_to_zero(), frozen_mask))
@@ -75,8 +77,10 @@ def froze_param_optax(
       not_frozen_keys += [pattern]
       scale_vals += [val]
     not_frozen_masks = bv_utils.make_mask_trees(params, not_frozen_keys)
-    not_frozen_mask = jax.tree_map(lambda *bools: any(bools), *not_frozen_masks)
-    frozen_mask = jax.tree_map(operator.not_, not_frozen_mask)
+    not_frozen_mask = jax.tree_util.tree_map(
+        lambda *bools: any(bools), *not_frozen_masks
+    )
+    frozen_mask = jax.tree_util.tree_map(operator.not_, not_frozen_mask)
     scale_txs = [
         optax.masked(optax.scale(scale_val), mask)
         for scale_val, mask in zip(scale_vals, not_frozen_masks)

@@ -546,7 +546,7 @@ def train_and_eval(
       hook(step)
     logs['learning_rate'] = lr_fn(step).reshape([-1, 1])
     summary_builder.update(metrics_update=t_metrics, extra_logs_update=logs)
-    jax.tree_map(lambda h: h.delete(), train_batch)
+    jax.tree_util.tree_map(lambda h: h.delete(), train_batch)
     if lead_host:
       logging.info('finish training for step %d', step)
     ###################### LOG TRAIN SUMMARY ########################
@@ -632,7 +632,7 @@ def train_and_eval(
                 )
                 writer.flush()
                 del retr_top_image
-            jax.tree_map(lambda h: h.delete(), eval_batch)
+            jax.tree_util.tree_map(lambda h: h.delete(), eval_batch)
             del inp_image_sample
           for key in eval_vqa_metrics_all:
             eval_vqa_metrics_all[key] /= float(steps_per_eval)

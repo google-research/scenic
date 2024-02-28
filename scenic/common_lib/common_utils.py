@@ -80,13 +80,14 @@ def to_config_dict_heuristic(
 
   def maybe_config_dict_in_list(x):
     if isinstance(x, (list, tuple)):
-      return jax.tree_map(
-          maybe_config_dict, x, is_leaf=lambda y: isinstance(y, dict))
+      return jax.tree_util.tree_map(
+          maybe_config_dict, x, is_leaf=lambda y: isinstance(y, dict)
+      )
     return x
 
-  config = jax.tree_map(
+  config = jax.tree_util.tree_map(
       maybe_config_dict_in_list,
       config.to_dict(),
-      is_leaf=lambda x: isinstance(x, list)
+      is_leaf=lambda x: isinstance(x, list),
   )
   return ml_collections.ConfigDict(config)
