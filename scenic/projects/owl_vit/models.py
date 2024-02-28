@@ -142,9 +142,11 @@ class TextZeroShotDetectionModule(nn.Module):
       Objectness scores, in a dictionary.
     """
     del train
-    if self.objectness_head_configs is None:
+    # TODO(b/215588365): Need local variable to work around pytype bug.
+    objectness_head_configs = self.objectness_head_configs
+    if objectness_head_configs is None:
       raise ValueError('Must pass objectness_configs to use objectness head.')
-    if self.objectness_head_configs.stop_gradient:
+    if objectness_head_configs.stop_gradient:
       image_features = jax.lax.stop_gradient(image_features)
     objectness_logits = self._objectness_head(image_features)
     return {'objectness_logits': objectness_logits[..., 0]}
@@ -230,12 +232,14 @@ class TextZeroShotDetectionModule(nn.Module):
       A dictionary containing the predicted segmentation masks. The mask at
         index i corresponds to the predicted box in `pred_boxes` at index i.
     """
-    if self.mask_head_configs is None:
+    # TODO(b/215588365): Need local variable to work around pytype bug.
+    mask_head_configs = self.mask_head_configs
+    if mask_head_configs is None:
       raise ValueError('Must pass mask_head_configs to use mask head.')
     pred_masks = self._mask_head(
         image, image_tokens, boxes, true_boxes=true_boxes)
     batch_size = image_tokens.shape[0]
-    mask_size = self.mask_head_configs.mask_size
+    mask_size = mask_head_configs.mask_size
     return {
         'pred_masks':
             jnp.reshape(pred_masks, (batch_size, -1, mask_size, mask_size))
