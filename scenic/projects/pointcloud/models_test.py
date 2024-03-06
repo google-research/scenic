@@ -169,6 +169,25 @@ class PerformerModelTest(parameterized.TestCase):
     result = pct_encoder.apply(variables, inputs)
     self.assertEqual(result.shape, (BATCH, NB_POINTS, OUT_DIM))
 
+  def test_performer_psuedolocal_masking_encoder_result(self):
+    attention_fn_configs = dict()
+    attention_fn_configs['attention_kind'] = 'performer'
+    attention_fn_configs['performer'] = {
+        'masking_type': 'pseudolocal',
+        'rf_type': 'regular',
+        'num_features': 128,
+    }
+    rng_key = jax.random.PRNGKey(SEED)
+    inputs = jax.random.normal(key=rng_key, shape=(BATCH, NB_POINTS, DIM))
+    pct_encoder = models.PointCloudTransformerEncoder(
+        in_dim=IN_DIM,
+        feature_dim=FEATURE_DIM,
+        attention_fn_configs=attention_fn_configs,
+    )
+    variables = pct_encoder.init(rng_key, inputs)
+    result = pct_encoder.apply(variables, inputs)
+    self.assertEqual(result.shape, (BATCH, NB_POINTS, OUT_DIM))
+
 
 if __name__ == '__main__':
   absltest.main()

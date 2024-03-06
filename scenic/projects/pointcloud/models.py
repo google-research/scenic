@@ -119,40 +119,64 @@ class SelfAttentionLayer(nn.Module):
             query,
             key,
             value,
-            kernel_config=self.attention_fn_configs['performer'])
+            kernel_config=self.attention_fn_configs['performer'],
+        )
       elif (
           self.attention_fn_configs['performer']['masking_type'] == 'fftmasked'
       ):
-        toeplitz_params = self.param('toeplitz_params', zeros,
-                                     (query.shape[-2], 2 * query.shape[-3] - 1))
+        toeplitz_params = self.param(
+            'toeplitz_params', zeros, (query.shape[-2], 2 * query.shape[-3] - 1)
+        )
         output = performer.masked_performer_dot_product_attention(
             query,
             key,
             value,
             toeplitz_params=toeplitz_params,
-            kernel_config=self.attention_fn_configs['performer'])
+            kernel_config=self.attention_fn_configs['performer'],
+        )
       elif (
           self.attention_fn_configs['performer']['masking_type']
           == 'sharpmasked'
       ):
         toeplitz_params = self.param(
-            'toeplitz_params', zeros,
-            (query.shape[-2], 5 * NUM_FT_PARAMS_PER_HEAD))
+            'toeplitz_params',
+            zeros,
+            (query.shape[-2], 5 * NUM_FT_PARAMS_PER_HEAD),
+        )
         output = performer.sharp_masked_performer_dot_product_attention(
             query,
             key,
             value,
             coords,
             toeplitz_params=toeplitz_params,
-            kernel_config=self.attention_fn_configs['performer'])
+            kernel_config=self.attention_fn_configs['performer'],
+        )
+      elif (
+          self.attention_fn_configs['performer']['masking_type']
+          == 'pseudolocal'
+      ):
+        inner_dim = 3
+        base_aniso_matrix = jnp.identity(3)
+        aniso_matrix_delta_params = self.param(
+            'aniso_matrix_delta_params', zeros, (inner_dim, 3)
+        )
+        output = performer.pseudolocal_subquadratic_attention(
+            query,
+            key,
+            value,
+            coords,
+            aniso_matrix=(base_aniso_matrix + aniso_matrix_delta_params),
+            rf_type=self.attention_fn_configs['performer']['rf_type'],
+            nb_rfs=self.attention_fn_configs['performer']['num_features'],
+        )
       output = jnp.squeeze(output, axis=-2)
 
     output = (inputs - output) if self.attention_type == 'offset' else output
     output = nn.Conv(
         self.out_channels,
         kernel_size=(self.kernel_size,),
-        use_bias=True)(
-            output)
+        use_bias=True,
+    )(output)
     output = nn.LayerNorm(reduction_axes=-2)(output)
     output = nn.relu(output)
     return output + inputs

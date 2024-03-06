@@ -12,6 +12,9 @@ import jax
 from jax import random
 import jax.numpy as jnp
 
+from scenic.projects.performer import subquadratic_attention as sat
+from scenic.projects.performer import utils as ut
+
 RANDOM_FEATURES_SEED = 873457891289
 BIG_CONSTANT = 10000000.0
 PERFORMERS_RPE_SEED = 73829861893
@@ -1249,9 +1252,6 @@ def masked_performer_dot_product_attention(
     kernel_config: configuratiion of the attention kernel in Performers:
 
   Returns:
-    bidirectional normalized FAVOR+ attention.
-
-  Returns:
     bidirectional normalized FAVOR+ attention supporting general RPE.
   """
   del bias
@@ -1311,9 +1311,6 @@ def sharp_masked_performer_dot_product_attention(
     kernel_config: configuratiion of the attention kernel in Performers:
 
   Returns:
-    bidirectional normalized FAVOR+ attention.
-
-  Returns:
     bidirectional normalized FAVOR+ attention supporting RPE through FLT.
   """
   del bias
@@ -1354,3 +1351,62 @@ def sharp_masked_performer_dot_product_attention(
       hybrid_global_size=0,
       segment_ids=None,
       data_dependent_kfs=False)
+
+
+def pseudolocal_subquadratic_attention(
+    query: Array,   #  shape: [...M,H,D]
+    key: Array,     #  shape: [...N,H,D]
+    value: Array,   #  shape: [...N,H,D]
+    coords: Array,  #  shape: [...M,E]   E=3
+    aniso_matrix: Array,  # shape: [R,E]
+    rf_type: Any,  #  'regular' | 'hyper'
+    nb_rfs: int,
+):
+  """Pseudolocal Performer attention with Gaussian smoothing.
+
+  Pseudolocal Performer attention with Gaussian smoothing
+
+  Args:
+    query: query tensor.
+    key: key tensor.
+    value: value tensor.
+    coords: coordinates of the tokens.
+    aniso_matrix: matrix defining the anisotripicity of the Gaussian smoothing
+    rf_type: type of the random feature mechanism applied ('regular' or 'hyper')
+    nb_rfs: number of random features used
+
+  Returns:
+    bidirectional pseudolocal Performer's attention.
+  """
+  qk_dim = query.shape[-1]
+  if rf_type == 'hyper':
+    rfs = sat.softmax_hyper_positive_rfs
+  else:
+    rfs = sat.softmax_positive_rfs
+  projection_matrix = ut.get_gaussian_orth_rand_mat(
+      random.PRNGKey(0), nb_rfs, qk_dim + aniso_matrix.shape[0]
+  )
+  qk_normalizer = jnp.sqrt(jnp.sqrt(qk_dim))
+  n_query = query / qk_normalizer
+  n_key = key / qk_normalizer
+  coords_proj = jnp.einsum('RE,...ME->...MR', aniso_matrix, coords)
+  coords_proj = jnp.expand_dims(coords_proj, axis=-2)
+  n_query_xyz = jnp.concatenate([n_query, coords_proj], axis=-1)
+  n_key_xyz = jnp.concatenate([n_key, coords_proj], axis=-1)
+  xyz_mult = jnp.exp(
+      -0.5 * jnp.sum(jnp.square(coords_proj), axis=-1, keepdims=True)
+  )
+  n_query_xyz *= xyz_mult
+  n_key_xyz *= xyz_mult
+  query_prime = rfs(n_query_xyz, projection_matrix, is_query=True)
+  key_prime = rfs(n_key_xyz, projection_matrix, is_query=False)
+  kv = jnp.einsum('...lhm,...lhd->...hmd', key_prime, value)
+  numerator = jnp.einsum('...lhm,...hmd->...lhd', query_prime, kv)
+  key_prime_sum = jnp.sum(key_prime, axis=-3)
+  denominator = jnp.einsum('...lhm,...hm->...lh', query_prime, key_prime_sum)
+  denominator = jnp.expand_dims(
+      denominator, len(denominator.shape)
+  )
+  result = numerator / denominator
+  return result
+
