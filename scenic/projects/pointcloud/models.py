@@ -207,13 +207,17 @@ class PointCloudTransformerEncoder(nn.Module):
       debug: bool = False,
   ):
     output = inputs
+    if mask is not None and (jnp.ndim(mask) < jnp.ndim(inputs)):
+      layer_norm_mask = jnp.expand_dims(mask, axis=-1)
+    else:
+      layer_norm_mask = mask
     for _ in range(self.num_pre_conv_layers):
       output = nn.Conv(
           self.feature_dim,
           kernel_size=(self.kernel_size,),
           use_bias=True,
       )(output)
-      output = nn.LayerNorm(reduction_axes=-2)(output, mask=mask)
+      output = nn.LayerNorm(reduction_axes=-2)(output, mask=layer_norm_mask)
 
     # Self-attention blocks, input_shape= [B, N, D]
     attention_outputs = []
@@ -233,7 +237,7 @@ class PointCloudTransformerEncoder(nn.Module):
         use_bias=True)(output)
 
     if self.out_dim is not None:
-      output = nn.LayerNorm(reduction_axes=-2)(output, mask=mask)
+      output = nn.LayerNorm(reduction_axes=-2)(output, mask=layer_norm_mask)
       output = nn.leaky_relu(output, negative_slope=0.2)
       output = nn.Conv(
           self.out_dim,
