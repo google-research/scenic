@@ -82,6 +82,28 @@ class TrainState:
       return default
 
 
+def expand_dims_for_specs(xs, specs):
+  return jax.tree.map(
+      lambda s, x: jax.tree_map(
+          functools.partial(jnp.expand_dims, axis=tuple(range(len(s)))),
+          x,
+      ),
+      specs,
+      xs,
+  )
+
+
+def squeeze_for_specs(xs, specs):
+  return jax.tree.map(
+      lambda s, x: jax.tree_map(
+          functools.partial(jnp.squeeze, axis=tuple(range(len(s)))),
+          x,
+      ),
+      specs,
+      xs,
+  )
+
+
 def initialize_model(
     *,
     model_def: nn.Module,
