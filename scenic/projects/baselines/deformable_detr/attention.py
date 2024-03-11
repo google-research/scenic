@@ -13,13 +13,13 @@ from typing import Callable, Sequence, Tuple, Union
 
 import flax.linen as nn
 import jax
-from jax.core import Shape
 import jax.numpy as jnp
 import ml_collections
 import numpy as np
 
 
 Array = Union[jnp.ndarray, np.ndarray]
+Shape = Tuple[int, ...]
 
 
 @functools.partial(jax.jit, static_argnames=('w', 'h'))
