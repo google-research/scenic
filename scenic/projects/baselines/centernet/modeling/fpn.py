@@ -8,13 +8,22 @@ import flax.linen as nn
 import jax
 import jax.numpy as jnp
 import ml_collections
-
 from scenic.projects.baselines.centernet.modeling import convnext
+from scenic.projects.baselines.resnet import ResNet
+from scenic.projects.centernet.resnet import D2ResNet
 
 ArrayList = List[jnp.ndarray]
 
+
+# TODO(zhouxy): probably avoid explicit import by using registration.
 BOTTOM_UP_CLASS = {
     'convnext': convnext.ConvNeXt,
+    # Detectron2 ResNets use a different block stracture from standard pytorch/
+    #   jax ResNet. Standard ResNets put strides in 3x3 convs.
+    #   Detectron2 ResNets put strides in each block in 1x1 convs.
+    #   Use detectron2 ResNet here to import models from detectron2.
+    'detectron2_resnet': D2ResNet,
+    'resnet': ResNet,
 }
 
 
