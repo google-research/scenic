@@ -44,8 +44,8 @@ def convert_and_save_model(
     enable_xla: bool = True,
     compile_model: bool = True,
     saved_model_options: Optional[tf.saved_model.SaveOptions] = None,
-    native_serialization: Optional[str | bool] = "default"
-):
+    native_serialization: Optional[str | bool] = "default",
+    native_serialization_platforms: Sequence[str] | None = ("cpu", "tpu")):
   """Converts a JAX function and saves a SavedModel.
 
   We assume that the JAX model consists of a prediction function and trained
@@ -101,6 +101,11 @@ def convert_and_save_model(
       confidence that the code executed when calling this function from
       TensorFlow is exactly the same as JAX would run natively. See
       jax2tf.convert() for details.
+    native_serialization_platforms: When the "native_serialization" flag is
+      used, the platforms that it will be serialised to. Must be a tuple of
+      strings, including a subset of: ['cpu', 'cuda', 'rocm', 'tpu'].
+      'None', specifies the JAX default backend on the machine where the
+      lowering is done.
 
   Raises:
     ValueError: If at least one input signature is not defined. However, if
@@ -116,7 +121,8 @@ def convert_and_save_model(
       with_gradient=with_gradient,
       polymorphic_shapes=[None, polymorphic_shapes],
       enable_xla=enable_xla,
-      native_serialization=native_serialization)
+      native_serialization=native_serialization,
+      native_serialization_platforms=native_serialization_platforms)
 
   def get_tf_variable(path, param):
     return tf.Variable(param, trainable=with_gradient, name="/".join(path))
