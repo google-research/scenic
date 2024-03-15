@@ -371,3 +371,4 @@ class Sam(nn.Module):
   def batch_generate(self, image, padding_mask, upsample_mask=True):
     return jax.vmap(lambda x, y: self.generate(x, y, upsample_mask))(
         image, padding_mask)
+
