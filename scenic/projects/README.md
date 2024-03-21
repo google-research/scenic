@@ -165,9 +165,16 @@
     > knowledge sources, through end-to-end pre-training.
     > Details can be found in the [paper](https://arxiv.org/abs/2212.05221).
 
-*   [PixelLLM](pixel_llm)
+    *   [PixelLLM](pixel_llm)
     > PixelLLM equips large language models with localization capability.
     > Details can be found in the [paper](https://arxiv.org/abs/2312.09237).
+
+*   [GER-ALD](gerald)
+
+    > GER-ALD is a novel generative framework for web-scale visual entity
+    > recognition. We represent each entity by a compact, discriminative and
+    > semantic code that a generative model learns to auto-regressively decode.
+    > Details can be found in the [paper](https://arxiv.org/abs/2403.02041).
 
 <a name="projects"></a>
 ## Scenic projects

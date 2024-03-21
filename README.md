@@ -71,6 +71,8 @@ Projects that were developed in Scenic or used it for their experiments:
 * [Audiovisual Masked Autoencoders](https://arxiv.org/abs/2212.05922)
 * [MatFormer: Nested Transformer for Elastic Inference](https://arxiv.org/abs/2310.07707)
 * [Pixel Aligned Language Models](https://arxiv.org/abs/2312.09237)
+* [A Generative Approach for Wikipedia-Scale Visual Entity Recognition](https://arxiv.org/abs/2403.02041)
+
 
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 
