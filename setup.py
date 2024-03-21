@@ -76,7 +76,6 @@ install_requires_core = [
     "flax>=0.4.0",
     "ml-collections>=0.1.1",
     "tensorflow>=2.7",
-    "tensorflow-addons>=0.15.0",
     "immutabledict>=2.2.1",
     "clu>=0.0.6",
     "tensorflow-datasets",
