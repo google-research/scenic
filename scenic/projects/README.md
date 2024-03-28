@@ -30,6 +30,14 @@
     > for both unimodal and multimodal downstream tasks. Details can be found
     > in the [paper](https://arxiv.org/abs/2212.05922).
 
+*   [Boundary Attention](boundary_attention)
+
+    > Boundary Attention is differentiable bottom-up model for detecting
+    > boundaries in high noise at any resolution. It uses a form of local
+    > attention to infer boundaries that include contours, corners and
+    > junctions, all without rasterization. Details and a link to
+    > the paper can be found on its [website](https://boundaryattention.github.io/).
+
 *   [ViViT](vivit)
 
     > ViViT is a family of pure-transformer based models for video
