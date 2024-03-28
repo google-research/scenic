@@ -196,7 +196,10 @@ def get_viz_dict_from_batch(batch, model_outputs, model, name,
   # accumulate image dictionary
   num_image_summaries = min(num_image_summaries, batch['image'].shape[1])
 
-  iters = [-3, -2, -1]
+  num_iters_plot = min(3, len(model_outputs))
+  iters = jnp.linspace(-num_iters_plot,
+                       -num_iters_plot+num_iters_plot-1,
+                       num_iters_plot).astype(int)
   sbatch = jnp.arange(1)
 
   write_images = {}

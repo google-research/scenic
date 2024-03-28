@@ -22,12 +22,14 @@ from scenic.projects.boundary_attention.configs import dataset_configs
 from scenic.projects.boundary_attention.configs import model_configs
 from scenic.projects.boundary_attention.helpers import get_input_opts
 
- # Add path to the trained model weights here:
+ # Add path to the trained model here:
 _CHECKPOINT_PATH = ''
 _CHECKPOINT_STEP = -1
+# If starting with pretrained weights, modify this instead
+_MODEL_WEIGHTS_PATH = ''
 # Add path to your data here:
 _DATASET_DIR = ''
-# Add what to resize data to here or none to use default size:
+# Define to resize data to here (H, W, C) or set to None to use default size:
 _INPUT_SIZE = None
 
 
@@ -35,6 +37,7 @@ def get_config(
     model_name: str = 'boundary_attention',
     checkpoint_path: Any = _CHECKPOINT_PATH,
     checkpoint_step: int = _CHECKPOINT_STEP,
+    weights_path: Any = _MODEL_WEIGHTS_PATH,
     input_size: Optional[Any] = _INPUT_SIZE,
     dataset_name: str = 'kaleidoshapes',
     dataset_dir: Optional[str] = _DATASET_DIR,
@@ -80,7 +83,7 @@ def get_config(
   config.init_from.checkpoint_step = config.model.get('checkpoint_step',
                                                       checkpoint_step)
   config.init_from.params_path = config.model.get('pretrained_params_path',
-                                                  None)
+                                                  weights_path)
 
   # Training.
   config.optimizer_configs = ml_collections.ConfigDict()

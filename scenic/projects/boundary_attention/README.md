@@ -26,7 +26,7 @@ conda create -n boundary_attention python=3.10 -y
 conda activate boundary_attention
 # Clone the scenic github repository
 git clone https://github.com/google-research/scenic.git
-cd ~/scenic
+cd scenic
 # Install scenic-wide packages
 pip install -e .
 # Install Boundary Attention specific packages
@@ -36,17 +36,26 @@ pip install -r scenic/projects/boundary_attention/requirements.txt
 pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html --force-reinstall
 ```
 
-Download the [pretrained weights](#pretrained-checkpoints) so that they are available locally.
-
-Then, you can use the following script to test Boundary Attention on new images by replacing `CHECKPOINT_PATH`, `IMAGE_PATH`, and `SAVE_PATH` with local paths to the model's checkpoint, a new input image, and where to save the network's output.
+ Download the [pretrained weights](#pretrained-weights) and place inside the boundary attention main folder.
 
 ```shell
-CHECKPOINT_PATH='ADD HERE'
+# Create directories for saving your results and placing the pretrained checkpoint
+mkdir scenic/projects/boundary_attention/workdir
+mkdir scenic/projects/boundary_attention/pretrained_weights
+
+# Move the checkpoint to the folder
+cp ~/Downloads/checkpoint  scenic/projects/boundary_attention/pretrained_weights
+```
+
+Then, you can use the following script to test Boundary Attention on new images, replacing `IMAGE_PATH` with a path to any local image.
+
+```shell
+PRETRAINED_PATH='scenic/projects/boundary_attention/pretrained_weights/'
 IMAGE_PATH='scenic/projects/boundary_attention/noisy_flower.png'
-SAVE_PATH='ADD HERE'
+SAVE_PATH='scenic/projects/boundary_attention/workdir/'
 
 python scenic/projects/boundary_attention/helpers/test_new_images.py \
-  --ckpt_dir=${CHECKPOINT_PATH} \
+  --weights_dir=${PRETRAINED_PATH} \
   --img_path=${IMAGE_PATH} \
   --save_path=${SAVE_PATH} \
   --height=216 \
@@ -56,7 +65,7 @@ python scenic/projects/boundary_attention/helpers/test_new_images.py \
 
 The height and width options resize the input image. The option "save_raw_output" toggles whether the entire output from the network is saved to a pickle file.
 
-Alternatively, you can modify this simple script for Jupyter or Colab.
+Alternatively, you can modify this script for Jupyter or Colab.
 
 ```python
 import PIL
@@ -71,8 +80,8 @@ from scenic.projects.boundary_attention.helpers import viz_utils
 im_height = 216 # Replace with height to resize input to
 im_width = 216  # Replace with width to resize input to
 
-img_path = '' # Replace with path to new input
-ckpt_dir = '' # Add path to ckpt directory here
+img_path = 'scenic/projects/boundary_attention/noisy_flower.png' # Replace with path to new input
+weights_dir = 'scenic/projects/boundary_attention/pretrained_weights/' # Add path to pretrained weights here
 
 ############################################
 
@@ -83,14 +92,14 @@ config = base_config.get_config(model_name='boundary_attention',
                                   dataset_name='testing',
                                   input_size=(im_height, im_width, 3))
 
-apply_jitted, trained_params = train_utils.make_apply(config, ckpt_dir)
+apply_jitted, trained_params = train_utils.make_apply(config, weights_dir)
 
 outputs = apply_jitted(trained_params['params'], input_img)
 viz_utils.visualize_outputs(input_img, outputs)
 ```
 
-### Pretrained Checkpoints
-The pretrained checkpoint for boundary attention is coming soon.
+### Pretrained Weights
+The pretrained model weights for boundary attention is coming soon.
 
 ### Kaleidoshapes Dataset
 A link to kaleidoshapes will be available soon, to generate your own kaleidoshapes dataset or for additional detail on how to use kaleidoshapes see [here](kaleidoshapes/README.md).
@@ -99,48 +108,53 @@ A link to kaleidoshapes will be available soon, to generate your own kaleidoshap
 
 A few important model files in this projects are:
 
-- `models/model_lib/boundary_attention_model_base.py` is our base model, which is called by wrapper `models/boundary_attention.py`
-- `helpers/junction_functions.py` defines a class to manipulate the model's output junctions and calls `helpers/render_junctions.py` to render junction patches
-- `helpers/params2maps.py` is a wrapper for `helpers/junction_functions.py`
+- [`boundary_attention_model_base.py`](models/model_lib/boundary_attention_model_base.py) is our base model, which is called by wrapper [`boundary_attention.py`](models/boundary_attention.py)
+- [`junction_functions.py`](helpers/junction_functions.py) defines a class to manipulate the model's output junctions and calls [`render_junctions.py`](helpers/render_junctions.py) to render junction patches
+- [`params2maps.py`](helpers/params2maps.py) is a wrapper for [`junction_functions.py`](helpers/junction_functions.py)
 
 ### Training
 
-Below is an example command-line script to train Boundary Attention on [Kaleidoshapes](#kaleidoshapes-dataset) with this [base config](configs/boundary_attention_model_config).
+Below is an example command-line script to train Boundary Attention on [Kaleidoshapes](#kaleidoshapes-dataset) with this [base config](configs/boundary_attention_model_config.py).
 
 There are two ways to specify dataset and checkpoint locations.
 The first is to modify the [base config](configs/base_config.py) so that the parameters defined at the top point to the correct locations.
 
-```python
-_CHECKPOINT_PATH = ''  # Add path here or set to None
-_CHECKPOINT_STEP = -1 # Add step, or leave as -1 for the latest checkpoint
-_DATASET_DIR = '' # Add path here
-```
+Here, `_CHECKPOINT_PATH` refers to checkpoints saved during training.
+Use `_MODEL_WEIGHTS_PATH` if using the pretrained weights provided.
 
-Modify `_CHECKPOINT_PATH` to point to the provided weights if starting training from the pretrained model. Otherwise, leave the `_CHECKPOINT_PATH` empty.
+```python
+_CHECKPOINT_PATH = ''  # Leave empty if using pretrained weights
+_CHECKPOINT_STEP = -1 # Add step, or leave as -1 for the latest checkpoint
+_MODEL_WEIGHTS_PATH = 'scenic/projects/boundary_attention/pretrained_weights/' # Add path to pretrained weights if using, otherwise put ''
+_DATASET_DIR = '' # Add path to kaleidoshapes here
+_INPUT_SIZE = None # Define to resize data to here (H, W, C) or set to None to use default size
+```
 
 Then, create a workdir and train with the following terminal command:
 
 ```shell
-WORKDIR="SET WORKDIR PATH HERE"
+WORKDIR='scenic/projects/boundary_attention/workdir/' # Modify to point to a desired location
 python -m scenic.projects.boundary_attention.main \
   --config=scenic/projects/boundary_attention/configs/base_config.py \
-  --workdir=${WORKDIR}/
+  --workdir=${WORKDIR}
 ```
 
-Alternatively, specify the checkpoint path, step, and dataset directory at train time (this will override changes to `base_config`):
+Alternatively, specify these settings at train time (this will override changes to `base_config`):
 
 ```shell
-WORKDIR='ADD PATH TO WORKDIR HERE'
-DATASET_DIR='ADD DATASET DIRECTORY HERE'
-CHECKPOINT_PATH='ADD CHECKPOINT LOCATION HERE'
+WORKDIR='scenic/projects/boundary_attention/workdir/'
+DATASET_DIR='ADD PATH TO DATASET HERE'
+CHECKPOINT_PATH=''
 CHECKPOINT_STEP=-1
+MODEL_WEIGHTS_PATH='scenic/projects/boundary_attention/pretrained_weights/'
 
 python -m scenic.projects.boundary_attention.main \
   --config=scenic/projects/boundary_attention/configs/base_config.py \
-  --workdir=${WORKDIR}/ \
-  --dataset_dir=${DATASET_DIR}/ \
-  --checkpoint_path=${CHECKPOINT_PATH}/ \
-  --checkpoint_step=${CHECKPOINT_STEP}
+  --workdir=${WORKDIR} \
+  --dataset_dir=${DATASET_DIR} \
+  --checkpoint_path=${CHECKPOINT_PATH} \
+  --checkpoint_step=${CHECKPOINT_STEP} \
+  --weights_path=${MODEL_WEIGHTS_PATH}
 ```
 
 ### Evaluation
@@ -148,27 +162,29 @@ python -m scenic.projects.boundary_attention.main \
 Below is an example command-line script to evaluate Boundary Attention on Kaleidoshapes.
 
 ```shell
-WORKDIR='ADD PATH TO WORKDIR'
-DATASET_DIR='ADD PATH TO DATASET'
-CHECKPOINT_PATH='ADD PATH TO CHECKPOINT'
+WORKDIR='scenic/projects/boundary_attention/workdir/'
+DATASET_DIR='ADD PATH TO DATASET HERE'
+CHECKPOINT_PATH=''
 CHECKPOINT_STEP=-1
+MODEL_WEIGHTS_PATH='scenic/projects/boundary_attention/pretrained_weights/'
 
 python -m scenic.projects.boundary_attention.eval_main \
   --config=scenic/projects/boundary_attention/configs/base_config.py \
-  --workdir=${WORKDIR}/ \
-  --dataset_dir=${DATASET_DIR}/ \
-  --checkpoint_path=${CHECKPOINT_PATH}/ \
-  --checkpoint_step=${CHECKPOINT_STEP}
+  --workdir=${WORKDIR} \
+  --dataset_dir=${DATASET_DIR} \
+  --checkpoint_path=${CHECKPOINT_PATH} \
+  --checkpoint_step=${CHECKPOINT_STEP} \
+  --weights_path=${MODEL_WEIGHTS_PATH}
 ```
 
 
 ### Citation
 ```
-@article{mia2023boundaries,
+@article{mia2024boundaries,
   author    = {Polansky, Mia Gaia and Herrmann, Charles and Hur, Junhwa and Sun, Deqing
               and Verbin, Dor and Zickler, Todd},
-  title     = {Boundary Attention: Learning to Find Faint Boundaries at Any Resolution},
+  title     = {Boundary Attention: Learning to Localize Boundaries Under High Noise},
   journal   = {arXiv},
-  year      = {2023},
+  year      = {2024},
   }
 ```

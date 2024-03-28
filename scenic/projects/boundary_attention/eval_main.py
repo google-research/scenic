@@ -25,14 +25,15 @@ import jax.numpy as jnp
 import ml_collections
 from scenic import app as scenic_app
 from scenic.projects.boundary_attention import eval_manager
+from scenic.projects.boundary_attention import trainer
 from scenic.projects.boundary_attention.dataset_lib import dataloader
 from scenic.projects.boundary_attention.models import all_models
-from scenic.train_lib import pretrain_utils
-from scenic.train_lib import train_utils
+from scenic.train_lib import train_utils as scenic_train_utils
 
 flags.DEFINE_string('dataset_dir', '', 'Dataset directory.')
 flags.DEFINE_string('checkpoint_path', '', 'Checkpoint path.')
 flags.DEFINE_integer('checkpoint_step', -1, 'Checkpoint step.')
+flags.DEFINE_string('weights_path', '', 'Pretrained weights path.')
 
 FLAGS = flags.FLAGS
 EVAL_ARTIFACT_DESCRIPTION = 'Last evaluated checkpoint'
@@ -41,7 +42,7 @@ FINAL_CKPT_ARTIFACT_DESCRIPTION = 'Final checkpoint'
 
 def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,  # pylint: disable=unused-argument
          writer: metric_writers.MetricWriter):
-  """Main function for DaVinci evals."""
+  """Main function for Boundary Attention evals."""
 
   # Update config if flags defined
   if len(FLAGS.dataset_dir) > 0:  # pylint: disable=g-explicit-length-test
@@ -50,6 +51,8 @@ def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,  # p
     config.init_from.checkpoint_path = FLAGS.checkpoint_path
   if FLAGS.checkpoint_step != -1:
     config.init_from.checkpoint_step = FLAGS.checkpoint_step
+  if len(FLAGS.weights_path) > 0:  # pylint: disable=g-explicit-length-test
+    config.init_from.params_path = FLAGS.weights_path
 
   model_cls = all_models.get_model_cls(config.model.name)
   # Create the dataset for the primary eval, which we assume uses the same
@@ -70,10 +73,33 @@ def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,  # p
   checkpoint_dir = FLAGS.checkpoint_path
   latest_checkpoint = checkpoints.latest_checkpoint(checkpoint_dir)
 
-  # Run evaluation
-  step = int(train_utils.checkpoint_path_step(latest_checkpoint))
-  train_state = pretrain_utils.restore_pretrained_checkpoint(
-      checkpoint_dir, step=step)
+   # Initialize model.
+  rng, params_rng, dropout_rng = jax.random.split(key=rng, num=3)
+
+  input_specs = []
+  for input_shape in dataset_metadata['input_shape']:
+    input_spec = (input_shape, dataset_metadata.get('input_dtype',
+                                                    jnp.float32))
+    input_specs.append(input_spec)
+
+  (params, model_state, _,
+   _) = scenic_train_utils.initialize_model(
+       model_def=model.flax_model,
+       input_spec=input_specs,
+       config=config,
+       rngs={'params': params_rng,
+             'dropout': dropout_rng})
+
+  _, train_rng = jax.random.split(rng)
+
+  train_state = scenic_train_utils.TrainState(
+      global_step=0,
+      params=params,
+      model_state=model_state,
+      rng=train_rng)
+
+  train_state, step = trainer.maybe_restore_model_or_params(model, train_state,
+                                                            workdir, config)
   train_state = jax_utils.replicate(train_state)
 
   # Evaluate
@@ -83,11 +109,11 @@ def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,  # p
   # Wait for all hosts to finish before proceeding to next checkpoint:
   logging.info('Reached barrier on host %s for checkpoint %s',
                jax.process_index(), latest_checkpoint)
-  train_utils.barrier()
+  scenic_train_utils.barrier()
 
   # Wait for all hosts to finish before exiting:
   logging.info('Reached final barrier on host %s', jax.process_index())
-  train_utils.barrier()
+  scenic_train_utils.barrier()
 
   # Shut down work unit and exit:
   logging.info('Exiting.')

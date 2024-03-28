@@ -151,7 +151,7 @@ def maybe_restore_model_or_params(model: Any,
         workdir, train_state)
 
   if (start_step == 0  # Which means "no" checkpoint is restored!
-      and config.init_from.get('checkpoint_path') is not None):
+      and len(config.init_from.get('checkpoint_path')) > 0):  # pylint: disable=g-explicit-length-test
     restored_model_cfg = config.init_from.get('model_config', config.model)
     init_checkpoint_path = config.init_from.get('checkpoint_path')
     if config.init_from.get('checkpoint_step', -1) != -1:
@@ -166,8 +166,7 @@ def maybe_restore_model_or_params(model: Any,
         train_state, restored_train_state, restored_model_cfg)
     del restored_train_state
 
-  elif (start_step == 0) and config.init_from.get('params_path') is not None:
-
+  elif (start_step == 0) and len(config.init_from.get('params_path')) > 0:  # pylint: disable=g-explicit-length-test
     restored_model_cfg = config.init_from.get('model_config', config.model)
     init_checkpoint_path = config.init_from.get('params_path')
     restored_train_state = train_utils.restore_pretrained_params(

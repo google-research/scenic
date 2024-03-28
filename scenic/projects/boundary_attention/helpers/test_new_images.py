@@ -30,7 +30,7 @@ from tensorflow.io import gfile
 flags.DEFINE_integer('height', 216, 'Height of input.')
 flags.DEFINE_integer('width', 216, 'Width of input.')
 flags.DEFINE_integer('rng_seed', 0, 'Rng seed.')
-flags.DEFINE_string('ckpt_dir', None, 'Checkpoint directory.')
+flags.DEFINE_string('weights_dir', None, 'Weights directory.')
 flags.DEFINE_string('img_path', None, 'Image path.')
 flags.DEFINE_string('save_path', None, 'Save output path.')
 flags.DEFINE_bool('save_raw_output', False, 'Save raw output.')
@@ -45,7 +45,8 @@ def main(argv):
                                   dataset_name='testing',
                                   input_size=(FLAGS.height, FLAGS.width, 3))
 
-  apply_jitted, trained_params = train_utils.make_apply(config, FLAGS.ckpt_dir)
+  apply_jitted, trained_params = train_utils.make_apply(config,
+                                                        FLAGS.weights_dir)
 
   im_real = np.array(
       PIL.Image.open(
@@ -58,11 +59,11 @@ def main(argv):
 
   viz_utils.visualize_outputs(im_use, outputs)
 
-  plt.savefig(gfile.GFile(FLAGS.save_path + 'output.png', 'wb'), format='png')
+  plt.savefig(gfile.GFile(FLAGS.save_path + '/output.png', 'wb'), format='png')
 
   if FLAGS.save_raw_output:
     pickle.dump(outputs,
-                gfile.GFile(FLAGS.save_path + 'output.pkl', 'wb'))
+                gfile.GFile(FLAGS.save_path + '/raw_output.pkl', 'wb'))
 
 
 if __name__ == '__main__':

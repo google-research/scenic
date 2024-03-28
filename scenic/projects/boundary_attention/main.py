@@ -32,6 +32,7 @@ from scenic.projects.boundary_attention.models import all_models
 flags.DEFINE_string('dataset_dir', '', 'Dataset directory.')
 flags.DEFINE_string('checkpoint_path', '', 'Checkpoint path.')
 flags.DEFINE_integer('checkpoint_step', -1, 'Checkpoint step.')
+flags.DEFINE_string('weights_path', '', 'Pretrained weights path.')
 
 FLAGS = flags.FLAGS
 FINAL_CKPT_ARTIFACT_DESCRIPTION = 'Final checkpoint'
@@ -52,6 +53,8 @@ def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,
     config.init_from.checkpoint_path = FLAGS.checkpoint_path
   if FLAGS.checkpoint_step != -1:
     config.init_from.checkpoint_step = FLAGS.checkpoint_step
+  if len(FLAGS.weights_path) > 0:  # pylint: disable=g-explicit-length-test
+    config.init_from.params_path = FLAGS.weights_path
 
   # Update learning rate to take into account the number of devices
   num_devices = jax.device_count()
