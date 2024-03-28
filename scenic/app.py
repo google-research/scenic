@@ -32,8 +32,8 @@ Usage in your main.py:
   if __name__ == '__main__':
     app.run(main)
 """
-
 import functools
+import os
 
 from absl import app
 from absl import flags
@@ -75,6 +75,11 @@ def _run_main(argv, *, main):
   # it unavailable to JAX.
   tf.config.experimental.set_visible_devices([], 'GPU')
 
+  config = FLAGS.config
+  workdir = FLAGS.workdir
+  if 'workdir_suffix' in config:
+    workdir = os.path.join(workdir, config.workdir_suffix)
+
   # Enable wrapping of all module calls in a named_call for easier profiling:
   nn.enable_named_call()
 
@@ -93,12 +98,12 @@ def _run_main(argv, *, main):
       f'host_id: {jax.process_index()}, host_count: {jax.process_count()}')
   if jax.process_index() == 0:
     platform.work_unit().create_artifact(platform.ArtifactType.DIRECTORY,
-                                         FLAGS.workdir, 'Workdir')
+                                         workdir, 'Workdir')
 
-  rng = jax.random.PRNGKey(FLAGS.config.rng_seed)
+  rng = jax.random.PRNGKey(config.rng_seed)
   logging.info('RNG: %s', rng)
 
   writer = metric_writers.create_default_writer(
-      FLAGS.workdir, just_logging=jax.process_index() > 0, asynchronous=True)
+      workdir, just_logging=jax.process_index() > 0, asynchronous=True)
 
-  main(rng=rng, config=FLAGS.config, workdir=FLAGS.workdir, writer=writer)
+  main(rng=rng, config=config, workdir=workdir, writer=writer)
