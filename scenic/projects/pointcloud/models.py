@@ -169,9 +169,25 @@ class SelfAttentionLayer(nn.Module):
           self.attention_fn_configs['performer']['masking_type']
           == 'pseudolocal'
       ):
+        sigma = self.attention_fn_configs['performer']['sigma']
+        base_aniso_matrix = (1.0 / sigma) * jnp.identity(3)
+        output = performer.pseudolocal_subquadratic_attention(
+            query,
+            key,
+            value,
+            coords,
+            aniso_matrix=(base_aniso_matrix),
+            rf_type=self.attention_fn_configs['performer']['rf_type'],
+            nb_rfs=self.attention_fn_configs['performer']['num_features'],
+        )
+      elif (
+          self.attention_fn_configs['performer']['masking_type']
+          == 'pseudolocal_learnable'
+      ):
         inner_dim = 3
-        base_aniso_matrix = jnp.identity(3)
-        aniso_matrix_delta_params = self.param(
+        sigma = self.attention_fn_configs['performer']['sigma']
+        base_aniso_matrix = (1.0 / sigma) * jnp.identity(3)
+        aniso_matrix_delta_params = (1.0 / sigma) * self.param(
             'aniso_matrix_delta_params', zeros, (inner_dim, 3)
         )
         output = performer.pseudolocal_subquadratic_attention(
@@ -182,6 +198,11 @@ class SelfAttentionLayer(nn.Module):
             aniso_matrix=(base_aniso_matrix + aniso_matrix_delta_params),
             rf_type=self.attention_fn_configs['performer']['rf_type'],
             nb_rfs=self.attention_fn_configs['performer']['num_features'],
+        )
+      else:
+        raise ValueError(
+            'Unsupported masking type: %s'
+            % self.attention_fn_configs['performer']['masking_type']
         )
       output = jnp.squeeze(output, axis=-2)
 
@@ -219,12 +240,15 @@ class PointCloudTransformerEncoder(nn.Module):
       mask: jnp.ndarray | None = None,
       train: bool = False,
       debug: bool = False,
+      coords: jnp.ndarray | None = None,
   ):
     output = inputs
     if mask is not None and (jnp.ndim(mask) < jnp.ndim(inputs)):
       layer_norm_mask = jnp.expand_dims(mask, axis=-1)
     else:
       layer_norm_mask = mask
+    if coords is None:
+      coords = inputs
     for _ in range(self.num_pre_conv_layers):
       output = nn.Conv(
           self.feature_dim,
@@ -240,7 +264,7 @@ class PointCloudTransformerEncoder(nn.Module):
           in_channels=self.feature_dim,
           out_channels=self.feature_dim,
           attention_fn_configs=self.attention_fn_configs)(
-              output, inputs, mask=mask)
+              output, coords, mask=mask)
       attention_outputs.append(output)
 
     output = jnp.concatenate(attention_outputs, axis=-1)
