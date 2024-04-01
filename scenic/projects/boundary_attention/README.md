@@ -36,7 +36,7 @@ pip install -r scenic/projects/boundary_attention/requirements.txt
 pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html --force-reinstall
 ```
 
- Download the [pretrained weights](#pretrained-weights) and place inside the boundary attention main folder.
+ Download the [pretrained weights](#pretrained-weights) and place inside a folder within the boundary attention main folder:
 
 ```shell
 # Create directories for saving your results and placing the pretrained checkpoint
@@ -99,10 +99,21 @@ viz_utils.visualize_outputs(input_img, outputs)
 ```
 
 ### Pretrained Weights
-The pretrained model weights for boundary attention is coming soon.
+The pretrained model weights for boundary attention are available in [this Google Drive folder](https://drive.google.com/drive/folders/1VwDx3UUGA_Sh8ax1eWAOzE1xwfu2uKtU?usp=share_link).
 
 ### Kaleidoshapes Dataset
-A link to kaleidoshapes will be available soon, to generate your own kaleidoshapes dataset or for additional detail on how to use kaleidoshapes see [here](kaleidoshapes/README.md).
+
+To download kaleidoshapes, install the [gcloudCLI](https://cloud.google.com/sdk/docs/install-sdk) and then use:
+
+```shell
+# Make new directory to store dataset
+mkdir scenic/boundary_attention/kaleidoshapes_dataset
+
+# Copy dataset to directory
+gsutil cp -r gs://scenic-bucket/boundary_attention/kaleidoshapes/ scenic/boundary_attention/kaleidoshapes_dataset
+```
+
+To generate your own kaleidoshapes dataset or for additional detail on how to use kaleidoshapes see [here](kaleidoshapes/README.md).
 
 ### File Structure
 
