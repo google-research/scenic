@@ -184,6 +184,11 @@
     > semantic code that a generative model learns to auto-regressively decode.
     > Details can be found in the [paper](https://arxiv.org/abs/2403.02041).
 
+*   [Streaming Dense Video Captioning](streaming_dvc)
+
+    > Streaming DVC is a framework for dense captioning of long videos.
+    > Details can be found in the [paper](https://arxiv.org/abs/2404.01297).
+
 <a name="projects"></a>
 ## Scenic projects
 A typical project consists of models, trainers, configs, a runner, and some
