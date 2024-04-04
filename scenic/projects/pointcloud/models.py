@@ -67,6 +67,7 @@ class SelfAttentionLayer(nn.Module):
   """Self Attention Layer."""
   in_channels: Any
   out_channels: Any
+  key_channels: Any | None = None
   kernel_size: int | None = 1
   mask_function: str | None = 'linear'
   attention_type: str | None = 'naive'
@@ -93,13 +94,14 @@ class SelfAttentionLayer(nn.Module):
     Returns:
       output: Tensor of shape [batch_size, num_points, feature_dim]
     """
+    key_channels = self.key_channels or self.out_channels
     input_q = nn.Conv(
-        self.out_channels,
+        key_channels,
         kernel_size=(self.kernel_size,),
         use_bias=True)(
             inputs)
     input_k = nn.Conv(
-        self.out_channels,
+        key_channels,
         kernel_size=(self.kernel_size,),
         use_bias=True)(
             inputs)
@@ -262,6 +264,7 @@ class PointCloudTransformerEncoder(nn.Module):
     for _ in range(self.num_attention_layers):
       output = SelfAttentionLayer(
           in_channels=self.feature_dim,
+          key_channels=self.feature_dim,
           out_channels=self.feature_dim,
           attention_fn_configs=self.attention_fn_configs)(
               output, coords, mask=mask)
