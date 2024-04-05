@@ -356,9 +356,10 @@ class ViT(nn.Module):
       num_remaining_tokens = int(
           (1.0 - self.token_mask_probability) * num_pixel_tokens)
       if train:
-        inds = jax.random.shuffle(
+        inds = jax.random.permutation(
             self.make_rng('dropout'),
-            jnp.arange(num_pixel_tokens, dtype=jnp.int32)
+            jnp.arange(num_pixel_tokens, dtype=jnp.int32),
+            independent=True,
         )[:num_remaining_tokens]
       else:
         if self.token_mask_test:

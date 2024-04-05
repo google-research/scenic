@@ -332,7 +332,7 @@ class CaptioningFlaxModel(nn.Module):
       visual_features = visual_features.reshape(
           video_batch_size, t * hw, dim)
       if train:
-        inds = jax.random.shuffle(
+        inds = jax.random.permutation(
             self.make_rng('dropout'),
             jnp.arange(t * hw, dtype=jnp.int32))[:self.num_pooled_tokens]
       else:
