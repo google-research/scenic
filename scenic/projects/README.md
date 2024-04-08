@@ -189,6 +189,12 @@
     > Streaming DVC is a framework for dense captioning of long videos.
     > Details can be found in the [paper](https://arxiv.org/abs/2404.01297).
 
+*   [Dense Video Object Captioning](densevoc)
+
+    > Dense VOC is an end-to-end model for joint object detection, tracking,
+    > and captioning in videos.
+    > Details can be found in the [paper](https://arxiv.org/abs/2306.11729).
+
 <a name="projects"></a>
 ## Scenic projects
 A typical project consists of models, trainers, configs, a runner, and some

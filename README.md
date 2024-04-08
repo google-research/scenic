@@ -72,7 +72,8 @@ Projects that were developed in Scenic or used it for their experiments:
 * [MatFormer: Nested Transformer for Elastic Inference](https://arxiv.org/abs/2310.07707)
 * [Pixel Aligned Language Models](https://arxiv.org/abs/2312.09237)
 * [A Generative Approach for Wikipedia-Scale Visual Entity Recognition](https://arxiv.org/abs/2403.02041)
-* [Streaming Dense Video Captioning](https://arxiv.org/abs/xxxx.xxxxx)
+* [Streaming Dense Video Captioning](https://arxiv.org/abs/2404.01297)
+* [Dense Video Object Captioning from Disjoint Supervision](https://arxiv.org/abs/2306.11729)
 
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 
