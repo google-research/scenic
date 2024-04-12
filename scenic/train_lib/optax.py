@@ -241,7 +241,7 @@ def make(config: ml_collections.ConfigDict,
       # with *zero* noise.
       grad_clip_norm_tx = [
           optax.masked(
-              optax.differentially_private_aggregate(
+              optax.contrib.differentially_private_aggregate(
                   config.max_grad_norm, 0.0, 0),
               not_frozen_mask),
           aggregate_gradients_pmean(axis_name=axis_name)]
