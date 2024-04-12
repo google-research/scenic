@@ -235,14 +235,18 @@ def random_erasing(frames: tf.Tensor,
   return random_eraser.distort(frames)
 
 
-def crop_resize(frames: tf.Tensor,
-                output_h: int,
-                output_w: int,
-                num_frames: int,
-                num_channels: int,
-                area_range=(0.3, 1),
-                unused_state=None,
-                aspect_ratio=(0.5, 2.0)) -> tf.Tensor:
+def crop_resize(
+    frames: tf.Tensor,
+    output_h: int,
+    output_w: int,
+    num_frames: int,
+    num_channels: int,
+    area_range=(0.3, 1),
+    unused_state=None,
+    aspect_ratio=(0.5, 2.0),
+    resize_method: str = tf.image.ResizeMethod.BICUBIC,
+    resize_antialias: bool = False,
+) -> tf.Tensor:
   """First crop clip with jittering and then resizes to (output_h, output_w).
 
   Args:
@@ -252,10 +256,12 @@ def crop_resize(frames: tf.Tensor,
     num_frames: Number of input frames per clip.
     num_channels: Number of channels of the clip.
     area_range: Random crop will preserve this proportion of the area of the
-    original frame.
+      original frame.
     unused_state: Argument included to be compatible with DeepMind Video Reader
-    preprocessing pipeline functions which pass in a state variable.
+      preprocessing pipeline functions which pass in a state variable.
     aspect_ratio: Aspect ratio range of area based random resizing.
+    resize_method: Method for resizing the frames.
+    resize_antialias: If True, apply anti-aliasing when resizing.
 
   Returns:
     A Tensor of shape [timesteps, output_h, output_w, channels] of type
@@ -285,8 +291,13 @@ def crop_resize(frames: tf.Tensor,
   frames = tf.slice(frames, offset, size)
   frames = tf.cast(
       tf.image.resize(
-          frames, (output_h, output_w), method=tf.image.ResizeMethod.BICUBIC),
-      frames.dtype)
+          frames,
+          (output_h, output_w),
+          method=resize_method,
+          antialias=resize_antialias,
+      ),
+      frames.dtype,
+  )
   frames.set_shape((num_frames, output_h, output_w, num_channels))
   return frames
 
@@ -464,8 +475,16 @@ def three_spatial_crops(images, crop_size):
   return tf.concat(result, axis=0)
 
 
-def additional_augmentations(ds_factory, augmentation_params, crop_size,
-                             num_frames, zero_centering, rgb_feature_name=None):
+def additional_augmentations(
+    ds_factory,
+    augmentation_params,
+    crop_size,
+    num_frames,
+    zero_centering,
+    rgb_feature_name=None,
+    resize_method: str = tf.image.ResizeMethod.BICUBIC,
+    resize_antialias: bool = False,
+):
   """Apply additional data augmentations in the DMVR pre-processsing graph."""
 
   if not rgb_feature_name:
@@ -510,10 +529,13 @@ def additional_augmentations(ds_factory, augmentation_params, crop_size,
             num_channels=3,
             area_range=area_range,
             aspect_ratio=aspect_ratio,
-            ),
+            resize_method=resize_method,
+            resize_antialias=resize_antialias,
+        ),
         feature_name=rgb_feature_name,
         fn_name=f'{rgb_feature_name}_crop_resize',
-        add_before_fn_name=next_fn_name)
+        add_before_fn_name=next_fn_name,
+    )
 
   elif do_jitter_scale:
     ds_factory.preprocessor_builder.add_fn(
