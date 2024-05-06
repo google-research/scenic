@@ -20,6 +20,7 @@ import re
 from typing import Any, Dict, Mapping, List, Optional, Union
 
 from absl import logging
+from big_vision import utils
 import flax
 from flax.training import checkpoints
 import numpy as np
@@ -316,10 +317,15 @@ def convert_big_vision_to_scenic_checkpoint(
     return unflattened
 
   logging.info('Loading big_vision checkpoint from %s', checkpoint_path)
-  checkpoint_data = np.load(gfile.GFile(checkpoint_path, 'rb'))
+  if '.bv' in checkpoint_path:
+    checkpoint_data = utils.load_checkpoint_ts(checkpoint_path)
+  else:
+    checkpoint_data = np.load(gfile.GFile(checkpoint_path, 'rb'))
   tree = unflatten_dict(checkpoint_data, separator='/', leaf_idx=0)
 
-  restored_params = tree['opt']['target']
+  restored_params = (
+      tree['opt']['target'] if 'target' in tree['opt'] else tree['params']
+  )
   if convert_to_linen:
     restored_params = checkpoints.convert_pre_linen(restored_params)
   restored_params = dict(restored_params)
@@ -335,9 +341,11 @@ def convert_big_vision_to_scenic_checkpoint(
 
   # pytype: disable=wrong-arg-types
   restored_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=int(tree['opt']['state']['step']),
+      global_step=int(
+          tree['opt']['state']['step'] if 'state' in tree['opt'] else 0
+      ),
       params=restored_params,
-      )
+  )
   # pytype: enable=wrong-arg-types
 
   return restored_train_state
