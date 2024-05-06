@@ -27,6 +27,7 @@ import numpy as np
 from scenic.common_lib import debug_utils
 from scenic.model_lib.base_models import model_utils as base_model_utils
 import scipy
+flax.config.update('flax_return_frozendict', True)
 
 
 def reshape_to_1d_factorized(x: jnp.ndarray, axis: int):
