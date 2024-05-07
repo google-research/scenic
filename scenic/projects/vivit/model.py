@@ -947,18 +947,21 @@ class ViViTMultiHeadClassificationModel(ViViTClassificationModel):
             (model_utils.joint_accuracy(logits, one_hot_targets, class_splits,
                                         weights),
              base_model_utils.num_examples(logits, one_hot_targets, weights)))
-        pairwise_top_five = base_model_utils.psum_metric_normalizer(
-            (model_utils.joint_top_k(
-                logits, one_hot_targets, class_splits, k=5, weights=weights),
-             base_model_utils.num_examples(logits, one_hot_targets, weights)))
         eval_name = f'{split_names[0]}-{split_names[1]}'
         evaluated_metrics[f'{eval_name}_accuracy'] = pairwise_acc
-        evaluated_metrics[f'{eval_name}_accuracy_top_5'] = pairwise_top_five
+        if self.dataset_meta_data.get('num_classes', -1) > 5:
+          pairwise_top_five = base_model_utils.psum_metric_normalizer(
+              (model_utils.joint_top_k(
+                  logits, one_hot_targets, class_splits, k=5, weights=weights),
+               base_model_utils.num_examples(logits, one_hot_targets, weights)))
+          evaluated_metrics[f'{eval_name}_accuracy_top_5'] = pairwise_top_five
 
       return evaluated_metrics
-
+    metrics = ViViT_CLASSIFICATION_METRICS
+    if self.dataset_meta_data.get('num_classes', -1) <= 5:
+      metrics = ViViT_CLASSIFICATION_METRICS_BASIC
     return functools.partial(
         classification_metrics_function,
-        metrics=ViViT_CLASSIFICATION_METRICS,
+        metrics=metrics,
         class_splits=self.class_splits,
         split_names=self.split_names)
