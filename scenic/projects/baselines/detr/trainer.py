@@ -33,8 +33,7 @@ from scenic.dataset_lib import dataset_utils
 
 
 from scenic.projects.baselines.detr import train_utils as detr_train_utils
-from scenic.train_lib_deprecated import lr_schedules
-from scenic.train_lib_deprecated import pretrain_utils
+from scenic.train_lib import pretrain_utils
 from scenic.train_lib_deprecated import train_utils
 
 
@@ -206,6 +205,39 @@ def get_eval_step(flax_model,
 
   return eval_step
 
+def _handle_legacy_format(train_state):
+  """Handle legacy format.
+
+  To remove this function, make sure all checkpoints that are to be loaded are
+  in the non-legacy format:
+    * checkpoint['params'] is a PyTree of parameters;
+    * checkpoint['model_state']['batch_stats'] is a PyTree of batch statistics.
+
+  Args:
+    train_state: A train state.
+  """
+  if 'params' not in train_state:
+    train_state['params'] = train_state.pop('optimizer').pop(
+        'target')
+    if 'params' in train_state['params']:
+      train_state['params'] = train_state['params']['params']
+  if 'model_state' in train_state and 'batch_stats' not in train_state[
+      'model_state']:
+    bad_restored_batch_stats = train_state.pop('model_state')
+    good_restored_batch_stats = {}
+    for key, value in bad_restored_batch_stats.items():
+      current = good_restored_batch_stats
+      subkeys = [subkey for subkey in key.split('/') if subkey]
+      for subkey in subkeys[:-1]:
+        if subkey not in current:
+          new_current = {}
+          current[subkey] = new_current
+          current = new_current
+        else:
+          current = current[subkey]
+      current[subkeys[-1]] = value
+    train_state['model_state'] = {}
+    train_state['model_state']['batch_stats'] = good_restored_batch_stats
 
 def train_and_evaluate(
     *,
@@ -293,10 +325,9 @@ def train_and_evaluate(
     bb_checkpoint_path = config.pretrained_backbone_configs.get(
         'checkpoint_path')
     bb_train_state = flax_restore_checkpoint(bb_checkpoint_path, target=None)
-
-    model_prefix_path = ['backbone']
+    _handle_legacy_format(bb_train_state)
     train_state = pretrain_utils.init_from_pretrain_state(
-        train_state, bb_train_state, model_prefix_path=model_prefix_path)
+        train_state, bb_train_state, model_prefix_path=['backbone'])
 
   update_model_state = not config.get('freeze_backbone_batch_stats', False)
   if not update_model_state:
