@@ -544,10 +544,8 @@ def train_and_evaluate(
         # Sync model state across replicas.
         train_state = train_utils.sync_model_state_across_replicas(train_state)
         if lead_host:
-          train_state.replace(accum_train_time=chrono.accum_train_time)
-          train_utils.save_checkpoint(workdir, train_state)
-
-    chrono.resume()  # Un-pause now.
+          train_utils.save_checkpoint(workdir, 
+                                      jax_utils.unreplicate(train_state))
 
   # Wait until computations are done before exiting.
   pool.shutdown()
