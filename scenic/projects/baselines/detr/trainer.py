@@ -436,7 +436,8 @@ def train_and_evaluate(
   global_metrics_evaluator = None  # Only run eval on the lead_host node.
   if lead_host:
     global_metrics_evaluator = detr_train_utils.DetrGlobalEvaluator(
-        config.dataset_name)
+        config.dataset_name,
+        annotations_loc=config.annotations_loc)
 
   train_metrics, extra_training_logs = [], []
   train_summary, eval_summary = None, None

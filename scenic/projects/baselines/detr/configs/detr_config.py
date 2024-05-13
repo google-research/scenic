@@ -87,6 +87,9 @@ def get_config():
   # https://github.com/google-research/scenic/tree/main/scenic/projects/baselines pylint: disable=line-too-long
   config.pretrained_backbone_configs.checkpoint_path = 'path_to_checkpoint_of_resnet_50'
 
+  # Eval.
+  config.annotations_loc = 'scenic/dataset_lib/coco_dataset/data/instances_val2017.json'
+
   # Logging.
   config.write_summary = True
   config.xprof = True  # Profile using xprof.
@@ -98,5 +101,3 @@ def get_config():
   config.debug_eval = False  # Debug mode during eval.
 
   return config
-
-
