@@ -17,7 +17,7 @@
 from concurrent import futures
 import functools
 import time
-from typing import Any, Dict, Tuple, Optional
+from typing import Any, Callable, Dict, Tuple, Optional
 
 from absl import logging
 from clu import metric_writers
@@ -30,78 +30,41 @@ import jax.profiler
 import ml_collections
 import numpy as np
 from scenic.dataset_lib import dataset_utils
-
+import optax
 
 from scenic.projects.baselines.detr import train_utils as detr_train_utils
 from scenic.train_lib import pretrain_utils
-from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib import train_utils
 
+PyTree = Any
 
-def get_train_step(flax_model,
-                   loss_and_metrics_fn,
-                   learning_rate_fn,
-                   backbone_learning_rate_fn,
-                   max_grad_norm=None,
-                   update_model_state=False,
-                   debug=False):
+def get_train_step(apply_fn: Callable[..., Tuple[PyTree, PyTree]],
+                  loss_and_metrics_fn: Callable[..., Tuple[PyTree, PyTree]],
+                  tx: optax.GradientTransformation,
+                  update_batch_stats: bool = False,
+                  debug: bool = False):
   """Runs a single step of training.
+  
+  Given the state of the training and a batch of data, computes the loss and
+  updates the parameters of the model.
 
-  Given the state of the training and a batch of data, computes
-  the loss and updates the parameters of the model.
-
-  Note that in this code, the buffers of the first (train_state) and second
-  (batch) arguments are donated to the computation.
+  Note that in this code, the buffers of the first (train_state) argument is
+  donated to the computation.
 
   Args:
-    flax_model: Flax model (an instance of nn.Module).
-    loss_and_metrics_fn: A function that given model predictions, a batch, and
-      parameters of the model calculates the loss as well as metrics.
-    learning_rate_fn: Learning rate scheduler which given the global_step
-      generates the learning rate.
-    backbone_learning_rate_fn: Learning rate scheduler which given the
-      global_step generates the learning rate used for updating  the parameters
-      of the backbone in the model.
-    max_grad_norm: float; Maximum gradient norm used for gradient clipping. If
-      set to None, no gradient clipping happens.
-    update_model_state: bool; whether to update the model_state (e.g. batch
-      stats in BatchNorm) during training or freeze it.
-    debug: bool; Whether the debug mode is enabled during training. `debug=True`
-      enables model specific logging/storing some values using
+    apply_fn: Model application function.
+    loss_and_metrics_fn: Function to calculate loss and metrics..
+    tx: An optax.GradientTransformation
+    update_batch_stats: Whether to update batch statistics in BatchNorm
+      during training or freeze it.
+    debug: Whether the debug mode is enabled during training. `debug=True`
+      enables model specific lossing/storing some values using
       jax.host_callback.
-
+  
   Returns:
-    Train step function that takes a train_state and batch and returns
-    new_train_state, metrics, lr, predictions.
-
+    Train step function that takes a train_state and batch and returns 
+    new_train_state, metrics, predictions.
   """
-  backbone_learning_rate_fn = backbone_learning_rate_fn or learning_rate_fn
-
-  def update_fn(train_state, new_model_state, grad, new_rng):
-    step = train_state.global_step
-    backbone_lr = backbone_learning_rate_fn(step)
-    lr = learning_rate_fn(step)
-
-    # Re-use same axis_name as in the call to `pmap(...train_step...)` below.
-    grad = jax.lax.pmean(grad, axis_name='batch')
-
-    if max_grad_norm is not None:
-      grad = detr_train_utils.clip_grads(grad, max_grad_norm)
-
-    (backbone_opt_hps,
-     opt_hps) = train_state.optimizer.optimizer_def.hyper_params
-    new_optimizer = train_state.optimizer.apply_gradient(
-        grad,
-        hyper_params=[
-            backbone_opt_hps.replace(learning_rate=backbone_lr),
-            opt_hps.replace(learning_rate=lr)
-        ])
-    new_train_state = train_state.replace(
-        global_step=step + 1,
-        optimizer=new_optimizer,
-        model_state=new_model_state,
-        rng=new_rng)
-    return new_train_state, lr, backbone_lr
-
   def train_step(train_state, batch):
 
     def loss_fn(params):
@@ -110,26 +73,39 @@ def get_train_step(flax_model,
       model_rng = train_utils.bind_rng_to_host_device(
           rng, axis_name='batch', bind_to='device')
       variables = {'params': params, **train_state.model_state}
-      predictions, new_model_state = flax_model.apply(
-          variables,
-          batch['inputs'],
-          padding_mask=batch['padding_mask'],
-          update_batch_stats=update_model_state,
-          mutable=['batch_stats'],
-          train=True,
-          rngs={'dropout': model_rng},
-          debug=debug)
+      predictions, mutated_variables = apply_fn(
+        variables,
+        batch['inputs'],
+        padding_mask=batch['padding_mask'],
+        update_batch_stats=update_batch_stats,
+        mutable=train_state.model_state.keys(),
+        train=True,
+        rngs={'dropout': model_rng},
+        debug=debug)
       loss, metrics = loss_and_metrics_fn(
-          predictions, batch, model_params=variables['params'])
-      return loss, (new_model_state, metrics, predictions, new_rng)
+        predictions, batch, model_params=variables['params'])
+      return loss, (mutated_variables, metrics, predictions, new_rng)
+  
+    new_global_step = train_state.global_step + 1
+    (_, (new_model_state, metrics, predictions, 
+         new_rng)), grads = jax.value_and_grad(loss_fn, has_aux=True)(
+          train_state.params)
+    
+    # Re-use same axis_name as in the call to `pmap(...train_step...)`
+    grads = jax.tree_map(lambda g: jnp.asarray(g, jnp.bfloat16), grads)
+    grads = jax.lax.pmean(grads, axis_name='batch')
 
-    compute_gradient_fn = jax.value_and_grad(loss_fn, has_aux=True)
-    (_, aux), grad = compute_gradient_fn(train_state.optimizer.target)
-    new_model_state, metrics, predictions, new_rng = aux
-    new_train_state, lr, backbone_lr = update_fn(train_state, new_model_state,
-                                                 grad, new_rng)
-    return new_train_state, metrics, lr, backbone_lr, predictions
-
+    updates, new_opt_state = tx.update(
+        grads, train_state.opt_state, params=train_state.params)
+    new_params = optax.apply_updates(train_state.params, updates)
+    train_state = train_state.replace(
+        global_step=new_global_step,
+        params=new_params,
+        opt_state=new_opt_state,
+        model_state=new_model_state,
+        rng=new_rng)
+    return train_state, metrics, predictions
+  
   return train_step
 
 
@@ -159,7 +135,7 @@ def get_eval_step(flax_model,
 
   def metrics_fn(train_state, batch, predictions):
     _, metrics = loss_and_metrics_fn(
-        predictions, batch, model_params=train_state.optimizer.target)
+        predictions, batch, model_params=train_state.params)
 
     if metrics_only:
       return None, None, metrics
@@ -191,7 +167,7 @@ def get_eval_step(flax_model,
 
   def eval_step(train_state, batch):
     variables = {
-        'params': train_state.optimizer.target,
+        'params': train_state.params,
         **train_state.model_state
     }
     predictions = flax_model.apply(
@@ -290,17 +266,17 @@ def train_and_evaluate(
   # Create optimizer.
   # We jit this, such that the arrays that are created are created on the same
   # device as the input is, in this case the CPU. Else they'd be on device[0]
-  optimizer = jax.jit(
-      detr_train_utils.get_detr_optimizer(config).create, backend='cpu')(
-          params)
+  tx = detr_train_utils.get_detr_optimizer(config, params)
+  opt_state = jax.jit(tx.init, backend='cpu')(params)
 
   rng, train_rng = jax.random.split(rng)
   train_state = train_utils.TrainState(
       global_step=0,
-      optimizer=optimizer,
+      params=params,
+      opt_state=opt_state,
       model_state=model_state,
-      rng=train_rng,
-      accum_train_time=0)
+      rng=train_rng)
+
   start_step = train_state.global_step
   if config.checkpoint:
     train_state, start_step = train_utils.restore_checkpoint(
@@ -342,21 +318,21 @@ def train_and_evaluate(
   # Calculate the total number of training steps.
   total_steps, steps_per_epoch = train_utils.get_num_training_steps(
       config, dataset.meta_data)
-  # Get learning rate scheduler.
-  learning_rate_fn = lr_schedules.get_learning_rate_fn(config)
-  backbone_learning_rate_fn = None
-  if config.get('backbone_training'):
-    backbone_learning_rate_fn = lr_schedules.get_learning_rate_fn(
-        config.backbone_training)
+
+  update_batch_stats = not config.get('freeze_backbone_batch_stats', False)
+  if not update_batch_stats:
+    if not config.load_pretrained_backbone:
+      raise ValueError('Freezing the batch statistics of the resnet backbone '
+                       'is only possible when loading a pretrained resnet '
+                       'backbone is enabled.')
 
   train_step = get_train_step(
-      flax_model=model.flax_model,
-      loss_and_metrics_fn=model.loss_function,
-      learning_rate_fn=learning_rate_fn,
-      backbone_learning_rate_fn=backbone_learning_rate_fn,
-      max_grad_norm=config.get('max_grad_norm', None),
-      update_model_state=update_model_state,
-      debug=config.debug_train)
+    apply_fn=model.flax_model.apply,
+    loss_and_metrics_fn=model.loss_function,
+    tx=tx, 
+    update_batch_stats=update_batch_stats,
+    debug=config.debug_train
+  )
 
   train_step_pmapped = jax.pmap(
       train_step, axis_name='batch', donate_argnums=(0,))
@@ -495,8 +471,8 @@ def train_and_evaluate(
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
       train_batch = next(dataset.train_iter)
-      (train_state, t_metrics, lr, backbone_lr,
-       train_predictions) = train_step_pmapped(train_state, train_batch)
+      (train_state, t_metrics, train_predictions) = train_step_pmapped(
+        train_state, train_batch)
       # This will accumulate metrics in TPU memory up to the point that we log
       # them. This is no problem for small metrics but may be a problem for
       # large (e.g. segmentation) metrics. An alternative is to set
@@ -504,17 +480,11 @@ def train_and_evaluate(
       # `train_utils.unreplicate_and_get` here instead of right before writing
       # summaries, but that means in each step, we have data transfer between
       # tpu and host, which might slow down the training.
-      train_metrics.append(t_metrics)
-      # Additional training logs: learning rate, learning_rate_backbone:
-      extra_training_logs.append({
-          'learning_rate': lr,
-          'learning_rate_backbone': backbone_lr,
-      })
+      train_metrics.append(train_utils.unreplicate_and_get(t_metrics))
 
     for h in hooks:
       h(step)
 
-    chrono.pause()
     if (log_large_summary_steps and step % log_large_summary_steps == 0 and
         lead_host):
       ############### LOG EXPENSIVE TRAIN SUMMARY ###############
@@ -545,8 +515,7 @@ def train_and_evaluate(
       # Write summary:
       train_summary = train_utils.log_train_summary(
           step=step,
-          train_metrics=jax.tree_util.tree_map(train_utils.unreplicate_and_get,
-                                               train_metrics),
+          train_metrics=train_metrics,
           extra_training_logs=jax.tree_util.tree_map(
               train_utils.unreplicate_and_get, extra_training_logs),
           writer=writer,
