@@ -441,13 +441,6 @@ def train_and_evaluate(
   train_metrics, extra_training_logs = [], []
   train_summary, eval_summary = None, None
 
-  chrono = train_utils.Chrono(
-      first_step=start_step,
-      total_steps=total_steps,
-      steps_per_epoch=steps_per_epoch,
-      global_bs=config.batch_size,
-      accum_train_time=int(jax_utils.unreplicate(train_state.accum_train_time)))
-
   logging.info('Starting training loop at step %d.', start_step + 1)
   report_progress = periodic_actions.ReportProgress(
       num_train_steps=total_steps,
@@ -509,8 +502,6 @@ def train_and_evaluate(
 
     if (step % log_summary_steps == 0) or (step == total_steps - 1):
       ############### LOG TRAIN SUMMARY ###############
-      if lead_host:
-        chrono.tick(step, writer)
 
       # Write summary:
       train_summary = train_utils.log_train_summary(
