@@ -92,7 +92,6 @@ def get_train_step(apply_fn: Callable[..., Tuple[PyTree, PyTree]],
           train_state.params)
     
     # Re-use same axis_name as in the call to `pmap(...train_step...)`
-    grads = jax.tree_map(lambda g: jnp.asarray(g, jnp.bfloat16), grads)
     grads = jax.lax.pmean(grads, axis_name='batch')
 
     updates, new_opt_state = tx.update(
