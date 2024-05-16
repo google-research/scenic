@@ -84,7 +84,7 @@ class TrainState:
 
 def expand_dims_for_specs(xs, specs):
   return jax.tree.map(
-      lambda s, x: jax.tree_map(
+      lambda s, x: jax.tree.map(
           functools.partial(jnp.expand_dims, axis=tuple(range(len(s)))),
           x,
       ),
@@ -95,7 +95,7 @@ def expand_dims_for_specs(xs, specs):
 
 def squeeze_for_specs(xs, specs):
   return jax.tree.map(
-      lambda s, x: jax.tree_map(
+      lambda s, x: jax.tree.map(
           functools.partial(jnp.squeeze, axis=tuple(range(len(s)))),
           x,
       ),
