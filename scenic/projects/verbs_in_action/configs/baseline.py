@@ -33,7 +33,7 @@ def get_config(runlocal=''):
   config.dataset_name = 'verbs_in_action_tfrecord_dataset'
   config.dataset_configs = ml_collections.ConfigDict()
   config.data_dtype_str = 'float32'
-  The tables here should be without hard negatives since this is the baseline training.
+  # The tables here should be without hard negatives since this is the baseline training.
   config.dataset_configs.base_dir = 'your_base_directory'
   config.dataset_configs.tables = {
       'train': 'training_path',
