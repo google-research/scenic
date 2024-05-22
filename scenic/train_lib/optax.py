@@ -200,7 +200,6 @@ def make(config: ml_collections.ConfigDict,
           f'`base_learning_rate` contains unsupported values {base_lrs}. If '
           'your intention was to freeze parameters, use Scenic optax and '
           '`config.lr_configs = None` instead.')
-
   masks, scheds = _make_mask_trees(params, schedule, log='schedule')
   frozen_mask, masks, scheds = _split_frozen(masks, scheds)
   not_frozen_mask = jax.tree_util.tree_map(operator.not_, frozen_mask)
@@ -224,10 +223,7 @@ def make(config: ml_collections.ConfigDict,
           optax.masked(
               optax.clip_by_global_norm(config.max_grad_norm),
               not_frozen_mask)]
-    else:
-      if 'optax_grad_pmean' not in config:
-        raise ValueError('When using per-example clipping, '
-                         'optimizer.optax_grad_pmean must be set.')
+    elif 'optax_grad_pmean' in config:
       if not config.optax_grad_pmean:
         raise ValueError('Per-example gradient aggregateion outside of Optax '
                          'is not supported.')
@@ -245,6 +241,20 @@ def make(config: ml_collections.ConfigDict,
                   config.max_grad_norm, 0.0, 0),
               not_frozen_mask),
           aggregate_gradients_pmean(axis_name=axis_name)]
+    elif 'optax_grad_mean' in config:
+      if not config.optax_grad_mean:
+        raise ValueError('Per-example gradient aggregation outside of Optax '
+                         'is not supported.')
+      grad_clip_norm_tx = [
+          optax.masked(
+              optax.differentially_private_aggregate(
+                  config.max_grad_norm, 0.0, 0),
+              not_frozen_mask),]
+    else:
+      raise ValueError(
+          'When using per-example clipping, '
+          'optimizer.optax_grad_pmean or optimizer.optax_grad_mean must be set.'
+      )
   else:
     grad_clip_norm_tx = []
 
