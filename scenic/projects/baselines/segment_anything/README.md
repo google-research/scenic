@@ -63,7 +63,7 @@ for mask, score in zip(ret[0]['masks'][0], ret[0]['iou_predictions'][0]):
 cached_image_embedding = ret[0]['image_embedding'][None]
 ret = sam_model.apply(
     {'params': params},
-    input_image=None,
+    image=None,
     point_coords=point_coords,
     point_labels=point_labels,
     padding_mask=padding_mask,
