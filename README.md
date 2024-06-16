@@ -121,7 +121,7 @@ upstreamed to Scenic's shared libraries.
 
 
 ### Quickstart
-You will need Python 3.9 or later. Download the code from GitHub
+You will need Python 3.10 or later. Download the code from GitHub
 
 ```shell
 $ git clone https://github.com/google-research/scenic.git
