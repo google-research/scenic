@@ -15,7 +15,7 @@
 """Tasseo training Script."""
 
 import functools
-from typing import Any, Callable, Dict, Tuple, Optional, Type
+from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 from absl import logging
 from clu import metric_writers
@@ -30,6 +30,7 @@ import jax.profiler
 import ml_collections
 import numpy as np
 import optax
+from PIL import Image
 from scenic.dataset_lib import dataset_utils
 from scenic.model_lib.base_models import base_model
 from scenic.projects.tasseo import train_utils as tasseo_train_utils
@@ -44,6 +45,81 @@ MetricFn = Callable[[jnp.ndarray, Dict[str, jnp.ndarray]],
                     Dict[str, Tuple[float, int]]]
 LossFn = Callable[[jnp.ndarray, Batch, Optional[jnp.ndarray]], float]
 LrFn = Callable[[jnp.ndarray], jnp.ndarray]
+
+
+def rotate_image(angle, image):
+  """Returns a rotated image."""
+  image_array = -np.ones((300, 300))
+  image_array[50:249, 100:199] = -np.asarray(image)
+  image = Image.fromarray(((image_array + 1) * 127.5).astype(np.uint8))
+  rotated_image = image.rotate(angle, expand=True)
+  rotated_image = -(np.asarray(rotated_image) / 127.5) + 1
+  shape = np.shape(rotated_image)
+  rotated_image = rotated_image[
+      int(shape[0] / 2) - 100 : int(shape[0] / 2) + 99,
+      int(shape[1] / 2) - 50 : int(shape[1] / 2) + 49,
+  ]
+  return rotated_image
+
+
+def rotate_batch(train_batch_inputs, max_angle):
+  """Rotate batch inputs."""
+  rotated_batch = np.zeros_like(train_batch_inputs)
+  shape = jnp.shape(train_batch_inputs)
+  for i in range(shape[0]):
+    for j in range(shape[1]):
+      rotated_batch[i, j, :, :, 0] = rotate_image(
+          np.random.random() * max_angle, train_batch_inputs[i, j, :, :, 0]
+      )
+  return jnp.asarray(rotated_batch)
+
+
+def rescale_image(scale_factor, image):
+  """Returns a rescaled image."""
+  image = np.asarray(image)
+  image = Image.fromarray(((image + 1) * 127.5).astype(np.uint8))
+  rescaled_image = image.resize(
+      (int(99 * scale_factor), int(199 * scale_factor))
+  )
+  rescaled_image = (np.asarray(rescaled_image) / 127.5) - 1
+  shape = np.shape(rescaled_image)
+  if scale_factor == 1 or shape == (199, 99):
+    output_array = rescaled_image
+  elif scale_factor < 1:
+    output_array = np.ones((199, 99))
+    output_array[
+        100 - int(shape[0] / 2) : 100 - int(shape[0] / 2) + shape[0],
+        50 - int(shape[1] / 2) : 50 - int(shape[1] / 2) + shape[1],
+    ] = rescaled_image
+  else:
+    output_array = rescaled_image[
+        int(shape[0] / 2) - 100 : int(shape[0] / 2) + 99,
+        int(shape[1] / 2) - 50 : int(shape[1] / 2) + 49,
+    ]
+  return output_array
+
+
+def rescale_batch(train_batch_inputs, min_scale_factor, max_scale_factor):
+  """Rescale batch inputs."""
+  rescaled_batch = np.zeros_like(train_batch_inputs)
+  shape = jnp.shape(train_batch_inputs)
+  for i in range(shape[0]):
+    for j in range(shape[1]):
+      scale_factor = min_scale_factor + np.random.random() * (
+          max_scale_factor - min_scale_factor
+      )
+      rescaled_image = rescale_image(
+          scale_factor, train_batch_inputs[i, j, :, :, 0]
+      )
+      while np.shape(rescaled_image) != (199, 99):  # catching weird edge cases
+        scale_factor = min_scale_factor + np.random.random() * (
+            max_scale_factor - min_scale_factor
+        )
+        rescaled_image = rescale_image(
+            scale_factor, train_batch_inputs[i, j, :, :, 0]
+        )
+      rescaled_batch[i, j, :, :, 0] = rescaled_image
+  return jnp.asarray(rescaled_batch)
 
 
 def train_step(
@@ -197,7 +273,12 @@ def eval_step(
   """
   variables = {'params': train_state.params, **train_state.model_state}
   logits = flax_model.apply(
-      variables, batch['inputs'], train=False, mutable=False, debug=debug)
+      variables,
+      batch['inputs'],
+      train=False,
+      mutable=False,
+      debug=debug,
+  )
   metrics = metrics_fn(logits, batch)
   if all_gather:
     targets = {'label': batch['label'], 'batch_mask': batch['batch_mask']}
@@ -366,8 +447,16 @@ def train(
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
       train_batch = next(dataset.train_iter)
+      train_batch['label'] = jnp.asarray(
+          train_batch['label'], dtype=jnp.float32
+      )  # added because of dtype mismatch
+      # train_batch['inputs'] = rotate_batch(train_batch['inputs'], 360)
+      #  randomly rotate the inputs
+      # train_batch['inputs'] = rescale_batch(train_batch['inputs'], 0.5, 1.1)
+      # randomly rescale the inputs
       train_state, t_metrics, t_logs = train_step_pmapped(
-          train_state, train_batch)
+          train_state, train_batch
+      )
       # This will accumulate metrics in TPU memory up to the point that we log
       # them. This is no problem for small metrics but may be a problem for
       # large (e.g. segmentation) metrics. An alternative is to set
@@ -412,38 +501,53 @@ def train(
         train_state = train_utils.sync_model_state_across_replicas(train_state)
         for _ in range(steps_per_eval):
           eval_batch = next(dataset.valid_iter)
+          eval_batch['label'] = jnp.asarray(
+              eval_batch['label'], dtype=jnp.float32
+          )
+          # eval_batch['inputs'] = rotate_batch(eval_batch['inputs'], 360)
+          #  randomly rotate the inputs
+          # eval_batch['inputs'] = rescale_batch(eval_batch['inputs'], 0.4, 1.1)
+          # randomly rescale the inputs
           e_metrics, e_output, e_batch = eval_step_pmapped(
-              train_state, eval_batch)
+              train_state, eval_batch
+          )
           eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
           if compute_global_metrics:
             # Unreplicate outputs of eval_step_pmapped that are coming from
             # `lax.all_gather`, fetch to the host and add to the Evaluator:
             e_batch_mask = train_utils.unreplicate_and_get(
-                e_batch['batch_mask']).astype(bool)
+                e_batch['batch_mask']
+            ).astype(bool)
             global_metrics_evaluator.add_batch_of_examples(
-                target=train_utils.unreplicate_and_get(
-                    e_batch['label'])[e_batch_mask],
-                output=train_utils.unreplicate_and_get(e_output)[e_batch_mask])
+                target=train_utils.unreplicate_and_get(e_batch['label'])[
+                    e_batch_mask
+                ],
+                output=train_utils.unreplicate_and_get(e_output)[e_batch_mask],
+            )
             del e_batch, e_output, e_batch_mask
         eval_global_metrics_summary = None
         if compute_global_metrics:
           eval_global_metrics_summary = (
-              global_metrics_evaluator.compute_metrics(clear_annotations=True))
+              global_metrics_evaluator.compute_metrics(clear_annotations=True)
+          )
         eval_summary = train_utils.log_eval_summary(
             step=step,
             eval_metrics=eval_metrics,
             extra_eval_summary=eval_global_metrics_summary,
-            writer=writer)
+            writer=writer,
+        )
       writer.flush()
       del eval_metrics, eval_global_metrics_summary
       chrono.resume()
     ##################### CHECKPOINTING ###################
-    if ((step % checkpoint_steps == 1 and step > 1) or
-        (step == total_steps)) and config.checkpoint:
+    if (
+        (step % checkpoint_steps == 1 and step > 1) or (step == total_steps)
+    ) and config.checkpoint:
       chrono.pause(wait_for=(train_state.params, train_state.opt_state))
       with report_progress.timed('checkpoint'):
         train_utils.handle_checkpointing(
-            train_state, chrono, workdir, max_checkpoint_keep)
+            train_state, chrono, workdir, max_checkpoint_keep
+        )
       chrono.resume()
 
   # Wait until computations are done before exiting.

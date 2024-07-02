@@ -26,7 +26,6 @@ from scenic.model_lib import models
 from scenic.train_lib import train_utils
 from scenic.train_lib import trainers
 
-
 FLAGS = flags.FLAGS
 
 

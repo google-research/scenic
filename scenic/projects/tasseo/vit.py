@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """ViT Classification model."""
+
 from typing import Optional
 
 from flax.training import common_utils
@@ -21,7 +22,9 @@ import numpy as np
 from scenic.model_lib.base_models import base_model
 from scenic.model_lib.base_models import model_utils
 from scenic.model_lib.base_models.classification_model import ClassificationModel
+from scenic.projects.baselines import topvit
 from scenic.projects.baselines import vit
+
 
 from topological_transformer.images import topvit
 
