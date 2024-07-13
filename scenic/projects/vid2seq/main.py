@@ -26,6 +26,7 @@ from scenic import app
 from scenic.projects.vid2seq import models
 from scenic.projects.vid2seq import trainer
 from scenic.projects.vid2seq.datasets.dense_video_captioning_tfrecord_dataset import get_datasets
+
 # replace with the path to your JAVA bin location
 JRE_BIN_JAVA = path_to_jre_bin_java
 
