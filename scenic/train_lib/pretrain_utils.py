@@ -324,7 +324,9 @@ def convert_big_vision_to_scenic_checkpoint(
   tree = unflatten_dict(checkpoint_data, separator='/', leaf_idx=0)
 
   restored_params = (
-      tree['opt']['target'] if 'target' in tree['opt'] else tree['params']
+      tree['opt']['target']
+      if 'target' in tree.get('opt', {})
+      else tree['params']
   )
   if convert_to_linen:
     restored_params = checkpoints.convert_pre_linen(restored_params)
@@ -342,7 +344,7 @@ def convert_big_vision_to_scenic_checkpoint(
   # pytype: disable=wrong-arg-types
   restored_train_state = train_state.replace(  # pytype: disable=attribute-error
       global_step=int(
-          tree['opt']['state']['step'] if 'state' in tree['opt'] else 0
+          tree['opt']['state']['step'] if 'state' in tree.get('opt', {}) else 0
       ),
       params=restored_params,
   )
