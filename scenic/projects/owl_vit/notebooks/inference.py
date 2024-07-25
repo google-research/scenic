@@ -147,30 +147,27 @@ class Model:
         np.array(query_box_yxyx)[None, ...],
         box_utils.box_cxcywh_to_yxyx(pred_boxes, np),
         np_backbone=np)[0][0]
-
+    # Use an adaptive threshold such that all boxes within 80% of the best IoU
+    # are included:
+    iou_thresh = np.max(ious) * 0.8
     # If there are no overlapping boxes, fall back to generalized IoU:
     if np.all(ious == 0.0):
       ious = box_utils.generalized_box_iou(
           np.array(query_box_yxyx)[None, ...],
           box_utils.box_cxcywh_to_yxyx(pred_boxes, np),
           np_backbone=np)[0]
-
-    # Use an adaptive threshold such that all boxes within 80% of the best IoU
-    # are included:
-    iou_thresh = np.max(ious) * 0.8
-
+      # 120% of the best IoU when gIOU is negative, clip to avoid numeric error.
+      iou_thresh = np.max(ious.clip(None, 0.0)) * 1.2
     # Select class_embeddings that are above the IoU threshold:
     selected_inds = (ious >= iou_thresh).nonzero()[0]
     assert selected_inds.size
     selected_embeddings = class_embeddings[selected_inds]
-
     # Due to the DETR style bipartite matching loss, only one embedding
     # feature for each object is "good" and the rest are "background." To find
     # the one "good" feature we use the heuristic that it should be dissimilar
     # to the mean embedding.
     mean_embedding = np.mean(class_embeddings, axis=0)
     mean_sim = np.einsum('d,id->i', mean_embedding, selected_embeddings)
-
     # Find box with lowest overall similarity:
     best_box_ind = selected_inds[np.argmin(mean_sim)]
 
