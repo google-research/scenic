@@ -59,7 +59,10 @@ def extract_graph_mp(kg_graph, n_pool=1) -> None:
   """
   jobs = []
   if not gfile.Exists(data_util.WIKIPEDIA_GRAPH_PATH):
-    gfile.MakeDirs(data_util.WIKIPEDIA_GRAPH_PATH)
+    gfile.MakeDirs(
+        data_util.WIKIPEDIA_GRAPH_PATH,
+        mode=gfile.LEGACY_GROUP_WRITABLE_WORLD_READABLE,
+    )
   if n_pool == 1:
     for i in range(data_util.NUM_SPLIT):
       extract_graph_from_file(kg_graph, i)

@@ -27,6 +27,7 @@ FEATURE_DIM = 12
 BATCH = 10
 NB_POINTS = 1000
 SEED = 41
+SIGMA = 0.1
 
 
 class PerformerModelTest(parameterized.TestCase):
@@ -52,6 +53,7 @@ class PerformerModelTest(parameterized.TestCase):
         'num_realizations': 10,
         'num_sines': 1,
         'use_random_projections': True,
+        'sigma': SIGMA
     }
     rng_key = jax.random.PRNGKey(SEED)
     inputs = jax.random.normal(key=rng_key, shape=(BATCH, NB_POINTS, DIM))
@@ -75,6 +77,7 @@ class PerformerModelTest(parameterized.TestCase):
         'num_realizations': 10,
         'num_sines': 1,
         'use_random_projections': False,
+        'sigma': SIGMA
     }
     rng_key = jax.random.PRNGKey(SEED)
     inputs = jax.random.normal(key=rng_key, shape=(BATCH, NB_POINTS, DIM))
@@ -98,7 +101,8 @@ class PerformerModelTest(parameterized.TestCase):
         'num_realizations': 10,
         'num_sines': 1,
         'use_random_projections': True,
-        'seed': 41
+        'seed': 41,
+        'sigma': SIGMA
     }
     rng_key = jax.random.PRNGKey(SEED)
     inputs = jax.random.normal(key=rng_key, shape=(BATCH, NB_POINTS, DIM))
@@ -122,7 +126,8 @@ class PerformerModelTest(parameterized.TestCase):
         'num_realizations': 10,
         'num_sines': 1,
         'use_random_projections': False,
-        'seed': 41
+        'seed': 41,
+        'sigma': SIGMA
     }
     rng_key = jax.random.PRNGKey(SEED)
     inputs = jax.random.normal(key=rng_key, shape=(BATCH, NB_POINTS, DIM))
@@ -146,7 +151,8 @@ class PerformerModelTest(parameterized.TestCase):
         'num_realizations': 10,
         'num_sines': 1,
         'use_random_projections': True,
-        'seed': 41
+        'seed': 41,
+        'sigma': SIGMA
     }
     rng_key = jax.random.PRNGKey(SEED)
     inputs = jax.random.normal(key=rng_key, shape=(BATCH, NB_POINTS, DIM))
@@ -170,7 +176,8 @@ class PerformerModelTest(parameterized.TestCase):
         'num_realizations': 10,
         'num_sines': 1,
         'use_random_projections': False,
-        'seed': 41
+        'seed': 41,
+        'sigma': SIGMA
     }
     rng_key = jax.random.PRNGKey(SEED)
     inputs = jax.random.normal(key=rng_key, shape=(BATCH, NB_POINTS, DIM))
@@ -190,6 +197,7 @@ class PerformerModelTest(parameterized.TestCase):
         'masking_type': 'pseudolocal',
         'rf_type': 'regular',
         'num_features': 128,
+        'sigma': SIGMA
     }
     rng_key = jax.random.PRNGKey(SEED)
     inputs = jax.random.normal(key=rng_key, shape=(BATCH, NB_POINTS, DIM))
