@@ -18,6 +18,10 @@ import collections
 import json
 from typing import Dict, Optional
 
+import immutabledict
+
+
+ImmutableDict = immutabledict.immutabledict
 
 OBJECTS365_LABEL_MAP_PATH = (
     'scenic/dataset_lib/coco_dataset/data/objects365_class_names.txt')

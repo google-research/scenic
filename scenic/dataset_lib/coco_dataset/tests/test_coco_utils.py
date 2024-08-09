@@ -19,6 +19,7 @@ from absl.testing import parameterized
 from scenic.dataset_lib.coco_dataset import coco_utils
 
 
+
 class CocoUtilsTest(parameterized.TestCase):
   """Test COCO utils."""
 
@@ -41,6 +42,7 @@ class CocoUtilsTest(parameterized.TestCase):
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda m: m.args == ('Unsupported TFDS name: unknown',)):
       coco_utils.get_label_map('unknown')
+
 
 if __name__ == '__main__':
   absltest.main()
