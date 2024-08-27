@@ -65,6 +65,7 @@ def top_k_hot(distances, k):
 
 class SelfAttentionLayer(nn.Module):
   """Self Attention Layer."""
+
   in_channels: Any
   out_channels: Any
   key_channels: Any | None = None
@@ -74,12 +75,14 @@ class SelfAttentionLayer(nn.Module):
   attention_fn_configs: dict[Any, Any] | None = None
 
   @nn.compact
-  def __call__(self,
-               inputs,
-               coords=None,
-               mask=None,
-               numerical_stabilizer=1e-9,
-               train: bool = False):
+  def __call__(
+      self,
+      inputs,
+      coords=None,
+      mask=None,
+      numerical_stabilizer=1e-9,
+      train: bool = False,
+  ):
     """Applies self attention on the input data.
 
     Args:
@@ -95,9 +98,9 @@ class SelfAttentionLayer(nn.Module):
       output: Tensor of shape [batch_size, num_points, feature_dim]
     """
     key_channels = self.key_channels or self.out_channels
-    if (self.attention_fn_configs is not None) and self.attention_fn_configs[
-        'neighbor_attn'
-    ]:
+    if (
+        self.attention_fn_configs is not None
+    ) and self.attention_fn_configs.get('neighbor_attn'):
       input_q = coords
       input_k = coords
       input_v = inputs
@@ -124,7 +127,8 @@ class SelfAttentionLayer(nn.Module):
         attention = jnp.where(mask, attention, big_neg)
       attention = nn.softmax(attention, axis=-1)
       attention = attention / (
-          numerical_stabilizer + jnp.sum(attention, axis=1, keepdims=True))
+          numerical_stabilizer + jnp.sum(attention, axis=1, keepdims=True)
+      )
       output = jnp.einsum('...MN,...NC->...NC', attention, input_v)
     else:
       query = jnp.expand_dims(input_q, axis=-2)
@@ -222,6 +226,7 @@ class SelfAttentionLayer(nn.Module):
 
 class PointCloudTransformerEncoder(nn.Module):
   """Point Cloud Transformer Encoder."""
+
   in_dim: int
   feature_dim: int
   kernel_size: int | None = 1
@@ -267,29 +272,28 @@ class PointCloudTransformerEncoder(nn.Module):
           in_channels=self.feature_dim,
           key_channels=self.feature_dim,
           out_channels=self.feature_dim,
-          attention_fn_configs=self.attention_fn_configs)(
-              output, coords, mask=mask)
+          attention_fn_configs=self.attention_fn_configs,
+      )(output, coords, mask=mask)
       attention_outputs.append(output)
 
     output = jnp.concatenate(attention_outputs, axis=-1)
 
     output = nn.Conv(
-        self.encoder_feature_dim,
-        kernel_size=(self.kernel_size,),
-        use_bias=True)(output)
+        self.encoder_feature_dim, kernel_size=(self.kernel_size,), use_bias=True
+    )(output)
 
     if self.out_dim is not None:
       output = nn.LayerNorm(reduction_axes=-2)(output, mask=layer_norm_mask)
       output = nn.leaky_relu(output, negative_slope=0.2)
       output = nn.Conv(
-          self.out_dim,
-          kernel_size=(self.kernel_size,),
-          use_bias=True)(output)
+          self.out_dim, kernel_size=(self.kernel_size,), use_bias=True
+      )(output)
     return output
 
 
 class PointCloudTransformerClassifier(nn.Module):
   """Point Cloud Transformer Classifier."""
+
   in_dim: int
   feature_dim: int
   kernel_size: int | None = 1
@@ -314,8 +318,8 @@ class PointCloudTransformerClassifier(nn.Module):
           use_attention_masking=self.use_attention_masking,
           use_knn_mask=self.use_knn_mask,
           nearest_neighbour_count=self.nearest_neighbour_count,
-          mask_function=self.mask_function)(
-              inputs, train=train, debug=debug)
+          mask_function=self.mask_function,
+      )(inputs, train=train, debug=debug)
 
     # Max Pooling
     output = jnp.max(output, axis=1, keepdims=False)
@@ -348,9 +352,9 @@ class PointCloudTransformerClassificationModel(MultiLabelClassificationModel):
         attention_fn_configs=self.config.attention_fn_configs,
         use_attention_masking=self.config.use_attention_masking,
         use_knn_mask=self.config.attention_masking_configs.use_knn_mask,
-        nearest_neighbour_count=self.config.attention_masking_configs
-        .nearest_neighbour_count,
-        mask_function=self.config.attention_masking_configs.mask_function)
+        nearest_neighbour_count=self.config.attention_masking_configs.nearest_neighbour_count,
+        mask_function=self.config.attention_masking_configs.mask_function,
+    )
 
   def default_flax_model_config(self) -> ml_collections.ConfigDict:
     return _get_default_configs_for_testing()
@@ -363,4 +367,5 @@ def _get_default_configs_for_testing() -> ml_collections.ConfigDict:
           feature_dim=128,
           kernel_size=1,
           num_classes=40,
-      ))
+      )
+  )
