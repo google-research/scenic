@@ -62,7 +62,7 @@ def softmax_positive_rfs(
     projection_matrix: jax.Array | None = None,
     numerical_stabilizer: float = 0.000001,
     is_query: bool = True,
-
+    temp: float = 5.0,
 ) -> jax.Array:
   r"""Computes positive random features from https://arxiv.org/abs/2009.14794.
 
@@ -73,17 +73,20 @@ def softmax_positive_rfs(
       stands for the number of projections.
     numerical_stabilizer: small positive constant used for numerical stability.
     is_query: determines whether input data tensor is a query- or key-tensor.
+    temp: temperature parameter of the softmax kernel.
 
   Returns:
     Corresponding kernel feature map used to linearize softmax kernel.
   """
-  h = lambda X: jnp.exp(-0.5 * jnp.sum(jnp.square(X), axis=-1, keepdims=True))
+  h = lambda X: jnp.exp(
+      -0.5 * temp * jnp.sum(jnp.square(X), axis=-1, keepdims=True)
+  )
   if is_query:
     axis = (-1,)
   else:
     axis = None
   activation_fn = lambda P, X: h(X) * jnp.exp(
-      P - jnp.max(P, axis=axis, keepdims=True)
+      temp * (P - jnp.max(P, axis=axis, keepdims=True))
   )
   return general_kernel_linearization(
       data, projection_matrix, numerical_stabilizer, activation_fn
@@ -128,4 +131,3 @@ def softmax_hyper_positive_rfs(
       data, projection_matrix, numerical_stabilizer, negative_activation_fn
   )
   return jnp.concatenate((positive_exponential, negative_exponential), axis=-1)
-

@@ -17,15 +17,14 @@
 # pylint: disable=invalid-name
 
 import abc
+import functools
 import math
 from typing import (Any, Dict, Optional, Sequence, Tuple, Union)
 
 from flax.linen.linear import PrecisionLike
-
 import jax
 from jax import random
 import jax.numpy as jnp
-
 from scenic.projects.performer import subquadratic_attention as sat
 from scenic.projects.performer import utils as ut
 
@@ -41,6 +40,14 @@ PRNGKey = Any
 Shape = Tuple[int, ...]
 Dtype = Any
 Array = Any
+
+
+def linear_gaussian(x):
+  x_norm = jnp.linalg.norm(x, axis=-1, keepdims=True)
+  x_sq_norm = x_norm**2
+  return jnp.exp(-0.5 * x_sq_norm) * jax.nn.relu(
+      x
+  )  # instead use RF based transformation
 
 
 class RandomMatrix(abc.ABC):
@@ -398,13 +405,13 @@ def expplus_softmax_kernel_transformation(
   return data_dash
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Performers-compatible Relative Positional Encoding mechanism.
 #
 # The implementation is taken from the following paper: "Relative Positional
 # Encoding for Transformers with Linear Complexity"
 # (github code: https://cifkao.github.io/spe/)
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 
 def sinespe(rng_key,
@@ -758,8 +765,12 @@ def favor_attention(query,
                                         key, value, inputs_mask)
     query = query[:, hybrid_global_size:, :, :]
   if not data_dependent_kfs:
-    query_prime = kernel_transformation(query, True, projection_matrix)
-    key_prime = kernel_transformation(key, False, projection_matrix)
+    query_prime = kernel_transformation(
+        data=query, is_query=True, projection_matrix=projection_matrix
+    )
+    key_prime = kernel_transformation(
+        data=key, is_query=False, projection_matrix=projection_matrix
+    )
   else:
     query_prime = kernel_transformation(query, key, True, projection_matrix)
     key_prime = kernel_transformation(key, query, False, projection_matrix)
@@ -849,6 +860,8 @@ def masked_favor_attention(query, key, value, masker, mask, kernel_config):
 
   if kernel_config['kernel_transformation'] == 'softmax':
     kernel_transformation = exp_softmax_kernel_transformation
+  elif kernel_config['kernel_transformation'] == 'linear_gaussian':
+    kernel_transformation = sat.softmax_positive_rfs
   else:
     if kernel_config['kernel_transformation'] == 'relu':
       activation_fn = jax.nn.relu
@@ -1198,16 +1211,17 @@ def regular_performer_dot_product_attention(
 
   if kernel_config['kernel_transformation'] == 'softmax':
     kernel_transformation = exp_softmax_kernel_transformation
+  elif kernel_config['kernel_transformation'] == 'linear_gaussian':
+    kernel_transformation = sat.softmax_positive_rfs
   else:
     if kernel_config['kernel_transformation'] == 'relu':
       activation_fn = jax.nn.relu
     else:
       activation_fn = (lambda x: x * x * x * x)
 
-    def gen_transformation(a, b, c):
-      return generic_kernel_transformation(a, b, c, activation_fn=activation_fn)
-
-    kernel_transformation = gen_transformation
+    kernel_transformation = functools.partial(
+        generic_kernel_transformation, activation_fn=activation_fn
+    )
   return favor_attention(
       query,
       key,
@@ -1337,6 +1351,8 @@ def sharp_masked_performer_dot_product_attention(
   del precision
   if kernel_config['kernel_transformation'] == 'softmax':
     kernel_transformation = exp_softmax_kernel_transformation
+  elif kernel_config['kernel_transformation'] == 'linear_gaussian':
+    kernel_transformation = sat.softmax_positive_rfs
   else:
     if kernel_config['kernel_transformation'] == 'relu':
       activation_fn = jax.nn.relu
@@ -1423,4 +1439,3 @@ def pseudolocal_subquadratic_attention(
   )
   result = numerator / denominator
   return result
-

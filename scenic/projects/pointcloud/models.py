@@ -95,21 +95,22 @@ class SelfAttentionLayer(nn.Module):
       output: Tensor of shape [batch_size, num_points, feature_dim]
     """
     key_channels = self.key_channels or self.out_channels
-    input_q = nn.Conv(
-        key_channels,
-        kernel_size=(self.kernel_size,),
-        use_bias=True)(
-            inputs)
-    input_k = nn.Conv(
-        key_channels,
-        kernel_size=(self.kernel_size,),
-        use_bias=True)(
-            inputs)
-    input_v = nn.Conv(
-        self.out_channels,
-        kernel_size=(self.kernel_size,),
-        use_bias=True)(
-            inputs)
+    if (self.attention_fn_configs is not None) and self.attention_fn_configs[
+        'neighbor_attn'
+    ]:
+      input_q = coords
+      input_k = coords
+      input_v = inputs
+    else:
+      input_q = nn.Conv(
+          key_channels, kernel_size=(self.kernel_size,), use_bias=True
+      )(inputs)
+      input_k = nn.Conv(
+          key_channels, kernel_size=(self.kernel_size,), use_bias=True
+      )(inputs)
+      input_v = nn.Conv(
+          self.out_channels, kernel_size=(self.kernel_size,), use_bias=True
+      )(inputs)
 
     if (
         self.attention_fn_configs is None
@@ -303,6 +304,7 @@ class PointCloudTransformerClassifier(nn.Module):
 
   @nn.compact
   def __call__(self, inputs, train: bool = False, debug: bool = False):
+    output = inputs
     if self.attention_type == 'standard':
       output = PointCloudTransformerEncoder(
           in_dim=self.in_dim,
