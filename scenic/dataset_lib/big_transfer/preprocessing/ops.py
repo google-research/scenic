@@ -230,7 +230,8 @@ def get_resize_small(smaller_size, method="area", antialias=True):
 @utils.InKeyOutKey()
 @utils.BatchedImagePreprocessing()
 def get_inception_crop(resize_size=None, area_min=5, area_max=100,
-                       resize_method=tf2.image.ResizeMethod.BILINEAR):
+                       resize_method=tf2.image.ResizeMethod.BILINEAR,
+                       resize_antialias=False):
   """Makes inception-style image crop.
 
   Inception-style crop is a random image crop (its size and aspect ratio are
@@ -243,6 +244,8 @@ def get_inception_crop(resize_size=None, area_min=5, area_max=100,
     area_max: maximal crop area.
     resize_method: The type of interpolation to apply when resizing. Valid
       values those accepted by tf.image.resize.
+    resize_antialias: Whether to use an anti-aliasing filter when downsampling
+      an image.
 
   Returns:
     A function, that applies inception crop.
@@ -260,8 +263,9 @@ def get_inception_crop(resize_size=None, area_min=5, area_max=100,
     # to restore it the manual way.
     crop.set_shape([None, None, image.shape[-1]])
     if resize_size:
-      crop = get_resize([resize_size, resize_size], resize_method)(
-          {"image": crop})["image"]
+      crop = get_resize(
+          [resize_size, resize_size], resize_method, resize_antialias)(
+              {"image": crop})["image"]
     return crop
 
   return _inception_crop
@@ -274,7 +278,8 @@ def get_decode_jpeg_and_inception_crop(
     area_min=5,
     area_max=100,
     aspect_ratio_range=None,
-    resize_method=tf2.image.ResizeMethod.BILINEAR):
+    resize_method=tf2.image.ResizeMethod.BILINEAR,
+    resize_antialias=False):
   """Decode jpeg string and make inception-style image crop.
 
   Inception-style crop is a random image crop (its size and aspect ratio are
@@ -290,6 +295,8 @@ def get_decode_jpeg_and_inception_crop(
       within this range.
     resize_method: The type of interpolation to apply when resizing. Valid
       values those accepted by tf.image.resize.
+    resize_antialias: Whether to use an anti-aliasing filter when downsampling
+      an image.
 
   Returns:
     A function, that applies inception crop.
@@ -312,8 +319,9 @@ def get_decode_jpeg_and_inception_crop(
     image = tf.image.decode_and_crop_jpeg(image_data, crop_window, channels=3)
 
     if resize_size:
-      image = get_resize([resize_size, resize_size], resize_method)(
-          {"image": image})["image"]
+      image = get_resize(
+          [resize_size, resize_size], resize_method, resize_antialias)(
+              {"image": image})["image"]
 
     return image
 
