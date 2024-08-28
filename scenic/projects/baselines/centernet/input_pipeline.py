@@ -96,6 +96,7 @@ coco_feature_description = {
 
 
 
+
 def coco_decode_example(data, with_masks=False):
   """Convert custom tfrecord into tfds builder format."""
   example = {}
