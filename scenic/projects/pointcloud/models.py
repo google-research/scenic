@@ -95,9 +95,9 @@ class SelfAttentionLayer(nn.Module):
       output: Tensor of shape [batch_size, num_points, feature_dim]
     """
     key_channels = self.key_channels or self.out_channels
-    if (self.attention_fn_configs is not None) and self.attention_fn_configs[
-        'neighbor_attn'
-    ]:
+    if ((self.attention_fn_configs is not None) and
+        ('neighbor_attn' in self.attention_fn_configs) and
+        self.attention_fn_configs['neighbor_attn']):
       input_q = coords
       input_k = coords
       input_v = inputs
