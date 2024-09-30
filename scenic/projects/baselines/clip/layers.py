@@ -251,7 +251,7 @@ class ResidualAttentionBlock(nn.Module):
   @nn.compact
   def __call__(self, x: jnp.ndarray, attn_mask=None) -> jnp.ndarray:
     xn = LayerNorm(name='ln_1')(x)
-    x = x + nn.SelfAttention(
+    x = x + nn.MultiHeadDotProductAttention(
         self.num_heads, name='attn', deterministic=True)(xn, attn_mask)
     xn = LayerNorm(name='ln_2')(x)
     x = x + MLP(name='mlp')(xn)
