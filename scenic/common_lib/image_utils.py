@@ -92,7 +92,7 @@ def resize_pil(image_or_batch: np.ndarray,
 
   pil_size = [out_w, out_h]
   resized = np.stack([
-      np.asarray(Image.fromarray(image).resize(pil_size, resample))
+      np.asarray(Image.fromarray(image).resize(pil_size, resample))  # pytype: disable=wrong-arg-types  # pillow-102-upgrade
       for image in batch
   ])
 
