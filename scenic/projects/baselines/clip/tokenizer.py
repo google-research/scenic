@@ -22,7 +22,6 @@ from clip.simple_tokenizer import SimpleTokenizer
 import numpy as np
 from scenic.projects.baselines.clip import download
 
-
 # pylint: disable=line-too-long
 DEFAULT_BPE_PATH = None
 DEFAULT_BPE_URL = 'https://github.com/openai/CLIP/blob/main/clip/bpe_simple_vocab_16e6.txt.gz?raw=true'
