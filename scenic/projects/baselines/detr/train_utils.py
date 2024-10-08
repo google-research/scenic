@@ -283,10 +283,12 @@ def draw_boxes_side_by_side(pred: Dict[str, Any], batch: Dict[str, Any],
         edgecolor = (255, 255, 0)
 
       gtdraw.rectangle(bb, fill=None, outline=edgecolor, width=3)
-      gtdraw.text([bb[0], max(bb[1] - 10, 0)],
-                  label_map[cls],
-                  font=font,
-                  fill=(0, 0, 255))
+      gtdraw.text(
+          [bb[0], max(bb[1] - 10, 0)],  # pytype: disable=wrong-arg-types  # pillow-102-upgrade
+          label_map[cls],
+          font=font,
+          fill=(0, 0, 255),
+      )
 
     # second for model predictions
     predim = PIL.Image.fromarray(imgs[indx])
@@ -306,10 +308,12 @@ def draw_boxes_side_by_side(pred: Dict[str, Any], batch: Dict[str, Any],
       h, w = batch['label']['size'][indx]
       bcx, bcy, bw, bh = bb * [w, h, w, h]
       bb = [bcx - bw / 2, bcy - bh / 2, bcx + bw / 2, bcy + bh / 2]
-      preddraw.text([bb[0], max(bb[1] - 10, 0)],
-                    label_map[cls],
-                    font=font,
-                    fill=(0, 0, 255))
+      preddraw.text(
+          [bb[0], max(bb[1] - 10, 0)],  # pytype: disable=wrong-arg-types  # pillow-102-upgrade
+          label_map[cls],
+          font=font,
+          fill=(0, 0, 255),
+      )
 
     gtim_np = np.asarray(gtim)
     predim_np = np.asarray(predim)
