@@ -221,8 +221,7 @@ def pmap_maybe(
 
 
 def axis_name_exists(axis_name: Hashable) -> bool:
-  return any(frame.name == axis_name
-             for frame in jax.core.thread_local_state.trace_state.axis_env)
+  return axis_name in jax.core.unsafe_get_axis_names()  # type: ignore
 
 
 # The following are the same functions in `jax.example_libraries.optimizers` but
