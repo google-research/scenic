@@ -21,6 +21,7 @@ batch norm will aggregate accross masked out positions, etc. This module
 introduces a Flax layers that do not suffer from this.
 """
 
+import enum
 import functools
 from typing import Optional, Tuple, Union, Callable, Any, Sequence, List, Iterable
 
@@ -610,6 +611,11 @@ def _ceil_divide(x1: jnp.ndarray, x2: jnp.ndarray) -> jnp.ndarray:
   return -jnp.floor_divide(jnp.negative(x1), x2)
 
 
+class PaddingType(enum.Enum):
+  VALID = 1
+  SAME = 2
+
+
 def padtype_to_pads(
     in_shape: jnp.ndarray,
     window_shape: Tuple[int, ...],
@@ -628,16 +634,15 @@ def padtype_to_pads(
     Inferred lhs paddings as array with dimensions
     (batch, len(spatial_dims), 2).
   """
-  xc = jax.lib.xla_client
   if isinstance(padding, str):
-    mapping = {'VALID': xc.PaddingType.VALID, 'SAME': xc.PaddingType.SAME}  # pytype: disable=module-attr  # gen-stub-imports
+    mapping = {'VALID': PaddingType.VALID, 'SAME': PaddingType.SAME}
     try:
       padding = mapping[padding.upper()]
     except KeyError as err:
       msg = "Unrecognized padding type: expected 'VALID' or 'SAME', got {}."
       raise RuntimeError(msg.format(padding)) from err
 
-  if padding == xc.PaddingType.SAME:  # pytype: disable=module-attr  # gen-stub-imports
+  if padding == PaddingType.SAME:
     window_shape = jnp.array(window_shape)
     window_strides = jnp.array(window_strides)
     out_shape = _ceil_divide(in_shape, window_strides)
@@ -645,7 +650,7 @@ def padtype_to_pads(
         (out_shape - 1) * window_strides + window_shape - in_shape, 0)
     pad_sizes = jnp.stack([pad_sizes // 2, pad_sizes - pad_sizes // 2], axis=1)
     return pad_sizes
-  elif padding == xc.PaddingType.VALID:  # pytype: disable=module-attr  # gen-stub-imports
+  elif padding == PaddingType.VALID:
     return jnp.zeros((in_shape.shape[0], len(window_shape), 2), dtype=jnp.int32)
   raise TypeError(f'Unknown padding type: {padding}.')
 
