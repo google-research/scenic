@@ -35,7 +35,7 @@ class State:
 
 def scatter_min(inp, index, src):
   """Jax implementation of torch.scatter(inp, 1, index, src)."""
-  # from https://github.com/google/jax/issues/8487
+  # from https://github.com/jax-ml/jax/issues/8487
   dnums = jax.lax.ScatterDimensionNumbers(
       update_window_dims=(), inserted_window_dims=(0,),
       scatter_dims_to_operand_dims=(0,))

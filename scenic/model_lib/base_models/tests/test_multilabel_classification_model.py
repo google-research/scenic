@@ -115,7 +115,7 @@ class TestMultiLabelClassificationModel(absltest.TestCase):
         (output, np.random.random(size=array_size)), axis=1)
     loss_value_extended = model.loss_function(output_extended, batch_extended)
 
-    # Test with `places=3` due to JAX issue: github.com/google/jax/issues/6553
+    # Test with `places=3` due to JAX issue: github.com/jax-ml/jax/issues/6553
     # TODO(robromijnders): follow up with JAX issue and remove `places=3`.
     self.assertAlmostEqual(
         float(loss_value_masked),

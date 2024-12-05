@@ -28,7 +28,7 @@ from scenic.projects.baselines.clip import download
 from tensorflow.io import gfile
 
 # JAX team is working type checking for pytrees:
-# https://github.com/google/jax/issues/3340
+# https://github.com/jax-ml/jax/issues/3340
 PyTree = Any
 
 # pylint: disable=line-too-long

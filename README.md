@@ -14,7 +14,7 @@ multi-host) vision models; and (ii) several *projects* containing fully
 fleshed out problem-specific training and evaluation loops using these
 libraries.
 
-Scenic is developed in [JAX](https://github.com/google/jax) and uses
+Scenic is developed in [JAX](https://github.com/jax-ml/jax) and uses
 [Flax](https://github.com/google/flax).
 
 ### Contents

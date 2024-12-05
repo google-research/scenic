@@ -16,7 +16,7 @@ even when the boundary signal is very weak or is swamped by noise.
 
 Boundary Attention is written in JAX and uses Scenic framework for training.
 For more information on how to install JAX with GPU support,
-see [here](https://github.com/google/jax#installation).
+see [here](https://github.com/jax-ml/jax#installation).
 
 To begin, we recommend installing scenic to a new conda virtual environment. If necessary, install anaconda or [miniconda](https://docs.conda.io/projects/miniconda/en/latest/).
 

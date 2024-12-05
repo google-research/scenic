@@ -21,7 +21,7 @@ import tensorflow as tf
 import tree as dm_tree
 
 # JAX team is working on type annotation for pytree:
-# https://github.com/google/jax/issues/1555
+# https://github.com/jax-ml/jax/issues/1555
 # A PyTree is a nested dictionary where the leaves are `jnp.ndarray`.
 # TODO(aarnab): Fix type annotation once ready.
 PyTree = Any

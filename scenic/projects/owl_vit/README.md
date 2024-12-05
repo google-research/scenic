@@ -130,7 +130,7 @@ OWL-ViT models can be converted to TensorFlow using the [`tf.saved_model`](https
 
 ## Installation
 
-The code has been tested on Debian 4.19 and Python 3.7. For information on how to install JAX with GPU support, see [here](https://github.com/google/jax#installation).
+The code has been tested on Debian 4.19 and Python 3.7. For information on how to install JAX with GPU support, see [here](https://github.com/jax-ml/jax#installation).
 
 ```shell
 git clone https://github.com/google-research/scenic.git
