@@ -29,7 +29,7 @@ from scenic.train_lib import train_utils
 from tensorflow.io import gfile
 
 # JAX team is working on type annotation for pytree:
-# https://github.com/google/jax/issues/1555
+# https://github.com/jax-ml/jax/issues/1555
 PyTree = Union[Mapping[str, Mapping], Any]
 
 

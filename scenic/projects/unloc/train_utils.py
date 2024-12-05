@@ -37,7 +37,7 @@ from scenic.train_lib import train_utils
 import scipy.ndimage
 
 # JAX team is working on type annotation for pytree:
-# https://github.com/google/jax/issues/1555
+# https://github.com/jax-ml/jax/issues/1555
 PyTree = Any
 Batch = Dict[str, Any]
 MetricFn = Callable[[jnp.ndarray, Dict[str, jnp.ndarray]],

@@ -2,7 +2,7 @@
 
 *Robust_segvit* is a pipeline to evaluate the robustness of semantic segmentation models.
 
-Robust_segvit is developed in [JAX](https://github.com/google/jax) and uses [Flax](https://github.com/google/flax).
+Robust_segvit is developed in [JAX](https://github.com/jax-ml/jax) and uses [Flax](https://github.com/google/flax).
 
 
 ## Code structure

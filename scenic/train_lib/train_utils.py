@@ -41,7 +41,7 @@ from scenic.train_lib import optimizers
 from tensorflow.io import gfile
 
 # JAX team is working on type annotation for pytree:
-# https://github.com/google/jax/issues/1555
+# https://github.com/jax-ml/jax/issues/1555
 PyTree = Any
 PRNGKey = jnp.ndarray
 

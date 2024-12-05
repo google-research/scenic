@@ -35,7 +35,7 @@ import optax
 
 
 # JAX team is working type checking for pytrees:
-# https://github.com/google/jax/issues/3340
+# https://github.com/jax-ml/jax/issues/3340
 PyTree = Any
 ScalarOrSchedule = Union[float, optax.Schedule]
 

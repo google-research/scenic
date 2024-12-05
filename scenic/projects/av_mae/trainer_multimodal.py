@@ -47,7 +47,7 @@ MetricFn = Callable[[jnp.ndarray, jnp.ndarray, Dict[str, jnp.ndarray]],
 LossFn = Callable[[jnp.ndarray, jnp.ndarray, Batch, Optional[jnp.ndarray]],
                   float]
 # JAX team is working on type annotation for pytree:
-# https://github.com/google/jax/issues/1555
+# https://github.com/jax-ml/jax/issues/1555
 PyTree = Any
 
 
