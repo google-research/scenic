@@ -38,7 +38,7 @@ def convert_and_save_model(
         Sequence[dict[str, tf.TensorSpec]],
     ],
     polymorphic_shapes: Optional[
-        Union[str, jax2tf.PolyShape, dict[str, str]]
+        Union[str, dict[str, str]]
     ] = None,
     with_gradient: bool = False,
     enable_xla: bool = True,
