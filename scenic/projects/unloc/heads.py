@@ -136,7 +136,7 @@ class LocalizationHead(nn.Module):
     if self.distance_normalizer == 'relu_clip':
       distances = nn.relu(distances)
       # We normalize the distances to be 0 and 1.
-      return jnp.clip(distances, a_max=1.0)
+      return jnp.clip(distances, max=1.0)
     elif self.distance_normalizer == 'sigmoid':
       return nn.sigmoid(distances)
     elif self.distance_normalizer == 'relu':

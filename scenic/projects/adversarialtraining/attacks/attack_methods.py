@@ -42,7 +42,7 @@ def project_perturbation_pyramid_inf(aug_params, epsilon, input_image,
   # The idea is to ensure that the sum of the perturbations over the pyramid
   # levels can't be more than epsilon.
   clipped_perturbation_pyramid = jax.tree_util.tree_map(
-      functools.partial(jnp.clip, a_min=-epsilon, a_max=epsilon), aug_params)
+      functools.partial(jnp.clip, min=-epsilon, max=epsilon), aug_params)
 
   return clipped_perturbation_pyramid
 
@@ -62,8 +62,8 @@ def project_perturbation_pyramid_l2(aug_params, epsilon, input_image,
   clipped_perturbation_pyramid = jax.tree_util.tree_map(
       functools.partial(
           jnp.clip,
-          a_min=-epsilon / pyramid_levels,
-          a_max=epsilon / pyramid_levels), aug_params)
+          min=-epsilon / pyramid_levels,
+          max=epsilon / pyramid_levels), aug_params)
 
   return clipped_perturbation_pyramid
 

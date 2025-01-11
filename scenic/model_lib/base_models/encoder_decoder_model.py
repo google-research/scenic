@@ -119,7 +119,7 @@ def encoder_decoder_metrics_function(
       # Calculate (clipped) perplexity after averaging log-perplexities:
       evaluated_metrics['perplexity'] = (jnp.clip(
           jnp.exp(evaluated_metrics['loss'][0] / evaluated_metrics['loss'][1]),
-          a_max=_MAX_PERPLEXITY), 1)
+          max=_MAX_PERPLEXITY), 1)
   return evaluated_metrics  # pytype: disable=bad-return-type  # jax-types
 
 

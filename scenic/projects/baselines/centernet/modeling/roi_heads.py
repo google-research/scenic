@@ -238,7 +238,7 @@ class CascadeROIHeads(nn.Module):
     # make these numbers configurable if needed.
     level_assignment = jnp.floor(4 + jnp.log2(sqrt_area / 224 + 1e-8))
     level_assignment = jnp.clip(
-        level_assignment, a_min=min_level, a_max=max_level)
+        level_assignment, min=min_level, max=max_level)
     scale = jnp.float_power(2.0, level_assignment)[:, :, None]
 
     return roi_align.multilevel_roi_align(

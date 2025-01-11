@@ -70,7 +70,7 @@ def get_metrics(misc_artifacts, batch, metrics, images_to_log, metrics_fn):
   metrics['|adv_logits-logits|_l2'] = batchwise_scalar_to_metric(logit_norms)
   metrics[
       '|adv_logits-logits|_l2 / |adv-orig|_l2'] = batchwise_scalar_to_metric(
-          logit_norms / (jnp.clip(l2_norms, a_min=1e-5)))
+          logit_norms / (jnp.clip(l2_norms, min=1e-5)))
 
   # network performance on adversarial
   logits_are_correct = jnp.argmax(

@@ -41,7 +41,7 @@ def unnormalize_imgnet(input_tensors):
 def normalize_minmax(tensor):
   mn = jnp.min(tensor, axis=(-1, -2, -3), keepdims=True)
   mx = jnp.max(tensor, axis=(-1, -2, -3), keepdims=True)
-  return (tensor - mn) / jnp.clip(mx - mn, a_min=1e-5)
+  return (tensor - mn) / jnp.clip(mx - mn, min=1e-5)
 
 
 def psum_metric_normalizer(metrics: Tuple[jnp.ndarray, jnp.ndarray]

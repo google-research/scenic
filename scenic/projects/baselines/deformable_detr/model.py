@@ -74,7 +74,7 @@ def compute_cost(
     All pairs cost matrix [bs, nout, ntargets].
   """
   # Calculate cost using pred_prob [bs, npreds].
-  logfn = lambda x: jnp.log(jnp.clip(x, a_min=1e-8))
+  logfn = lambda x: jnp.log(jnp.clip(x, min=1e-8))
   neg_cost_class = (1 - alpha) * (out_prob**gamma) * (-logfn(1 - out_prob))
   pos_cost_class = alpha * ((1 - out_prob)**gamma) * (-logfn(out_prob))
   cost_class = pos_cost_class - neg_cost_class

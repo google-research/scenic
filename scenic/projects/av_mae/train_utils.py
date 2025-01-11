@@ -78,7 +78,7 @@ def generate_image_grid(target: jnp.ndarray,
   if modality == 'spectrogram':
     prediction_clipped = prediction
   else:
-    prediction_clipped = jnp.clip(prediction, a_min=-1, a_max=1)
+    prediction_clipped = jnp.clip(prediction, min=-1, max=1)
 
   # Normalise to uint8 in range [0, 255] for summary-writing.
   def normalise(tensor: jnp.ndarray, offset: float = 127.5) -> jnp.ndarray:
@@ -221,7 +221,7 @@ def generate_image_grid_from_video(target: jnp.ndarray,
   # mean and std-dev instead of [-1, 1].
   # if jnp.max(target) > 1 or jnp.min(target) < -1:
   #   raise ValueError('Invalid ranges in target.')
-  prediction_clipped = jnp.clip(prediction, a_min=-1, a_max=1)
+  prediction_clipped = jnp.clip(prediction, min=-1, max=1)
 
   # Normalise to uint8 in range [0, 255] for summary-writing.
   def normalise(tensor: jnp.ndarray, offset: float = 127.5) -> jnp.ndarray:
