@@ -85,7 +85,16 @@ def get_dataset(*,
     pp = builder.get_preprocess_fn(how)
     example = pp(x)
     # to scenic format
-    return {'inputs': example['image'], 'label': example['labels']}
+    if dataset_configs.dataset == 'imagenet2012' and 'file_name' in example:
+      return {
+          'inputs': example['image'],
+          'label': example['labels'],
+          'file_name': example['file_name'],
+      }
+    return {
+        'inputs': example['image'],
+        'label': example['labels'],
+    }
 
   # E.g. for testing with TAP.
   shuffle_buffer_size = (1000 if num_shards == 1 else
@@ -104,7 +113,7 @@ def get_dataset(*,
       batch_size=batch_size,
       preprocess_fn=functools.partial(pp_fn, how=dataset_configs.pp_train),
       shuffle_buffer_size=shuffle_buffer_size,
-      prefetch=dataset_configs.get('prefetch_to_host', 2),
+      prefetch=dataset_configs.get('prefetch_to_host', False),
       cache=cache,
       ignore_errors=True,
       skip_decode=skip_decode)

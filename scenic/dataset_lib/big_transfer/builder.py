@@ -23,7 +23,7 @@ import tensorflow.compat.v1 as tf
 
 TPU_SUPPORTED_DTYPES = [
     tf.bool, tf.int32, tf.int64, tf.bfloat16, tf.float32, tf.complex64,
-    tf.uint32
+    tf.uint32, tf.string,
 ]
 
 
