@@ -110,7 +110,7 @@ def cpu_matcher(matching_fn):
     return matching_fn_hcb(cost, n_cols), None
 
   def matching_fn_hcb_vjp_bwd(*_):
-    return (None,)  # Return no gradient.
+    return (None, None)  # Return no gradient.
 
   matching_fn_hcb.defvjp(matching_fn_hcb_vjp_fwd, matching_fn_hcb_vjp_bwd)
 
