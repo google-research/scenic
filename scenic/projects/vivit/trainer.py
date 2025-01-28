@@ -232,17 +232,6 @@ def train(
       step0_log['gflops'] = gflops
     writer.write_scalars(1, step0_log)
 
-  # Manually defragment memory before starting training, if we are using the
-  # tfrt runtime.
-  do_memory_defrag = False
-  if config.get('do_memory_defrag', False):
-    client = jax.lib.xla_bridge.get_backend()
-    try:
-      logging.info('Defragmenting memory')
-      client.defragment()
-      do_memory_defrag = True
-    except RuntimeError:
-      logging.warn('Memory defragmentation not possible, use the tfrt runtime')
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
       train_batch = next(dataset.train_iter)
@@ -280,17 +269,10 @@ def train(
           key_separator='/')
       # Reset metric accumulation for next evaluation cycle.
       train_metrics, extra_training_logs = [], []
-      if do_memory_defrag:
-        logging.info('Defragmenting memory')
-        client.defragment()
 
     ################### EVALUATION ################################
     if (step % log_eval_steps == 1) or (step == total_steps):
       with report_progress.timed('eval'):
-        if do_memory_defrag:
-          logging.info('Defragmenting memory')
-          client.defragment()
-
         eval_metrics = []
         additional_summary = None
         if is_multilabel_model:
@@ -347,9 +329,6 @@ def train(
             key_separator='/')
         writer.flush()
         del eval_metrics
-        if do_memory_defrag:
-          logging.info('Defragmenting memory')
-          client.defragment()
 
     ##################### CHECKPOINTING ###########################
     if ((step % checkpoint_steps == 0 and step > 0) or
@@ -366,10 +345,6 @@ def train(
     if (config.dataset_configs.get('do_multicrop_test') and
         ((step % log_test_steps == 1 and step > 1) or step == total_steps)):
       with report_progress.timed('test'):
-        if do_memory_defrag:
-          logging.info('Defragmenting memory')
-          client.defragment()
-
         test_metrics = []
         # Sync model state across replicas.
         train_state = train_utils.sync_model_state_across_replicas(train_state)
@@ -395,9 +370,6 @@ def train(
         writer.flush()
         # Free up some space.
         del test_metrics
-        if do_memory_defrag:
-          logging.info('Defragmenting memory')
-          client.defragment()
 
     chrono.resume()  # un-pause now
   # Wait until computations are done before exiting.
