@@ -306,18 +306,6 @@ def train(
       step0_log['gflops'] = gflops
     writer.write_scalars(1, step0_log)
 
-  # Manually defragment memory before starting training, if we are using the
-  # tfrt runtime.
-  do_memory_defrag = False
-  if config.get('do_memory_defrag', False):
-    client = jax.lib.xla_bridge.get_backend()
-    try:
-      logging.info('Defragmenting memory')
-      client.defragment()
-      do_memory_defrag = True
-    except RuntimeError:
-      logging.warn('Memory defragmentation not possible, use the tfrt runtime')
-
   write_note(f'First step compilations...\n{chrono.note}')
 
   for step in range(start_step + 1, total_steps + 1):
@@ -372,18 +360,13 @@ def train(
       )
       # Reset metric accumulation for next evaluation cycle.
       train_metrics, extra_training_logs = [], []
-      if do_memory_defrag:
-        logging.info('Defragmenting memory')
-        client.defragment()
+
       chrono.resume()
 
     ################### EVALUATION ################################
     if (step % log_eval_steps == 1) or (step == total_steps):
       chrono.pause(wait_for=(train_state.params))
       with report_progress.timed('eval'):
-        if do_memory_defrag:
-          logging.info('Defragmenting memory')
-          client.defragment()
 
         eval_metrics = []
         additional_summary = None
@@ -441,9 +424,7 @@ def train(
             key_separator='/')
         writer.flush()
         del eval_metrics
-        if do_memory_defrag:
-          logging.info('Defragmenting memory')
-          client.defragment()
+
       chrono.resume()
 
     ##################### CHECKPOINTING ###########################
@@ -461,9 +442,6 @@ def train(
         ((step % log_test_steps == 1 and step > 1) or step == total_steps)):
       chrono.pause(wait_for=(train_state.params))
       with report_progress.timed('test'):
-        if do_memory_defrag:
-          logging.info('Defragmenting memory')
-          client.defragment()
 
         test_metrics = []
         # Sync model state across replicas.
@@ -490,9 +468,7 @@ def train(
         writer.flush()
         # Free up some space.
         del test_metrics
-        if do_memory_defrag:
-          logging.info('Defragmenting memory')
-          client.defragment()
+
       chrono.resume()
 
   # Wait until computations are done before exiting.
