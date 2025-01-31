@@ -82,10 +82,14 @@ def get_dataset(*,
   target_is_onehot = 'onehot' in dataset_configs.pp_train
 
   def pp_fn(x, how):
-    pp = builder.get_preprocess_fn(how)
+    pp = builder.get_preprocess_fn(
+        how, remove_tpu_dtypes=dataset_configs.get('remove_tpu_dtypes', True))
     example = pp(x)
     # to scenic format
-    return {'inputs': example['image'], 'label': example['labels']}
+    return_dict = {'inputs': example['image'], 'label': example['labels']}
+    if dataset_configs.dataset == 'imagenet2012' and 'file_name' in example:
+      return_dict['file_name'] = example['file_name']
+    return return_dict
 
   # E.g. for testing with TAP.
   shuffle_buffer_size = (1000 if num_shards == 1 else
