@@ -18,7 +18,7 @@ import functools
 from typing import Dict, Optional, Tuple, Union
 
 from flax.training import common_utils
-from immutabledict import immutabledict
+from immutabledict import immutabledict  # pylint: disable=g-importing-member
 import jax.numpy as jnp
 from scenic.model_lib.base_models import base_model
 from scenic.model_lib.base_models import model_utils
@@ -151,8 +151,8 @@ class MultiLabelClassificationModel(base_model.BaseModel):
     del split  # For all splits, we return the same metric functions.
     return functools.partial(
         base_model.metrics_function_jit,
-        target_is_multihot=self.dataset_meta_data.get('target_is_onehot',
-                                                      False),
+        target_is_one_or_multihot=self.dataset_meta_data.get('target_is_onehot',
+                                                             False),
         metrics=_MULTI_LABEL_CLASSIFICATION_METRICS)
 
   def loss_function(
