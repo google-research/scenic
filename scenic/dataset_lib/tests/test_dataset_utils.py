@@ -74,6 +74,7 @@ class DatasetUtilsTest(parameterized.TestCase):
     self.assertEqual(outputs['batch_mask'].shape,
                      (desired_bs,) + batch_mask_shape)
     if pre_padding_mask:
+      self.assertIsNotNone(complete_batch_mask)
       self.assertEqual(outputs['batch_mask'].sum(), complete_batch_mask.sum())
     else:
       self.assertEqual(outputs['batch_mask'].sum(),
@@ -104,6 +105,7 @@ class DatasetUtilsTest(parameterized.TestCase):
     self.assertEqual(outputs['batch_mask'].shape,
                      (desired_bs,) + batch_mask_shape)
     if pre_padding_mask:
+      self.assertIsNotNone(complete_batch_mask)
       self.assertEqual(outputs['batch_mask'].sum(), complete_batch_mask.sum())
     else:
       self.assertEqual(outputs['batch_mask'].sum(),
