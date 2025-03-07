@@ -46,7 +46,7 @@ def get_model_cls(model_name: str) -> Callable[..., Any]:
 def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,
          writer: metric_writers.MetricWriter):
   """Main function for the Vid2Seq project."""
-  jave_jre = JRE_BIN_JAVA
+  java_jre = JRE_BIN_JAVA
   os.environ['JRE_BIN_JAVA'] = java_jre
 
   # ensure arguments match
