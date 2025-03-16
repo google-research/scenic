@@ -73,7 +73,8 @@ def get_config(runlocal=''):
 
   # Model.
   version, patch = VARIANT.split('/')
-  config.model_name = 'vit_multilabel_classification'
+  # config.model_name = 'vit_multilabel_classification'
+  config.model_name = 'topvit_multilabel_classification'  #  changed topvit cfg
   config.model = ml_collections.ConfigDict()
   config.model.hidden_size = {'Ti': 192,
                               'S': 384,
