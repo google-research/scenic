@@ -144,30 +144,30 @@ def initialize_model(
     else:
       dummy_input.append(None)
 
-  # We want all parameters to be created in host RAM, not on any device, they'll
-  # be sent there later as needed, otherwise we already encountered two
-  # situations where we allocate them twice.
-  @functools.partial(jax.jit, backend='cpu')
   def _initialize_model(rngs):
     """Initialization function to be jitted."""
-    init_model_state, init_params = flax.core.pop(
-        flax.core.freeze(
-            model_def.init(
-                rngs, *dummy_input, train=train, debug=False, **model_kwargs
-            )
-        ),
-        'params',
-    )
-    # Set bias in the head to low value, such that loss is small initially.
-    if config.get('init_head_bias', None) is not None:
-      init_params = flax.core.unfreeze(init_params)
-      init_params['output_projection'] = optimizers.tree_map_with_names(
-          lambda p: jnp.full_like(p, config.init_head_bias),
-          init_params['output_projection'],
-          match_name_fn=lambda name: 'bias' in name,
+    # We want all parameters to be created in host RAM, not on any device,
+    # they'll be sent there later as needed, otherwise we already encountered
+    # two situations where we allocate them twice.
+    with jax.default_device(jax.devices('cpu')[0]):
+      init_model_state, init_params = flax.core.pop(
+          flax.core.freeze(
+              model_def.init(
+                  rngs, *dummy_input, train=train, debug=False, **model_kwargs
+              )
+          ),
+          'params',
       )
-      init_params = flax.core.freeze(init_params)
-    return init_params, init_model_state
+      # Set bias in the head to low value, such that loss is small initially.
+      if config.get('init_head_bias', None) is not None:
+        init_params = flax.core.unfreeze(init_params)
+        init_params['output_projection'] = optimizers.tree_map_with_names(
+            lambda p: jnp.full_like(p, config.init_head_bias),
+            init_params['output_projection'],
+            match_name_fn=lambda name: 'bias' in name,
+        )
+        init_params = flax.core.freeze(init_params)
+      return init_params, init_model_state
 
   if not isinstance(rngs, dict):
     rngs = {'params': rngs}
@@ -264,51 +264,55 @@ def initialize_model_with_pytree(
 
   dummy_input = create_dummy_input(input_spec)
 
-  # We want all parameters to be created in host RAM, not on any device, they'll
-  # be sent there later as needed, otherwise we already encountered two
-  # situations where we allocate them twice.
-  @functools.partial(jax.jit, backend='cpu')
   def _initialize_model(rngs):
     """Initialization function to be jitted."""
-    # If dummy_input is a dict, we feed inputs as keyword arguments, otherwise
-    # feed as position arguments.
-    if isinstance(dummy_input, dict) and unpack_input:
-      init_model_state, init_params = flax.core.pop(
-          flax.core.freeze(
-              model_def.init(
-                  rngs, **dummy_input, train=False, debug=False, **model_kwargs
-              )
-          ),
-          'params',
-      )
-    elif isinstance(dummy_input, collections.Sequence) and unpack_input:
-      init_model_state, init_params = flax.core.pop(
-          flax.core.freeze(
-              model_def.init(
-                  rngs, *dummy_input, train=False, debug=False, **model_kwargs
-              )
-          ),
-          'params',
-      )
-    else:
-      init_model_state, init_params = flax.core.pop(
-          flax.core.freeze(
-              model_def.init(
-                  rngs, dummy_input, train=False, debug=False, **model_kwargs
-              )
-          ),
-          'params',
-      )
-    # Set bias in the head to low value, such that loss is small initially.
-    if config.get('init_head_bias', None) is not None:
-      init_params = flax.core.unfreeze(init_params)
-      init_params['output_projection'] = optimizers.tree_map_with_names(
-          lambda p: jnp.full_like(p, config.init_head_bias),
-          init_params['output_projection'],
-          match_name_fn=lambda name: 'bias' in name,
-      )
-      init_params = flax.core.freeze(init_params)
-    return init_params, init_model_state
+    # We want all parameters to be created in host RAM, not on any device,
+    # they'll be sent there later as needed, otherwise we already encountered
+    # two situations where we allocate them twice.
+    with jax.default_device(jax.devices('cpu')[0]):
+      # If dummy_input is a dict, we feed inputs as keyword arguments, otherwise
+      # feed as position arguments.
+      if isinstance(dummy_input, dict) and unpack_input:
+        init_model_state, init_params = flax.core.pop(
+            flax.core.freeze(
+                model_def.init(
+                    rngs,
+                    **dummy_input,
+                    train=False,
+                    debug=False,
+                    **model_kwargs
+                )
+            ),
+            'params',
+        )
+      elif isinstance(dummy_input, collections.Sequence) and unpack_input:
+        init_model_state, init_params = flax.core.pop(
+            flax.core.freeze(
+                model_def.init(
+                    rngs, *dummy_input, train=False, debug=False, **model_kwargs
+                )
+            ),
+            'params',
+        )
+      else:
+        init_model_state, init_params = flax.core.pop(
+            flax.core.freeze(
+                model_def.init(
+                    rngs, dummy_input, train=False, debug=False, **model_kwargs
+                )
+            ),
+            'params',
+        )
+      # Set bias in the head to low value, such that loss is small initially.
+      if config.get('init_head_bias', None) is not None:
+        init_params = flax.core.unfreeze(init_params)
+        init_params['output_projection'] = optimizers.tree_map_with_names(
+            lambda p: jnp.full_like(p, config.init_head_bias),
+            init_params['output_projection'],
+            match_name_fn=lambda name: 'bias' in name,
+        )
+        init_params = flax.core.freeze(init_params)
+      return init_params, init_model_state
 
   if not isinstance(rngs, dict):
     rngs = {'params': rngs}
@@ -474,28 +478,28 @@ def initialize_multitask_model(
         dummy_input.append(jnp.zeros(in_st.shape, in_st.dtype))
       model_def(*dummy_input, train=False, debug=False, **dict(kwargs))
 
-  # We want all parameters to be created in host RAM, not on any device, they'll
-  # be sent there later as needed, otherwise we already encountered two
-  # situations where we allocate them twice.
-  @functools.partial(jax.jit, backend='cpu')
   def _initialize_model(rngs):
     """Initialization function to be jitted."""
-    init_model_state, init_params = flax.core.pop(
-        flax.core.freeze(nn.init(fn=init_fn, module=model_def)(rngs)), 'params'
-    )
-    # Set bias in the head to low value, such that loss is small initially.
-    if (
-        config.get('init_head_bias', None) is not None
-        and 'output_projection' in init_params
-    ):
-      init_params = flax.core.unfreeze(init_params)
-      init_params['output_projection'] = optimizers.tree_map_with_names(
-          lambda p: jnp.full_like(p, config.init_head_bias),
-          init_params['output_projection'],
-          match_name_fn=lambda name: 'bias' in name,
-      )
-      init_params = flax.core.freeze(init_params)
-    return init_params, init_model_state
+    # We want all parameters to be created in host RAM, not on any device,
+    # they'll be sent there later as needed, otherwise we already encountered
+    # two situations where we allocate them twice.
+    with jax.default_device(jax.devices('cpu')[0]):
+      init_model_state, init_params = flax.core.pop(
+          flax.core.freeze(nn.init(fn=init_fn, module=model_def)(rngs)),
+          'params')
+      # Set bias in the head to low value, such that loss is small initially.
+      if (
+          config.get('init_head_bias', None) is not None
+          and 'output_projection' in init_params
+      ):
+        init_params = flax.core.unfreeze(init_params)
+        init_params['output_projection'] = optimizers.tree_map_with_names(
+            lambda p: jnp.full_like(p, config.init_head_bias),
+            init_params['output_projection'],
+            match_name_fn=lambda name: 'bias' in name,
+        )
+        init_params = flax.core.freeze(init_params)
+      return init_params, init_model_state
 
   if not isinstance(rngs, dict):
     rngs = {'params': rngs}
