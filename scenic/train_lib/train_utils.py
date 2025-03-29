@@ -149,7 +149,7 @@ def initialize_model(
     # We want all parameters to be created in host RAM, not on any device,
     # they'll be sent there later as needed, otherwise we already encountered
     # two situations where we allocate them twice.
-    with jax.default_device(jax.devices('cpu')[0]):
+    with jax.default_device(jax.local_devices(backend='cpu')[0]):
       init_model_state, init_params = flax.core.pop(
           flax.core.freeze(
               model_def.init(
@@ -269,7 +269,7 @@ def initialize_model_with_pytree(
     # We want all parameters to be created in host RAM, not on any device,
     # they'll be sent there later as needed, otherwise we already encountered
     # two situations where we allocate them twice.
-    with jax.default_device(jax.devices('cpu')[0]):
+    with jax.default_device(jax.local_devices(backend='cpu')[0]):
       # If dummy_input is a dict, we feed inputs as keyword arguments, otherwise
       # feed as position arguments.
       if isinstance(dummy_input, dict) and unpack_input:
@@ -483,7 +483,7 @@ def initialize_multitask_model(
     # We want all parameters to be created in host RAM, not on any device,
     # they'll be sent there later as needed, otherwise we already encountered
     # two situations where we allocate them twice.
-    with jax.default_device(jax.devices('cpu')[0]):
+    with jax.default_device(jax.local_devices(backend='cpu')[0]):
       init_model_state, init_params = flax.core.pop(
           flax.core.freeze(nn.init(fn=init_fn, module=model_def)(rngs)),
           'params')
