@@ -103,7 +103,7 @@ def cpu_matcher(matching_fn):
         slice_and_match,
         jax.ShapeDtypeStruct(b + [2, min(n, m)], jnp.int32),
         (cost, n_cols),
-        vectorized=True)
+        vmap_method='broadcast_all')
 
   # Define forward and backward passes.
   def matching_fn_hcb_vjp_fwd(cost, n_cols):
