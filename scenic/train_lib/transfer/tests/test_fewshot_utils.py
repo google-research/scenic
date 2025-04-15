@@ -20,6 +20,8 @@ import jax
 from jax import random
 from scenic.train_lib.transfer import fewshot_utils
 
+jax.config.update('jax_threefry_partitionable', False)
+
 
 def big_vision_linear_regression(x, y, x_test, y_test, l2_reg, num_classes):
   """Computes fewshot regression with eigenvalue solver in big_vision."""
