@@ -24,8 +24,10 @@ from scenic.projects.baselines import hybrid_vit
 from scenic.projects.baselines import mixer
 from scenic.projects.baselines import resnet
 from scenic.projects.baselines import simple_cnn
+from scenic.projects.baselines import topvit
 from scenic.projects.baselines import unet
 from scenic.projects.baselines import vit
+
 
 ALL_MODELS = {}
 
@@ -50,6 +52,8 @@ CLASSIFICATION_MODELS = {
         hybrid_vit.HybridViTMultiLabelClassificationModel,
     'mixer_multilabel_classification':
         mixer.MixerMultiLabelClassificationModel,
+    'topvit_multilabel_classification':
+        topvit.TopViTMultiLabelClassificationModel,
 }
 
 SEGMENTATION_MODELS = {
