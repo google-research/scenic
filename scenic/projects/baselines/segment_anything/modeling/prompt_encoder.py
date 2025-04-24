@@ -32,8 +32,8 @@ class PromptEncoder(nn.Module):
   """Sam prompt encoder for points and boxes."""
 
   embed_dim: int = 256
-  image_embedding_size: Tuple[int, int] = (1024 // 16, 1024 // 16)
   input_image_size: Tuple[int, int] = (1024, 1024)
+  image_embedding_size: Tuple[int, int] = (1024 // 16, 1024 // 16)
   num_point_embeddings: int = 4  # pos/neg point + 2 box corners
   mask_in_chans: int = 16
 
@@ -114,6 +114,7 @@ class PromptEncoder(nn.Module):
     return corner_embedding
 
   def _embed_masks(self, masks):
+    print(masks.shape)
     mask_embedding = self.mask_downscaling(masks)
     return mask_embedding
 
@@ -156,6 +157,7 @@ class PromptEncoder(nn.Module):
       sparse_embeddings = jnp.concatenate(
           [sparse_embeddings, box_embeddings], axis=1)
     if masks is not None:
+      print(masks.shape)
       dense_embeddings = self._embed_masks(masks)
     else:
       if image_embedding_size is None:
@@ -165,6 +167,7 @@ class PromptEncoder(nn.Module):
           (num_prompts, image_embedding_size[0],
            image_embedding_size[1], self.embed_dim,)
       )
+
     return sparse_embeddings, dense_embeddings
 
 
