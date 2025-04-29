@@ -15,12 +15,13 @@
 """Utility functions for Training."""
 
 import collections.abc as collections
+import contextlib
 import copy
 import functools
 import os
 import re
 import time
-from typing import Any, Callable, Dict, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, Mapping, Optional, Sequence, Tuple, Union
 
 from absl import logging
 from clu import metric_writers
@@ -280,7 +281,7 @@ def initialize_model_with_pytree(
                     **dummy_input,
                     train=False,
                     debug=False,
-                    **model_kwargs
+                    **model_kwargs,
                 )
             ),
             'params',
@@ -486,7 +487,8 @@ def initialize_multitask_model(
     with jax.default_device(jax.local_devices(backend='cpu')[0]):
       init_model_state, init_params = flax.core.pop(
           flax.core.freeze(nn.init(fn=init_fn, module=model_def)(rngs)),
-          'params')
+          'params',
+      )
       # Set bias in the head to low value, such that loss is small initially.
       if (
           config.get('init_head_bias', None) is not None
@@ -1260,6 +1262,27 @@ class Chrono:
     self.accum_train_time = ckpt.get('accum_train_time', 0.0)
     self.accum_pause_time = ckpt.get('accum_pause_time', 0.0)
     self.accum_examples_seen = ckpt.get('accum_examples_seen', 0)
+
+  @contextlib.contextmanager
+  def paused(self, wait_for: Iterable[Any] = ()):
+    """A context manager for temporarily pausing to await arguments.
+
+    Example:
+        with chrono.paused(wait_for=some_jax_operations):
+            # Operations to perform while chrono is paused
+            ...
+
+    Args:
+      wait_for: An iterable of JAX operations to wait for before pausing.
+
+    Yields:
+      The Chrono object.
+    """
+    self.pause(wait_for=wait_for)
+    try:
+      yield self
+    finally:
+      self.resume()
 
 
 def barrier_across_hosts():
