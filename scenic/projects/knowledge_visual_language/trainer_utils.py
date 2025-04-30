@@ -96,7 +96,7 @@ def froze_param_optax(
     )
     frozen_mask = jax.tree_util.tree_map(operator.not_, not_frozen_mask)
     scale_txs = [
-        optax.masked(optax.scale(scale_val), mask)
+        optax.masked(optax.scale(scale_val), mask)  # pytype: disable=wrong-arg-types
         for scale_val, mask in zip(scale_vals, not_frozen_masks)
     ]
     tx = optax.chain(

@@ -354,9 +354,9 @@ def inference_on_dataset(
       for pred, label in zip(results, labels):
         if evaluator_name != 'densecap':
           assert evaluator_name == 'caption'
-          pred = tokenizer.indices_to_string(pred['text_tokens'][1:].tolist())
+          pred = tokenizer.indices_to_string(pred['text_tokens'][1:].tolist())  # pytype: disable=attribute-error
           label['captions'] = [
-              tokenizer.indices_to_string(x[1:].tolist())
+              tokenizer.indices_to_string(x[1:].tolist())  # pytype: disable=attribute-error
               for x in label['text_tokens']]
         global_metrics_evaluator.add_example(  # pytype: disable=attribute-error
             prediction=pred, target=label)

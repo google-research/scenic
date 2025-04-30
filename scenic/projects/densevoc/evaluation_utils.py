@@ -405,7 +405,7 @@ def inference_on_video_dataset(
             if label['image_ids'][i] <= 0:  # padded frames in a video.
               break
             label['image/id'] = label['image_ids'][i]
-            texts = [tokenizer.indices_to_string(
+            texts = [tokenizer.indices_to_string(  # pytype: disable=attribute-error
                 x[1:]) for x in pred['text_tokens'][i]]
             detection_pred = (
                 pred['detection_boxes'][i], pred['detection_scores'][i],
