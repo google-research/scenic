@@ -58,7 +58,10 @@ class MaskDecoder(nn.Module):
         num_layers=self.iou_head_depth,
         name='iou_prediction_head')
 
-    self.transformer = transformer.TwoWayTransformer(name='transformer')
+    self.transformer = transformer.TwoWayTransformer(
+        name='transformer',
+        embedding_dim=self.transformer_dim,
+    )
 
   def predict_masks(
       self, image_embeddings, image_pe,
