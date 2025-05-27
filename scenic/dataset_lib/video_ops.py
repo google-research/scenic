@@ -184,14 +184,16 @@ class RandomErasing:
           if 2 * half_height < image_height and 2 * half_width < image_width:
             center_height = tf.random.uniform(
                 shape=[],
-                minval=0,
-                maxval=int(image_height - 2 * half_height),
-                dtype=tf.int32)
+                minval=half_height,
+                maxval=int(image_height - half_height),
+                dtype=tf.int32,
+            )
             center_width = tf.random.uniform(
                 shape=[],
-                minval=0,
-                maxval=int(image_width - 2 * half_width),
-                dtype=tf.int32)
+                minval=half_width,
+                maxval=int(image_width - half_width),
+                dtype=tf.int32,
+            )
 
             video = _fill_rectangle_video(
                 video,
