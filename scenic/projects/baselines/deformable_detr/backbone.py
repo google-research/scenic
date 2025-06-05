@@ -1,4 +1,4 @@
-# Copyright 2024 The Scenic Authors.
+# Copyright 2025 The Scenic Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,13 +29,14 @@ class InputPosEmbeddingSine(nn.Module):
   dtype: jnp.dtype = jnp.float32
   scale: Optional[float] = None
   temperature: float = 10000
+  offset: float = -0.5
 
   @nn.compact
   def __call__(self, padding_mask: jnp.ndarray) -> jnp.ndarray:
     """Creates the positional embeddings for transformer inputs.
 
     This is slightly different from the one used in DETR in that an offset of
-    -0.5 is added when calculating `x_embed` and `y_embed`.
+    -0.5 may be added when calculating `x_embed` and `y_embed`.
 
     Args:
       padding_mask: Binary matrix with 0 at padded image regions. Shape is
@@ -57,8 +58,8 @@ class InputPosEmbeddingSine(nn.Module):
     # Normalization:
     eps = 1e-6
     scale = self.scale if self.scale is not None else 2 * jnp.pi
-    y_embed = (y_embed - 0.5)/ (y_embed[:, -1:, :] + eps) * scale
-    x_embed = (x_embed - 0.5) / (x_embed[:, :, -1:] + eps) * scale
+    y_embed = (y_embed + self.offset)/ (y_embed[:, -1:, :] + eps) * scale
+    x_embed = (x_embed + self.offset) / (x_embed[:, :, -1:] + eps) * scale
 
     num_pos_feats = self.hidden_dim // 2
     dim_t = jnp.arange(num_pos_feats, dtype=jnp.float32)
