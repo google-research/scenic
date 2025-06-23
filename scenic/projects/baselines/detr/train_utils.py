@@ -20,9 +20,8 @@ import os
 from typing import Any, Dict, Optional, Set
 
 from absl import logging
-from flax import core as flax_core
-from flax import optim as optimizers
-from flax import traverse_util
+import flax
+import optax
 import jax
 from jax.example_libraries import optimizers as experimental_optimizers
 import jax.numpy as jnp
@@ -33,8 +32,7 @@ import PIL.ImageFont
 from scenic.common_lib import image_utils
 from scenic.dataset_lib.coco_dataset import coco_eval
 from scenic.model_lib.base_models import box_utils
-from scenic.train_lib_deprecated import optimizers as scenic_optimizers
-from scenic.train_lib_deprecated import train_utils
+from scenic.train_lib import train_utils
 import scipy.special
 import tensorflow as tf
 
@@ -323,62 +321,52 @@ def draw_boxes_side_by_side(pred: Dict[str, Any], batch: Dict[str, Any],
   return np.stack(viz, axis=0)
 
 
-def get_detr_optimizer(config):
-  """Makes a Flax MultiOptimizer for DETR."""
-  other_optim = scenic_optimizers.get_optimizer(config)
+def get_detr_optimizer(config, params):
+  """Makes an Optax optimizer for DETR."""
+  oc = config.optimizer_configs
 
-  if config.get('backbone_training'):
-    backbone_optim = scenic_optimizers.get_optimizer(config.backbone_training)
-  else:
-    backbone_optim = other_optim
-
-  def is_bn(path):
+  def bn_and_freeze_batch_stats(path):
     # For DETR we need to skip the BN affine transforms as well.
+    if not config.freeze_backbone_batch_stats:
+      return False
     names = ['/bn1/', '/bn2/', '/bn3/', '/init_bn/', '/proj_bn/']
     for s in names:
       if s in path:
         return True
     return False
-  backbone_traversal = optimizers.ModelParamTraversal(
-      lambda path, param: ('backbone' in path) and (not is_bn(path)))
-  other_traversal = optimizers.ModelParamTraversal(
-      lambda path, param: 'backbone' not in path)
 
-  return MultiOptimizerWithLogging((backbone_traversal, backbone_optim),
-                                   (other_traversal, other_optim))
+  backbone_traversal = flax.traverse_util.ModelParamTraversal(
+    lambda path, _: 'backbone' in path)
+  bn_traversal = flax.traverse_util.ModelParamTraversal(
+    lambda path, _: bn_and_freeze_batch_stats(path))
+  
+  all_false = jax.tree_util.tree_map(lambda _: False, params)
 
+  def get_mask(traversal: flax.traverse_util.ModelParamTraversal):
+    return traversal.update(lambda _: True, all_false)
+  
+  backbone_mask = get_mask(backbone_traversal)
+  bn_mask = get_mask(bn_traversal)
+  weight_decay_mask = jax.tree_map(lambda p: p.ndim != 1, params)
+  
 
-class MultiOptimizerWithLogging(optimizers.MultiOptimizer):
-  """Adds logging to MultiOptimizer to show which params are trained."""
+  tx = optax.chain(
+    optax.clip_by_global_norm(oc.max_grad_norm),
+    optax.adamw(
+      learning_rate=optax.piecewise_constant_schedule(
+        oc.base_learning_rate,
+        {oc.learning_rate_decay_event: oc.learning_rate_decay_rate}
+      ),
+      b1=oc.beta1,
+      b2=oc.beta2,
+      weight_decay=oc.weight_decay,
+      mask=weight_decay_mask,
+      mu_dtype=oc.get('mu_dtype', jnp.float32)),
+    optax.masked(optax.scale(oc.learning_rate_reduction), backbone_mask),
+    optax.masked(optax.scale(0), bn_mask),
+  )
 
-  def init_state(self, params):
-    self.log(params)
-    return super().init_state(params)
-
-  def log(self, inputs):
-    for i, traversal in enumerate(self.traversals):
-      params = _get_params_dict(inputs)
-      flat_dict = traverse_util.flatten_dict(params)
-      for key, value in _sorted_items(flat_dict):
-        path = '/' + '/'.join(key)
-        if traversal._filter_fn(path, value):  # pylint: disable=protected-access
-          logging.info(
-              'ParamTraversalLogger (opt %d): %s, %s', i, value.shape, path)
-
-
-def _sorted_items(x):
-  """Returns items of a dict ordered by keys."""
-  return sorted(x.items(), key=lambda x: x[0])
-
-
-def _get_params_dict(inputs):
-  if isinstance(inputs, (dict, flax_core.FrozenDict)):
-    return flax_core.unfreeze(inputs)
-  else:
-    raise ValueError(
-        'Can only traverse a flax Model instance or a nested dict, not '
-        f'{type(inputs)}')
-
+  return tx
 
 def clip_grads(grad_tree, max_norm):
   """Clip gradients stored as a pytree of arrays to maximum norm `max_norm`."""
