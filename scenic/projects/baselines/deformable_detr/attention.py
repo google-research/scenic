@@ -186,7 +186,7 @@ def deform_attn_sampling_fn(values: Array, sampling_locations: Array,
   for level_idx in range(len(shapes)):
     fn = functools.partial(attention_at_index_fn, level_idx=level_idx)
     fn = _map(reshape_attn(fn), mode)
-    sampled_values_all_levels.append(fn(jnp.array(range(values.shape[0]))))
+    sampled_values_all_levels.append(fn(jnp.arange(values.shape[0])))
 
   # (bs, nlevels * npoints, len_q, nembed)
   sampled_values_all_levels = jnp.concatenate(
