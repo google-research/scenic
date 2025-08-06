@@ -32,7 +32,6 @@ from typing import Any, Dict, Mapping, Optional, Tuple, List
 from absl import logging
 import flax.linen as nn
 import jax
-from jax.experimental import host_callback  # pylint: disable=unused-import
 import jax.numpy as jnp
 import ml_collections
 import numpy as np
@@ -88,98 +87,8 @@ class KnowledgeFIDModule(fusion_in_decoder_soft.FusionInDecoderSoftModule):
       recall_target=0.99,
       exact=False,
   ):
-    logging.info('mips local!!!')
-    logging.info(self.local_keys.value.shape)
-    logging.info(local_kb.n_data)
-    host_query = jax.lax.all_gather(
-        x=query,
-        axis_name='batch',
-        axis=0,
-        axis_index_groups=self.axis_index_groups,
-        tiled=True,
-    )
-    logging.info(host_query.shape)
-
-    local_scores = jax.lax.dot(host_query, self.local_keys.value.transpose())
-    if exact:
-      local_topk_scores, local_topk_ids = jax.lax.top_k(
-          local_scores, k=self.retr_k
-      )
-    else:
-      local_topk_scores, local_topk_ids = jax.lax.approx_max_k(
-          local_scores,
-          k=self.retr_k,
-          recall_target=recall_target,
-          reduction_input_size_override=local_kb.n_data,
-          aggregate_to_topk=True,
-      )
-    local_topk_ids_offset = (
-        local_topk_ids + local_device_id * local_kb.n_data_per_shard
-    )
-    # local_topk_scores: bsz * k
-    logging.info(local_topk_ids.shape)
-    host_topk_scores = jax.lax.all_to_all(
-        x=local_topk_scores,
-        axis_name='batch',
-        split_axis=0,
-        concat_axis=1,
-        axis_index_groups=self.axis_index_groups,
-        tiled=True,
-    )
-    host_topk_ids = jax.lax.all_to_all(
-        x=local_topk_ids_offset,
-        axis_name='batch',
-        split_axis=0,
-        concat_axis=1,
-        axis_index_groups=self.axis_index_groups,
-        tiled=True,
-    )
-    # host_topk_scores: per_bsz * (n_device * k)
-    logging.info(host_topk_scores.shape)
-
-    host_corpus_scores, host_corpus_ids = self._get_corpus_scores(
-        corpus_scores, host_topk_ids
-    )
-    host_topk_scores, host_rank_ids = jax.lax.top_k(
-        host_topk_scores * host_corpus_scores, k=self.retr_k
-    )
-    # host_topk_scores: per_bsz * retr_k
-
-    host_data_ids = layers.batch_index_select(
-        host_topk_ids, host_rank_ids[:, : self.data_k]
-    )
-    host_memory_ids = layers.batch_index_select(
-        host_topk_ids, host_rank_ids[:, self.data_k :]
-    )
-    host_corpus_ids = layers.batch_index_select(host_corpus_ids, host_rank_ids)
-
-    logging.info('data and memory shape!!!')
-    logging.info(host_data_ids.shape)
-    logging.info(host_memory_ids.shape)
-
-    # retrieve memory
-    args = (host_data_ids, host_memory_ids)
-
-    ret_memory, ret_data = host_callback.call(
-        local_memory.local_retrieve_memory,
-        args,
-        result_shape=local_kb.local_ret_specs,
-    )
-
-    ret_memory['masks'] = jnp.ones(ret_memory['values'].shape[:3]).astype(bool)
-
-    for k in ret_memory:
-      logging.info(k)
-      logging.info(ret_memory[k].shape)
-      logging.info(ret_memory[k].dtype)
-
-    return (
-        host_topk_scores,
-        ret_memory,
-        ret_data,
-        host_topk_ids,
-        host_rank_ids,
-        host_corpus_ids,
+    raise NotImplementedError(
+        'jax.experimental.host_callback has been removed.'
     )
 
   def _dist_mips_across(
