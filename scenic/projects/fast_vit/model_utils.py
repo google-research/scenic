@@ -140,7 +140,7 @@ class LinformerEncoderAttention(nn.Module):
           use_bias=None,
           precision=self.precision,
           dtype=self.dtype)
-      shared_dense_proj = dense_proj()
+      shared_dense_proj = dense_proj()  # pytype: disable=wrong-arg-types
       key = shared_dense_proj(key)
       value = shared_dense_proj(value)
       if query is not None:
