@@ -176,7 +176,7 @@ def make_schedule(
 
   schedule = [(re, name, create_schedule(lr_configs))
               for re, name, lr_configs in schedule]
-  return schedule
+  return schedule  # pytype: disable=bad-return-type
 
 
 def make(config: ml_collections.ConfigDict,
