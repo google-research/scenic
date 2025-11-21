@@ -15,7 +15,7 @@
 """Implement Object-aware attention block."""
 
 import functools
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Optional, Sequence
 
 import flax.linen as nn
 import jax
@@ -24,7 +24,7 @@ import ml_collections
 from scenic.model_lib.layers import attention_layers
 
 
-Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
+Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 
 
 class ObjectBlock(nn.Module):

@@ -15,7 +15,7 @@
 """Util functions for ViViT models."""
 
 import functools
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Iterable, Optional, Sequence
 
 import flax.linen as nn
 import jax
@@ -24,7 +24,7 @@ import ml_collections
 from scenic.model_lib.layers import attention_layers
 from scenic.projects.objectvivit.object_attention import ObjectBlock
 
-Initializer = Callable[[jnp.ndarray, Iterable[int], jnp.dtype], jnp.ndarray]
+Initializer = Callable[[jnp.ndarray, Sequence[int], jnp.dtype], jnp.ndarray]
 
 
 def get_object_inds(
