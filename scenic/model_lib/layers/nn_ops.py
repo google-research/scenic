@@ -15,6 +15,7 @@
 """Common neural network funcitonality that doesn't require parameters."""
 
 from typing import Callable, Sequence
+import flax
 import flax.linen as nn
 import jax
 from jax import lax
@@ -419,9 +420,10 @@ def weighted_avg_pool(inputs,
   assert inputs.shape[:-1] == weights.shape
   weights = jnp.expand_dims(weights, -1)
   inputs = inputs * weights
-  y = nn.pooling.pool(inputs, 0., lax.add, window_shape, strides, padding)
-  pooled_weights = nn.pooling.pool(weights, 0., lax.add, window_shape, strides,
-                                   padding)
+  y = flax.pooling.pool(inputs, 0.0, lax.add, window_shape, strides, padding)
+  pooled_weights = flax.pooling.pool(
+      weights, 0.0, lax.add, window_shape, strides, padding
+  )
   outputs = y / pooled_weights
   if return_pooled_weights:
     return outputs, (pooled_weights.squeeze(axis=-1) / np.prod(window_shape))
