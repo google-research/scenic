@@ -252,13 +252,15 @@ class UNet(nn.Module):
               x, residual=skip_connections.pop(), train=train)
 
     x = nn_layers.IdentityLayer(name='pre_logits')(x)
-    x = OutputBlock(
-        features=final_features,
-        num_classes=self.num_classes,
-        padding=self.padding,
-        use_batch_norm=self.use_batch_norm,
-        name='output_projection')(
-            x, train=train)
+    if self.num_classes > 0:
+      # If self.num_classes <= 0, we just return the backbone features.
+      x = OutputBlock(
+          features=final_features,
+          num_classes=self.num_classes,
+          padding=self.padding,
+          use_batch_norm=self.use_batch_norm,
+          name='output_projection')(
+              x, train=train)
     return x
 
 
