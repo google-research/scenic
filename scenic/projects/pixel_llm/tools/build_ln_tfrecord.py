@@ -167,8 +167,8 @@ def trace2coord(traces, timed_caption):
       integral_y = np.mean(y_values)
     else:
       # calculate integral (average) x and y values
-      integral_x = np.trapz(x_values, t_values) / (t_values[-1] - t_values[0])
-      integral_y = np.trapz(y_values, t_values) / (t_values[-1] - t_values[0])
+      integral_x = np.trapezoid(x_values, t_values) / (t_values[-1] - t_values[0])
+      integral_y = np.trapezoid(y_values, t_values) / (t_values[-1] - t_values[0])
 
     dic['integral_x'] = integral_x
     dic['integral_y'] = integral_y
