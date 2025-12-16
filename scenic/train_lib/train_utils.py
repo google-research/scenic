@@ -31,6 +31,7 @@ from flax import struct
 import flax.linen as nn
 from flax.training import checkpoints
 import jax
+from jax.experimental import multihost_utils as mhu
 import jax.numpy as jnp
 import ml_collections
 import numpy as np
@@ -1288,9 +1289,12 @@ class Chrono:
 def barrier_across_hosts():
   """Ensure all hosts stay up until the end, otherwise the program may hang."""
   if jax.process_count() > 1:
-    x = jnp.ones([jax.local_device_count()])
-    x = jax.device_get(jax.pmap(lambda x: jax.lax.psum(x, 'i'), 'i')(x))
-    assert x[0] == jax.device_count()
+    if jax.config.jax_pmap_shmap_merge:
+      mhu.sync_global_devices('_barrier_across_hosts')
+    else:
+      x = jnp.ones([jax.local_device_count()])
+      x = jax.device_get(jax.pmap(lambda x: jax.lax.psum(x, 'i'), 'i')(x))
+      assert x[0] == jax.device_count()
 
 
 def handle_checkpointing(
