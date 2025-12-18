@@ -130,6 +130,13 @@ def train_step(
   if config.get('max_grad_norm') is not None:
     grad = clip_grads(grad, config.max_grad_norm)
 
+  if train_state.tx is None:
+    raise ValueError(
+        'The optimizer `tx` is not set in `train_state`. This means the'
+        ' optimizer was not properly initialized. Please ensure'
+        ' `scenic_optax.make` was called and the result was used when creating'
+        ' the `train_state`.'
+    )
   updates, new_opt_state = train_state.tx.update(grad, train_state.opt_state,
                                                  train_state.params)
   new_params = optax.apply_updates(train_state.params, updates)
@@ -140,7 +147,7 @@ def train_step(
   training_logs['l2_params'] = jnp.sqrt(sum([jnp.vdot(p, p) for p in ps]))
   us = jax.tree_util.tree_leaves(updates)
   training_logs['l2_updates'] = jnp.sqrt(sum([jnp.vdot(u, u) for u in us]))
-  training_logs['learning_rate'] = lr_fn(train_state.global_step)
+  training_logs['learning_rate'] = lr_fn(jnp.array(train_state.global_step))
 
   # Only logging auxiliary_outputs when we are using act
   if config.model.get('ac_config', None):
@@ -364,7 +371,9 @@ def train(
     dataset: dataset_utils.Dataset,
     workdir: str,
     writer: metric_writers.MetricWriter,
-) -> Tuple[train_utils.TrainState, Dict[str, Any], Dict[str, Any]]:
+) -> Tuple[
+    train_utils.TrainState, Dict[str, Any] | None, Dict[str, Any] | None
+]:
   """Main training loop lives in this function.
 
   Given the model class and dataset, it prepares the items needed to run the
@@ -381,10 +390,13 @@ def train(
     writer: CLU metrics writer instance.
 
   Returns:
-    train_sate that has the state of training (including current global_step,
-    model_state, rng, and the optimizer), train_summary and eval_summary which
-    are dict of metrics (from the last evaluation and train metric logging
-    respectively). These outputs are used for regression testing.
+    `train_state` that has the state of training (including current
+        `global_step`, `model_state`, `rng`, and `optimizer`), `train_summary`
+        and `eval_summary` which are dict of metrics (from the last
+        evaluation and train metric logging respectively). `train_summary`
+        and `eval_summary` will be None if evaluation or logging does not
+        occur before training completes (e.g. if dataset.valid_iter is None
+        for `eval_summary`). These outputs are used for regression testing.
   """
   lead_host = jax.process_index() == 0
   # Build the loss_fn, metrics, and flax_model.
