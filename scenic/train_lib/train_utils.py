@@ -1288,9 +1288,8 @@ class Chrono:
 def barrier_across_hosts():
   """Ensure all hosts stay up until the end, otherwise the program may hang."""
   if jax.process_count() > 1:
-    x = jnp.ones([jax.local_device_count()])
-    x = jax.device_get(jax.pmap(lambda x: jax.lax.psum(x, 'i'), 'i')(x))
-    assert x[0] == jax.device_count()
+    # Use multihost_utils for true global synchronization across all hosts.
+    jax.experimental.multihost_utils.sync_global_devices('barrier')
 
 
 def handle_checkpointing(
