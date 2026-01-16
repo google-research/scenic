@@ -113,6 +113,13 @@ def train_step(
   # Re-use same axis_name as in the call to `pmap(...train_step...)` below.
   grad = jax.lax.pmean(grad, axis_name='batch')
 
+  if train_state.tx is None:
+    raise ValueError(
+        'The optimizer `tx` is not set in `train_state`. This means the'
+        ' optimizer was not properly initialized. Please ensure'
+        ' `scenic_optax.make` was called and the result was used when creating'
+        ' the `train_state`.'
+    )
   updates, new_opt_state = train_state.tx.update(
       grad, train_state.opt_state, train_state.params
   )
@@ -127,7 +134,7 @@ def train_step(
   training_logs['l2_updates'] = jnp.sqrt(sum([jnp.vdot(u, u) for u in us]))
   for name, lr_fn in lr_fns.items():
     lr_name = 'learning_rate' if name == 'all' else f'learning_rate_{name}'
-    training_logs[lr_name] = lr_fn(train_state.global_step)
+    training_logs[lr_name] = lr_fn(jnp.array(train_state.global_step))
 
   metrics = metrics_fn(output, batch)
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
@@ -255,7 +262,9 @@ def train(
     dataset: dataset_utils.Dataset,
     workdir: str,
     writer: metric_writers.MetricWriter,
-) -> Tuple[train_utils.TrainState, Dict[str, Any], Dict[str, Any]]:
+) -> Tuple[
+    train_utils.TrainState, Dict[str, Any] | None, Dict[str, Any] | None
+]:
   """Main training loop lives in this function.
 
   Given the model class and dataset, it prepares the items needed to run the
