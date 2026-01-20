@@ -629,7 +629,7 @@ def save_checkpoint(
   """
   if jax.process_index() == 0:
     # Get train state from the first replica.
-    checkpoint_state = jax.device_get(train_state)
+    checkpoint_state = jax.device_get(jax_utils.unreplicate(train_state))
     checkpoints.save_checkpoint(
         workdir,
         checkpoint_state,
