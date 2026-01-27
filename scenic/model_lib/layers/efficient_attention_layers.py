@@ -26,7 +26,7 @@ from jax import lax
 
 
 Array = jnp.ndarray
-PRNGKey = jax.Arraygit
+PRNGKey = jax.Array
 Shape = Tuple[int, ...]
 Dtype = Any
 
