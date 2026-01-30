@@ -702,7 +702,7 @@ def test_and_log_summary(*, train_state: train_utils.TrainState,
     exemplars += f'{keys[n]}\n\nGT: {refs[n]}\n\nHY: {preds[n]}\n\n'
   logging.info(f'{prefix}: ' + exemplars.replace('%', '').replace('\n', ' '))
 
-  if jax.host_id() == 0:
+  if jax.process_index() == 0:
     prefix_local = re.sub(r'[\[\]]', '_', prefix)
     write_examples_to_disk(workdir, prefix_local, train_iteration, keys, refs,
                            preds)
@@ -838,7 +838,7 @@ def train_and_eval(
   """
   logging.info('Starting train and eval')
 
-  lead_host = jax.host_id() == 0
+  lead_host = jax.process_index() == 0
   logging.info('Number of processes is %s', jax.process_count())
 
   # Tokenizer
