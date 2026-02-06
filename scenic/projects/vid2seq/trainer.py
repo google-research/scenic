@@ -965,7 +965,7 @@ def train_and_eval(
       * a dictionary with the evaluation summary
   """
 
-  lead_host = jax.host_id() == 0
+  lead_host = jax.process_index() == 0
 
   datasets_metadata = {name: ds.meta_data for name, ds in dataset_dict.items()}
   all_datasets = []
