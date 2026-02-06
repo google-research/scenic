@@ -18,7 +18,6 @@ r"""Configs for COCO detection using DETR with Sinkhorn as matching algorithm.
 """
 # pylint: enable=line-too-long
 
-import copy
 import ml_collections
 _COCO_TRAIN_SIZE = 118287
 NUM_EPOCHS = 300
@@ -80,38 +79,22 @@ def get_config():
   config.eos_coef = 0.1
 
   # Training.
-  config.trainer_name = 'detr_trainer'
-  config.optimizer = 'adam'
-  config.optimizer_configs = ml_collections.ConfigDict()
-  config.optimizer_configs.weight_decay = 1e-4
-  config.optimizer_configs.beta1 = 0.9
-  config.optimizer_configs.beta2 = 0.999
-  config.max_grad_norm = 0.1
   config.num_training_epochs = NUM_EPOCHS
   config.batch_size = 64
   config.rng_seed = 0
 
-  decay_events = {500: 400}
-
-  # Learning rate.
+  # Optimizer.
   steps_per_epoch = _COCO_TRAIN_SIZE // config.batch_size
-  config.lr_configs = ml_collections.ConfigDict()
-  config.lr_configs.learning_rate_schedule = 'compound'
-  config.lr_configs.factors = 'constant*piecewise_constant'
-  config.lr_configs.decay_events = [
-      decay_events.get(NUM_EPOCHS, NUM_EPOCHS * 2 // 3) * steps_per_epoch,
-  ]
-  # Note: this is absolute (not relative):
-  config.lr_configs.decay_factors = [.1]
-  config.lr_configs.base_learning_rate = 1e-4
-
-  # Backbone training configs: optimizer and learning rate.
-  config.backbone_training = ml_collections.ConfigDict()
-  config.backbone_training.optimizer = copy.deepcopy(config.optimizer)
-  config.backbone_training.optimizer_configs = copy.deepcopy(
-      config.optimizer_configs)
-  config.backbone_training.lr_configs = copy.deepcopy(config.lr_configs)
-  config.backbone_training.lr_configs.base_learning_rate = 1e-5
+  config.optimizer_configs = ml_collections.ConfigDict()
+  config.optimizer_configs.max_grad_norm = 0.1
+  config.optimizer_configs.base_learning_rate = 1e-4
+  config.optimizer_configs.learning_rate_decay_rate = 0.1
+  config.optimizer_configs.beta1 = 0.9
+  config.optimizer_configs.beta2 = 0.999
+  config.optimizer_configs.weight_decay = 1e-4
+  config.optimizer_configs.learning_rate_reduction = 0.1  # base_lr * reduction
+  config.optimizer_configs.learning_rate_decay_event = (NUM_EPOCHS * 2 // 3 *
+                                                       steps_per_epoch)
 
   # Pretrained_backbone.
   config.load_pretrained_backbone = True
@@ -119,7 +102,10 @@ def get_config():
   config.pretrained_backbone_configs = ml_collections.ConfigDict()
   # Download pretrained ResNet50 checkpoints from here:
   # https://github.com/google-research/scenic/tree/main/scenic/projects/baselines pylint: disable=line-too-long
-  config.init_from.checkpoint_path = 'path_to_checkpoint_of_resnet_50'
+  config.pretrained_backbone_configs.checkpoint_path = 'path_to_checkpoint_of_resnet_50'
+
+  # Eval.
+  config.annotations_loc = 'scenic/dataset_lib/coco_dataset/data/instances_val2017.json'
 
   # Logging.
   config.write_summary = True
@@ -132,5 +118,3 @@ def get_config():
   config.debug_eval = False  # Debug mode during eval.
 
   return config
-
-
