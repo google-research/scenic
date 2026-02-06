@@ -57,7 +57,7 @@ def train_and_eval(
       * a dictionary with the train_summary
       * a dictionary with the evaluation summary
   """
-  lead_host = jax.host_id() == 0
+  lead_host = jax.process_index() == 0
 
   model = model_cls(config, dataset.meta_data)
   train_step_pmapped, eval_step_pmapped = pmapped_steps(model, config)
