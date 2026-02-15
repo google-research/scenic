@@ -416,6 +416,7 @@ class CLIP(nn.Module):
   vision_features: int
   vision_num_layers: Union[int, Sequence[int]]
   vision_head_dim: int = 64
+  vision_num_heads: Optional[int] = None
   vision_patch_size: Optional[int] = None
   vision_return_map: bool = False
   use_underscore_module_name: bool = False
@@ -423,6 +424,8 @@ class CLIP(nn.Module):
   def setup(self):
     if isinstance(self.vision_num_layers, (tuple, list)):
       self.vision_num_heads = self.vision_features * 32 // self.vision_head_dim
+      if self.vision_num_heads is None:
+        self.vision_num_heads = self.vision_features * 32 // 64
       self.visual = ModifiedResNet(
           num_layers=self.vision_num_layers,
           features=self.vision_features,
@@ -430,6 +433,8 @@ class CLIP(nn.Module):
           out_features=None if self.vision_return_map else self.embed_dim)
     else:
       self.vision_num_heads = self.vision_features // self.vision_head_dim
+      if self.vision_num_heads is None:
+        self.vision_num_heads = self.vision_features // 64
       self.visual = VisionTransformer(
           patch_size=self.vision_patch_size,
           features=self.vision_features,
