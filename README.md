@@ -74,6 +74,7 @@ Projects that were developed in Scenic or used it for their experiments:
 * [A Generative Approach for Wikipedia-Scale Visual Entity Recognition](https://arxiv.org/abs/2403.02041)
 * [Streaming Dense Video Captioning](https://arxiv.org/abs/2404.01297)
 * [Dense Video Object Captioning from Disjoint Supervision](https://arxiv.org/abs/2306.11729)
+* [Semantica: An Adaptable Image-Conditioned Diffusion Model](https://arxiv.org/abs/2405.14857)
 
 More information can be found in [projects](https://github.com/google-research/scenic/tree/main/scenic/projects#list-of-projects-hosted-in-scenic).
 
