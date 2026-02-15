@@ -355,6 +355,7 @@ def get_dataset(
     data_rng: PRNGKey,
     *,
     num_local_shards: Optional[int] = None,
+    prefetch_buffer_size: int = 2,
     dataset_service_address: Optional[str] = None,
     dataset_name: Optional[str] = None,
     dataset_configs: Optional[ml_collections.ConfigDict] = None,
@@ -372,6 +373,7 @@ def get_dataset(
     num_local_shards: Number of shards for each batch. So (bs, ...) becomes
       (num_local_shards, bs//num_local_shards, ...). If not specified, it will
       be number of local devices.
+    prefetch_buffer_size: int; Buffer size for the device prefetch.
     dataset_service_address: Used when using the tf.data.experimental.service
     dataset_name: Name of dataset to load, if not reading from the config.
     dataset_configs: Configuration of the dataset, if not reading directly from
@@ -427,6 +429,7 @@ def get_dataset(
       dtype_str=config.data_dtype_str,
       rng=data_rng,
       shuffle_seed=shuffle_seed,
+      prefetch_buffer_size=prefetch_buffer_size,
       dataset_configs=dataset_configs,
       dataset_service_address=dataset_service_address,
       **kwargs,
