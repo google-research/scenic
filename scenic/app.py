@@ -1,4 +1,4 @@
-# Copyright 2025 The Scenic Authors.
+# Copyright 2026 The Scenic Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,13 +32,13 @@ Usage in your main.py:
   if __name__ == '__main__':
     app.run(main)
 """
+
 import functools
 import os
 
-from absl import app
+from absl import app  # pylint: disable=unused-import
 from absl import flags
 from absl import logging
-
 from clu import metric_writers
 from clu import platform
 import flax
@@ -46,6 +46,7 @@ import flax.linen as nn
 import jax
 from ml_collections import config_flags
 import tensorflow as tf
+
 
 FLAGS = flags.FLAGS
 
@@ -65,6 +66,7 @@ flax.config.update('flax_use_orbax_checkpointing', False)
 def run(main):
   # Provide access to --jax_backend_target and --jax_xla_backend flags.
   jax.config.config_with_absl()
+
   app.run(functools.partial(_run_main, main=main))
 
 
