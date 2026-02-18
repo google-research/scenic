@@ -29,7 +29,7 @@ _REGRESSION_METRICS = immutabledict({
 })
 
 
-def regression_metrics_function(
+def regression_metrics_function(  # pytype: disable=annotation-type-mismatch
     predictions: jnp.ndarray,
     batch: base_model.Batch,
     metrics: base_model.MetricNormalizerFnDict = _REGRESSION_METRICS,

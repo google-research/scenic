@@ -61,7 +61,7 @@ _ENCODER_DECODER_METRICS = immutabledict({
 _MAX_PERPLEXITY = 1.0e4
 
 
-def encoder_decoder_metrics_function(
+def encoder_decoder_metrics_function(  # pytype: disable=annotation-type-mismatch
     logits: jnp.ndarray,
     batch: base_model.Batch,
     target_is_onehot: bool = False,

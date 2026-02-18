@@ -66,7 +66,7 @@ _MULTIHEADLABEL_METRICS = immutabledict({
 })
 
 
-def bow_classification_metrics_function(
+def bow_classification_metrics_function(  # pytype: disable=annotation-type-mismatch
     logits: jnp.ndarray,
     batch: base_model.Batch,
     target_is_multihot: bool = False,
@@ -120,7 +120,7 @@ def bow_classification_metrics_function(
   return evaluated_metrics  # pytype: disable=bad-return-type  # jax-types
 
 
-def multihead_classification_metrics_function(
+def multihead_classification_metrics_function(  # pytype: disable=annotation-type-mismatch
     logits,
     batch,
     metrics: base_model.MetricNormalizerFnDict = _MULTIHEADLABEL_METRICS,
@@ -183,7 +183,7 @@ def multihead_classification_metrics_function(
 
 def classification_metrics_function_with_acc_top_5(*args, **kwargs):
   """A wrapper over classification_metrics_function which has accuracy_top_5."""
-  return classification_metrics_function(
+  return classification_metrics_function(  # pytype: disable=wrong-arg-types
             *args, metrics=_MULTIHEADLABEL_METRICS, **kwargs)
 
 

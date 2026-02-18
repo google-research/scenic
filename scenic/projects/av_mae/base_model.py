@@ -194,7 +194,7 @@ def get_spectogram_targets(inputs: jnp.ndarray,
   return patched_input
 
 
-def feature_regression_metrics_function(
+def feature_regression_metrics_function(  # pytype: disable=annotation-type-mismatch
     predictions: jnp.ndarray,
     prediction_masks: jnp.ndarray,
     batch: base_model.Batch,

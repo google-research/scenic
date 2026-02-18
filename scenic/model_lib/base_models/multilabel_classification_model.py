@@ -37,7 +37,7 @@ def multilabel_classification_metrics_function(
     logits: jnp.ndarray,
     batch: base_model.Batch,
     target_is_multihot: bool = False,
-    metrics: base_model.MetricNormalizerFnDict = _MULTI_LABEL_CLASSIFICATION_METRICS,
+    metrics: base_model.MetricNormalizerFnDict = _MULTI_LABEL_CLASSIFICATION_METRICS,  # pytype: disable=annotation-type-mismatch
     axis_name: Union[str, Tuple[str, ...]] = 'batch',
 ) -> Dict[str, Tuple[float, int]]:
   """Calculates metrics for the multi-label classification task.
