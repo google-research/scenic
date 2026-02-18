@@ -217,7 +217,7 @@ def get_size_with_aspect_ratio(
   max_original_size = tf_float(tf.maximum(w, h))
   min_original_size = tf_float(tf.minimum(w, h))
   ratio = max_original_size / min_original_size  # Greater than 1.0 .
-  larger_side_output_size = tf_int32(size * ratio)
+  larger_side_output_size = tf_int32(tf_float(size) * ratio)
 
   if max_size is not None:
     max_size = tf_float(max_size)
