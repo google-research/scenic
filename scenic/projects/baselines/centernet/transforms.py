@@ -20,6 +20,7 @@ detr/transforms.py
 """
 
 from typing import Any, Dict
+from absl import logging
 import tensorflow as tf
 
 
@@ -183,26 +184,70 @@ def get_hw(features, dtype=tf.int32):
   return h, w
 
 
-def get_size_with_aspect_ratio(image_size, size, max_size=None):
-  """Output (h, w) such that smallest side in image_size resizes to size."""
+def get_size_with_aspect_ratio(
+    image_size, size, max_size=None, correct_rounding_max_size=False
+):
+  """Output (h, w) such that smallest side in image_size resizes to size.
+
+  This function makes sure that the longest side is not larger than max_size,
+  if provided.
+
+  Args:
+    image_size: (h, w) tuple of the original image size.
+    size: the desired size of the smallest side after resizing.
+    max_size: the maximum size of the largest side after resizing.
+    correct_rounding_max_size: if True, the size is adjusted to avoid rounding
+      issues when max_size is provided. Without this, the output max_size might
+      be max_size - 1 due to rounding issues. This defaults to False for
+      backward compatibility. However it should be set to True whenever
+      possible, as that is the expected behavior.
+
+  Returns:
+    (h, w) tuple of the new image size.
+  """
+  if not correct_rounding_max_size:
+    # Log an error the first n times this is called with incorrect rounding.
+    logging.log_first_n(
+        logging.ERROR,
+        'correct_rounding_max_size is False. This is incorrect and will be '
+        'deprecated soon. Please set correct_rounding_max_size to True.',
+        10,
+    )
   h, w = image_size[0], image_size[1]
+  max_original_size = tf_float(tf.maximum(w, h))
+  min_original_size = tf_float(tf.minimum(w, h))
+  ratio = max_original_size / min_original_size  # Greater than 1.0 .
+  larger_side_output_size = tf_int32(size * ratio)
+
   if max_size is not None:
     max_size = tf_float(max_size)
-    min_original_size = tf_float(tf.minimum(w, h))
-    max_original_size = tf_float(tf.maximum(w, h))
-    if max_original_size / min_original_size * tf_float(size) > max_size:
-      size = tf_int32(tf.floor(
-          max_size * min_original_size / max_original_size))
+
+    if ratio * tf_float(size) > max_size:
+      # Resizing the smallest side to `size` would result in the larger side
+      # being bigger than `max_size`.
+      size = tf_int32(
+          tf.floor(max_size * min_original_size / max_original_size)
+      )
+
+      if correct_rounding_max_size:
+        # NOTE: Because of rounding issues, doing now size * ratio might
+        # return max_size - 1. This is not strictly a problem, but would lead
+        # to padding the image on both sides. For instance
+        # get_size_with_aspect_ratio((427, 640), 512, 512), False) returns
+        # (341, 511), but (427, 640), 512, 512), True) returns (341, 512).
+        larger_side_output_size = tf_int32(max_size)
+      else:
+        larger_side_output_size = tf_int32(tf_float(size) * ratio)
 
   if (w <= h and tf.equal(w, size)) or (h <= w and tf.equal(h, size)):
     return (h, w)
 
   if w < h:
     ow = size
-    oh = tf_int32(size * h / w)
+    oh = larger_side_output_size
   else:
     oh = size
-    ow = tf_int32(size * w / h)
+    ow = larger_side_output_size
 
   return (oh, ow)
 
