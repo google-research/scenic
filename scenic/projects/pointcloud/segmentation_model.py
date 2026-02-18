@@ -62,7 +62,7 @@ _POINTCLOUD_SEGMENTATION_METRICS = immutabledict({
 })
 
 
-def semantic_segmentation_metrics_function(
+def semantic_segmentation_metrics_function(  # pytype: disable=annotation-type-mismatch
     logits: jnp.ndarray,
     batch: base_model.Batch,
     target_is_onehot: bool = False,

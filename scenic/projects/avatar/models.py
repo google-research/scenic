@@ -655,7 +655,7 @@ class Seq2SeqModel(object):
     """
     del split  # The metric function is the same for all splits.
 
-    def metric_fn(
+    def metric_fn(  # pytype: disable=annotation-type-mismatch
         logits: jnp.ndarray,
         targets: jnp.ndarray,
         weights: jnp.ndarray,
