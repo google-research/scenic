@@ -26,7 +26,8 @@ import dataclasses
 import inspect
 import math
 import tensorflow.compat.v1 as tf
-from tensorflow_addons import image as contrib_image
+import tensorflow as tf_ori
+#from tensorflow_addons import image as contrib_image
 
 # This signifies the max integer that the controller RNN could predict for the
 # augmentation scheme.
@@ -228,6 +229,13 @@ def posterize(image, bits):
   shift = 8 - bits
   return tf.bitwise.left_shift(tf.bitwise.right_shift(image, shift), shift)
 
+def affine(image, transform, fill_value=0.0):
+  return tf_ori.image.transform(
+      image,
+      transform,
+      interpolation="BILINEAR",
+      fill_mode="CONSTANT",
+      fill_value=fill_value,)
 
 def rotate(image, degrees, replace):
   """Rotates the image by degrees either clockwise or counterclockwise.
@@ -250,19 +258,51 @@ def rotate(image, degrees, replace):
   # In practice, we should randomize the rotation degrees by flipping
   # it negatively half the time, but that's done on 'degrees' outside
   # of the function.
-  image = contrib_image.rotate(wrap(image), radians)
+  #image = contrib_image.rotate(wrap(image), radians)
+
+  cos = tf_ori.cos(radians)
+  sin = tf_ori.sin(radians)
+
+  height = tf.cast(tf.shape(image)[0], tf.float32)
+  width  = tf.cast(tf.shape(image)[1], tf.float32)
+
+  cx = (width - 1.0) / 2.0
+  cy = (height - 1.0) / 2.0
+
+  transform = [
+      cos, -sin, (1 - cos) * cx + sin * cy,
+      sin,  cos, (1 - cos) * cy - sin * cx,
+      0.0,  0.0,
+  ]
+  image = affine(wrap(image), transform)
+  raise RuntimeError("using TFA!")
   return unwrap(image, replace)
 
 
 def translate_x(image, pixels, replace):
   """Equivalent of PIL Translate in X dimension."""
-  image = contrib_image.translate(wrap(image), [-pixels, 0])
+  #image = contrib_image.translate(wrap(image), [-pixels, 0])
+  transform = [
+    1.0, 0.0, -pixels,
+    0.0, 1.0,  0.0,
+    0.0, 0.0,
+  ]
+
+  image = affine(wrap(image), transform)
+  raise RuntimeError("using TFA!")
   return unwrap(image, replace)
 
 
 def translate_y(image, pixels, replace):
   """Equivalent of PIL Translate in Y dimension."""
-  image = contrib_image.translate(wrap(image), [0, -pixels])
+  #image = contrib_image.translate(wrap(image), [0, -pixels])
+  transform = [
+    1.0, 0.0, 0.0,
+    0.0, 1.0, -pixels,
+    0.0, 0.0,
+  ]
+  image = affine(wrap(image), transform)
+  raise RuntimeError("using TFA!")
   return unwrap(image, replace)
 
 
@@ -272,8 +312,19 @@ def shear_x(image, level, replace):
   # with a matrix form of:
   # [1  level
   #  0  1].
-  image = contrib_image.transform(
-      wrap(image), [1., level, 0., 0., 1., 0., 0., 0.])
+
+
+  # image = contrib_image.transform(
+  #     wrap(image), [1., level, 0., 0., 1., 0., 0., 0.])
+  
+  transform = [
+      1.0, level, 0.0,
+      0.0, 1.0, 0.0,
+      0.0, 0.0,
+  ]
+
+  image = affine(wrap(image), transform)
+  raise RuntimeError("using TFA!")
   return unwrap(image, replace)
 
 
@@ -283,8 +334,17 @@ def shear_y(image, level, replace):
   # with a matrix form of:
   # [1  0
   #  level  1].
-  image = contrib_image.transform(
-      wrap(image), [1., 0., 0., level, 1., 0., 0., 0.])
+
+  # image = contrib_image.transform(
+  #     wrap(image), [1., 0., 0., level, 1., 0., 0., 0.])
+  
+  transform = [
+    1.0, 0.0, 0.0,
+    level, 1.0, 0.0,
+    0.0, 0.0,
+  ]
+  image = affine(wrap(image), transform)
+  raise RuntimeError("using TFA!")
   return unwrap(image, replace)
 
 

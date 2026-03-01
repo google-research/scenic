@@ -254,6 +254,11 @@ def train(
   # If the config is already an optax-compatible config, better call directly:
   #   optimizers.get_optimizer(config.optimizer_configs, lr_fn)
   tx = optimizers.get_optimizer(optimizer_config, lr_fn, params=params)
+
+  # https://github.com/google-deepmind/optax/issues/320
+  tx = optax.MultiSteps(tx, every_k_schedule=8)
+  logging.info(tx)
+
   # We jit this, such that the arrays that are created on the same device as the
   # input is, in this case the CPU. Else they'd be on device[0].
   opt_state = jax.jit(tx.init, backend='cpu')(params)

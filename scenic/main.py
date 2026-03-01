@@ -25,6 +25,7 @@ from scenic import app
 from scenic.model_lib import models
 from scenic.train_lib import train_utils
 from scenic.train_lib import trainers
+from scenic.projects.vivit import model as vivit_model
 
 
 FLAGS = flags.FLAGS
@@ -34,7 +35,8 @@ def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,
          writer: metric_writers.MetricWriter) -> None:
   """Main function for Scenic."""
 
-  model_cls = models.get_model_cls(config.model_name)
+  #model_cls = models.get_model_cls(config.model_name)
+  model_cls = vivit_model.get_model_cls(config.model_name)
   data_rng, rng = jax.random.split(rng)
 
   if config.checkpoint:
@@ -64,3 +66,10 @@ def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,
 
 if __name__ == '__main__':
   app.run(main=main)
+  
+"""
+export PYTHONPATH=/users/undergraduate/rjchen25/scenic-vivit/scenic:$PYTHONPATH
+python scenic/main.py \
+  --config="/users/undergraduate/rjchen25/scenic-vivit/scenic/projects/vivit/configs/kinetics400/my_config.py" \
+  --workdir=/users/undergraduate/rjchen25/scenic-vivit/train/train_0301_3 > /users/undergraduate/rjchen25/scenic-vivit/record/train_0301_3.log 2>&1
+"""

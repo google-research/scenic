@@ -29,7 +29,40 @@ from scenic.dataset_lib.big_transfer.registry import Registry
 import tensorflow.compat.v1 as tf
 import tensorflow.compat.v2 as tf2
 
-from tensorflow_addons import image as image_utils
+#from tensorflow_addons import image as image_utils
+
+# fix rotate
+import tensorflow as tf_ori
+
+def rotate(image, angle, replace=0.0):
+    cos = tf_ori.cos(angle)
+    sin = tf_ori.sin(angle)
+
+    height = tf.cast(tf.shape(image)[0], tf.float32)
+    width  = tf.cast(tf.shape(image)[1], tf.float32)
+
+    cx = (width - 1) / 2.0
+    cy = (height - 1) / 2.0
+
+    transform = [
+        cos, -sin, (1 - cos) * cx + sin * cy,
+        sin,  cos, (1 - cos) * cy - sin * cx,
+        0.0,  0.0,
+    ]
+
+    transform = [
+        cos, -sin, 0.0,
+        sin,  cos, 0.0,
+        0.0,  0.0,
+    ]
+    raise RuntimeError("using TFA")
+    return tf_ori.image.transform(
+        image,
+        transform,
+        interpolation="BILINEAR",
+        fill_mode="CONSTANT",
+        fill_value=replace,
+    )
 
 
 @Registry.register("preprocess_ops.color_distort", "function")
@@ -503,6 +536,7 @@ def get_random_rotation(min_angle=0, max_angle=360):
       raise ValueError("Tensor \"image\" should have 3 or 4 dimensions.")
     random_angles = tf.random.uniform(
         shape=(batch_size,), minval=min_angle, maxval=max_angle)
+    return rotate(images=image, angles=random_angles)
     return image_utils.rotate(images=image, angles=random_angles)
 
   return _random_rotation

@@ -43,23 +43,24 @@ class VideoTFRecordDatsetTest(parameterized.TestCase):
     dataset_configs.num_test_clips = num_test_clips
     dataset_configs.do_three_spatial_crops = do_three_spatial_crops
 
-    dataset_configs.base_dir = '/path/to/dataset_root/'
+    dataset_configs.base_dir = "/users/undergraduate/rjchen25/k400/tfrecord_02228/"
     dataset_configs.tables = {
-        'train': 'something-something-v2-train.rgb.tfrecord@128',
-        'validation': 'something-something-v2-validation.rgb.tfrecord@128',
-        'test': 'something-something-v2-validation.rgb.tfrecord@128'
+        'train': 'filted_train_set@175',        # 分片數根據實際調整
+        'validation': 'filted_test_set@105',
+        'test': 'filted_test_set@105'
     }
     dataset_configs.examples_per_subset = {
-        'train': 168913,
-        'validation': 24777,
-        'test': 24777
+        'train': 30779,
+        'validation': 11137,
+        'test': 11137
     }
-    dataset_configs.num_classes = 174
+    dataset_configs.num_classes = 400
 
+    """    
     print('Please set the correct dataset base directory and run'
           'this test again.')
     return
-
+    """
     dataset = video_tfrecord_dataset.get_dataset(
         batch_size=batch_size,
         eval_batch_size=eval_batch_size,
@@ -93,10 +94,10 @@ class VideoTFRecordDatsetTest(parameterized.TestCase):
         jnp.array_equal(test_batch['inputs'].shape, expected_shape_test))
 
     # Check number of examples.
-    self.assertEqual(dataset.meta_data['num_train_examples'], 168913)
-    self.assertEqual(dataset.meta_data['num_eval_examples'], 24777)
+    self.assertEqual(dataset.meta_data['num_train_examples'], 30779)
+    self.assertEqual(dataset.meta_data['num_eval_examples'], 11137)
     self.assertEqual(dataset.meta_data['num_test_examples'],
-                     24777 * num_test_clips * num_spatial_crops)
+                     11137 * num_test_clips * num_spatial_crops)
 
 
 if __name__ == '__main__':
