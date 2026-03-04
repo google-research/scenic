@@ -57,6 +57,20 @@ def box_yxyx_to_cxcywh(x: Array, np_backbone: PyModule = jnp) -> Array:
   return np_backbone.concatenate(b, axis=-1)
 
 
+def box_xywh_to_xyxy(x: Array, np_backbone: PyModule = jnp) -> Array:
+  """Converts boxes from [x, y, w, h] format into [x, y, x', y'] format."""
+  x0, y0, w, h = np_backbone.split(x, 4, axis=-1)
+  b = [x0, y0, x0 + w, y0 + h]
+  return np_backbone.concatenate(b, axis=-1)
+
+
+def box_xyxy_to_xywh(x: Array, np_backbone: PyModule = jnp) -> Array:
+  """Converts boxes from [x, y, x', y'] format into [x, y, w, h] format."""
+  x0, y0, x1, y1 = np_backbone.split(x, 4, axis=-1)
+  b = [x0, y0, x1 - x0, y1 - y0]
+  return np_backbone.concatenate(b, axis=-1)
+
+
 def box_iou(boxes1: Array,
             boxes2: Array,
             np_backbone: PyModule = jnp,
