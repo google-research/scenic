@@ -1,7 +1,8 @@
 # Scenic
 <div style="text-align: left">
-<img align="right" src="https://raw.githubusercontent.com/google-research/scenic/main/images/scenic_logo.png" width="200" alt="scenic logo"></img>
+<img align="right" src="https://raw.githubusercontent.com/google-research/scenic/main/images/scenic_logo.png" width="200" alt="Scenic logo"></img>
 </div>
+
 
 *Scenic* is a codebase with a focus on research around attention-based models
 for computer vision. Scenic has been successfully used to develop
@@ -18,6 +19,7 @@ Scenic is developed in [JAX](https://github.com/jax-ml/jax) and uses
 [Flax](https://github.com/google/flax).
 
 ### Contents
+
 * [What we offer](#what-we-offer)
 * [SOTA models and baselines in Scenic](#sota-models-and-baselines-in-scenic)
 * [Philosophy](#philosophy)
@@ -35,7 +37,6 @@ Among others *Scenic* provides
 * Input-pipelines for popular vision datasets;
 * [Baseline models](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines#scenic-baseline-models),
 including strong non-attentional baselines.
-
 
 ## SOTA models and baselines in *Scenic*
 There are some SOTA models and baselines in Scenic which were either developed
@@ -97,7 +98,6 @@ Baselines that were reproduced in Scenic:
 * [(CenterNet) Objects as Points](https://arxiv.org/abs/1904.07850)
 * [(SAM) Segment Anything](https://arxiv.org/abs/2304.02643)
 
-
 More information can be found in [baseline models](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines#scenic-baseline-models).
 
 <a name="philosophy"></a>
@@ -108,9 +108,9 @@ copy-pasting over adding complexity or increasing abstraction*. Only when
 functionality proves to be widely useful across many models and tasks it may be
 upstreamed to Scenic's shared libraries.
 
-
 <a name="getting_start"></a>
 ## Getting started
+
 * See `projects/baselines/README.md` for a walk-through baseline models and
   instructions on how to run the code.
 * If you would like to contribute to *Scenic*, please check out the
@@ -118,7 +118,6 @@ upstreamed to Scenic's shared libraries.
   [Contributing](CONTRIBUTING.md) sections.
   Should your contribution be a part of the shared libraries, please send us a
   pull request!
-
 
 ### Quickstart
 You will need Python 3.9 or later. Download the code from GitHub
@@ -198,7 +197,6 @@ Common baselines such as a ResNet and Vision Transformer (ViT) are implemented
 in the [`projects/baselines`](https://github.com/google-research/scenic/tree/main/scenic/projects/baselines)
 project. Forking models in this directory is a good starting point for new
 projects.
-
 
 ## Citing Scenic
 If you use Scenic, you can cite our [white paper](https://openaccess.thecvf.com/content/CVPR2022/html/Dehghani_Scenic_A_JAX_Library_for_Computer_Vision_Research_and_Beyond_CVPR_2022_paper.html).
