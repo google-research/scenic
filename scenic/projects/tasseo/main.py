@@ -43,7 +43,6 @@ from scenic.projects.tasseo.datasets import metaphase_sexid_dataset
 from scenic.train_lib import train_utils
 from scenic.train_lib import trainers
 
-
 FLAGS = flags.FLAGS
 
 
