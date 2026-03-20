@@ -211,6 +211,7 @@ def initialize_model_with_pytree(
     config: ml_collections.ConfigDict,
     rngs: Union[jnp.ndarray, Mapping[str, jnp.ndarray]],
     unpack_input: bool = True,
+    train: bool = False,
     **model_kwargs,
 ) -> Tuple[PyTree, PyTree, int, Optional[float]]:
   """Initializes parameters and model state with a pytree input_spec.
@@ -228,6 +229,7 @@ def initialize_model_with_pytree(
     config: Configurations of the initialization.
     rngs: Jax rng keys.
     unpack_input: Unpack the pytree when feeding it to the model.
+    train: If the scenic model should be initialized in the train mode.
     **model_kwargs: Kwargs passed to flax model initialization.
 
   Returns:
@@ -279,8 +281,8 @@ def initialize_model_with_pytree(
                 model_def.init(
                     rngs,
                     **dummy_input,
-                    train=False,
                     debug=False,
+                    train=train,
                     **model_kwargs,
                 )
             ),
@@ -290,7 +292,7 @@ def initialize_model_with_pytree(
         init_model_state, init_params = flax.core.pop(
             flax.core.freeze(
                 model_def.init(
-                    rngs, *dummy_input, train=False, debug=False, **model_kwargs
+                    rngs, *dummy_input, train=train, debug=False, **model_kwargs
                 )
             ),
             'params',
@@ -299,7 +301,7 @@ def initialize_model_with_pytree(
         init_model_state, init_params = flax.core.pop(
             flax.core.freeze(
                 model_def.init(
-                    rngs, dummy_input, train=False, debug=False, **model_kwargs
+                    rngs, dummy_input, train=train, debug=False, **model_kwargs
                 )
             ),
             'params',
