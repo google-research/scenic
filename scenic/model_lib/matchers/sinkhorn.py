@@ -21,8 +21,10 @@ from typing import Optional
 import jax
 import jax.numpy as jnp
 import numpy as np
-from ott.geometry import geometry
-from ott.tools import transport
+import ott
+
+geometry = ott.geometry
+transport = ott.tools.transport
 
 
 def idx2permutation(row_ind, col_ind):
