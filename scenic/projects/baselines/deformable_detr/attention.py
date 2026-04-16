@@ -55,7 +55,7 @@ def bilinear_interpolate(im: Array, grid: Array, w: int, h: int) -> jnp.ndarray:
     [..., nembed] array of interpolated values.
   """
   im = im.reshape(h, w, -1)
-  im = jnp.pad(im, ((1, 1), (1, 1), (0, 0)), 'empty')
+  im = jnp.pad(im, ((1, 1), (1, 1), (0, 0)), mode='constant', constant_values=0)
   im = im.reshape((h + 2) * (w + 2), -1)
 
   x = grid[..., 0] * w
