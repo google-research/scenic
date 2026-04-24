@@ -282,8 +282,12 @@ class DeformableDETRTransformerTest(parameterized.TestCase):
 
     self.assertSequenceEqual(ref_points.shape, (bs, flat_shape, nlevels, 2))
     delta = 0.5
-    self.assertSequenceAlmostEqual(ref_points[0, -1, 0], [1. - delta / 30.] * 2)
-    self.assertSequenceAlmostEqual(ref_points[0, 0, 0], [delta / 10.] * 2)
+    self.assertSequenceAlmostEqual(
+        ref_points[0, -1, 0], [1.0 - delta / 30.0] * 2, places=6
+    )
+    self.assertSequenceAlmostEqual(
+        ref_points[0, 0, 0], [delta / 10.0] * 2, places=6
+    )
 
   @parameterized.named_parameters(
       {
