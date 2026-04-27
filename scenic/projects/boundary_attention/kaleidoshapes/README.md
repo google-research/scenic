@@ -13,7 +13,7 @@ To download kaleidoshapes, install the [gcloudCLI](https://cloud.google.com/sdk/
 mkdir scenic/boundary_attention/kaleidoshapes_dataset
 
 # Copy dataset to directory
-gsutil cp -r gs://scenic-bucket/boundary_attention/kaleidoshapes/ scenic/boundary_attention/kaleidoshapes_dataset
+gcloud storage cp --recursive gs://scenic-bucket/boundary_attention/kaleidoshapes/ scenic/boundary_attention/kaleidoshapes_dataset
 ```
 
 ### Quick Start
