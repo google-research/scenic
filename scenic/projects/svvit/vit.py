@@ -15,7 +15,6 @@
 """ViT Classification model."""
 
 from scenic.model_lib.base_models.classification_model import ClassificationModel
-
 from scenic.projects.baselines import vit
 
 
