@@ -127,6 +127,13 @@ def train_step(
   if config.get('max_grad_norm') is not None:
     grad = clip_grads(grad, config.max_grad_norm)
 
+  if train_state.tx is None:
+    raise ValueError(
+        'The optimizer `tx` is not set in `train_state`. This means the'
+        ' optimizer was not properly initialized. Please ensure'
+        ' `scenic_optax.make` was called and the result was used when creating'
+        ' the `train_state`.'
+    )
   updates, new_opt_state = train_state.tx.update(grad, train_state.opt_state,
                                                  train_state.params)
   new_params = optax.apply_updates(train_state.params, updates)
@@ -138,7 +145,7 @@ def train_step(
   us = jax.tree_util.tree_leaves(updates)
   training_logs['l2_updates'] = jnp.sqrt(sum([jnp.vdot(u, u) for u in us]))
   # TODO(dehghani): Can we get this from the optimizer instead?
-  training_logs['learning_rate'] = lr_fn(train_state.global_step)
+  training_logs['learning_rate'] = lr_fn(jnp.array(train_state.global_step))
 
   # Logging the average sequence length we are using
   if config.get('model.ac_config.dynamic_tape_length') is not None:
@@ -424,4 +431,6 @@ def train(
   # Wait until computations are done before exiting.
   train_utils.barrier_across_hosts()
   # Return the train and eval summary after last step for regression testing.
+  assert train_summary is not None
+  assert eval_summary is not None
   return train_state, train_summary, eval_summary
