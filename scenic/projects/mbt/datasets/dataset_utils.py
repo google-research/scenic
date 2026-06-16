@@ -77,6 +77,7 @@ def apply_specaugment(spec: tf.Tensor, spec_augment_params=None):
 
 def _decode_spectrogram(spectrogram,
                         inflate=True,
+                        circular_time_shift=True,
                         zero_centering=True,
                         dataset_mean=0,
                         dataset_stddev=1):
@@ -86,6 +87,7 @@ def _decode_spectrogram(spectrogram,
   Args:
     spectrogram: input mel spectrogram
     inflate: if True, adds a channel dimension
+    circular_time_shift: If `True`, apply random time shift to spectrograms
     zero_centering: if True, zero centers the spectrogram
     dataset_mean: mean over the dataset.
     dataset_stddev: standard deviation over the dataset.
@@ -94,6 +96,13 @@ def _decode_spectrogram(spectrogram,
     spectrogram: decoded spectrogram.
 
   """
+
+  if circular_time_shift:
+    # randomly sample start time, then cyclically extract whole clip
+    shift = tf.random.uniform(
+        shape=(), minval=0, maxval=tf.shape(spectrogram)[0], dtype=tf.int32)
+    spectrogram = tf.roll(spectrogram, shift=shift, axis=0)
+
   if inflate:
     spectrogram = tf.expand_dims(spectrogram, -1)
     spectrogram = tf.tile(spectrogram, [1, 1, 3])
@@ -121,6 +130,7 @@ def add_spectrogram(parser_builder,
                     num_test_clips=1,
                     spec_augment=True,
                     spec_augment_params=None,
+                    circular_time_shift=True,
                     zero_centering_image=False,
                     dataset_mean=0.0,
                     dataset_stddev=1.0,
@@ -148,6 +158,7 @@ def add_spectrogram(parser_builder,
       are aggreagated in the batch dimension.
     spec_augment: Whether to apply augmentation using SpecAugment.
     spec_augment_params: Dict of parameters for SpecAugment.
+    circular_time_shift: If `True`, apply random time shift to spectrograms.
     zero_centering_image: If `True`, frames are normalized to values in [-1, 1].
       If `False`, values in [0, 1].
     dataset_mean: Mean of values over the dataset.
@@ -207,8 +218,9 @@ def add_spectrogram(parser_builder,
           fn_name=f'{output_feature_name}_middle_sample')
   # pylint: disable=g-long-lambda
   decoder_builder.add_fn(
-      fn=lambda x: _decode_spectrogram(x, True, zero_centering_image,
-                                       dataset_mean, dataset_stddev),
+      fn=lambda x:
+      _decode_spectrogram(x, True, circular_time_shift, zero_centering_image,
+                          dataset_mean, dataset_stddev),
       feature_name=output_feature_name,
       fn_name=f'{output_feature_name}_decode_spectrogram')
   # pylint: enable=g-long-lambda
