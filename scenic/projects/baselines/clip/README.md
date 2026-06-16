@@ -51,8 +51,9 @@ with open('/path/to/clip.npy', 'wb') as f:
   np.save(f, params)
 ```
 
-Note that these models run natively on images with resolution 224 and normalized
-using `IMAGE_MEAN` and `IMAGE_STD`. The maximum text length is 77.
+Note that these models run natively on images with resolution 224px and
+normalized using `IMAGE_MEAN` and `IMAGE_STD`. The maximum text length is 77
+characters.
 
 
 ### Acknowledgment
