@@ -83,6 +83,7 @@ PRE_MOSAIC_OPS = tuple(
         image_ops.Keep,
         image_ops.RandomCrop,
         image_ops.RandomFlipLeftRight,
+        image_ops.RandomFlipUpDown,
         image_ops.ResizeWithPad,
         label_ops.CanonicalizeTextLabels,
         label_ops.RemoveForbiddenLabels,
