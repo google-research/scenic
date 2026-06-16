@@ -39,7 +39,7 @@ from scenic.projects.vivit import model as vivit_model
 from scenic.projects.vivit import model_utils as vivit_model_utils
 
 # JAX team is working on type annotation for PyTree:
-# https://github.com/google/jax/issues/1555
+# https://github.com/jax-ml/jax/issues/1555
 Array = Union[jnp.ndarray, np.ndarray]
 PyTree = Any
 
