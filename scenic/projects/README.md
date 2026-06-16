@@ -132,6 +132,14 @@
     > trained on single modalities or tasks.
     > Details can be found in the [paper](https://arxiv.org/abs/2111.12993).
 
+*   [Semantica](modified_simple_diffusion)
+
+    > Semantica is a image-conditioned diffusion model that generates
+    > images based on the semantics of a conditioning image. It is trained
+    > exclusively on web-scale image pairs employing pretrained image encoders
+    > and semantic data-filtering.
+    > Details can be found in the [paper](https://arxiv.org/abs/2405.14857).
+
 *   [T5](t5)
 
     > Wrappers of T5 models in [t5x](https://github.com/google-research/t5x).
