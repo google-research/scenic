@@ -140,17 +140,6 @@ class NNOpsTest(parameterized.TestCase):
     self.assertEqual(output[0, 0, 0, 0], 11.)
     self.assertEqual(output[0, -1, -1, 0], 88.)
 
-  def test_extract_patches(self):
-    """Tests extract_patches."""
-    input_shape = (16, 3, 3, 32)
-    inputs = np.array(np.random.normal(size=input_shape))
-
-    # patching a 3x3 image to 3x3 patches, with no stride 1x1 should do nothing
-    # but reshaping the (bs, h, w, c) to (bs, 1, 1, h, w, c)
-    patched = nn_ops.extract_patches(inputs, (3, 3), (1, 1))
-    self.assertEqual(patched.shape, (16, 1, 1, 3, 3, 32))
-    np.testing.assert_allclose(inputs, patched.reshape(input_shape), atol=1e-2)
-
   @parameterized.named_parameters([('test_avg_pooling', 'avg_pooling'),
                                    ('test_max_pooling', 'max_pooling'),
                                    ('test_avg_pooling_bu', 'avg_pooling'),

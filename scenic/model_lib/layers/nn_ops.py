@@ -51,8 +51,8 @@ def extract_image_patches(lhs,
       `'NCHW'`.
 
   Returns:
-    A 4-D Tensor. Has the same type and data format as `lhs`, and with shape
-    `[batch, num_patches_col, num_patches_row, rhs_shape[1], rhs_shape[2], C]`.
+    A 4-D Tensor. Has the same type as `lhs`, and with shape
+    `[batch, num_patches_row, num_patches_col, rhs_shape[1], rhs_shape[2], C]`.
   """
   num_dims = lhs.ndim
   num_spatial_dims = num_dims - 2
@@ -76,83 +76,20 @@ def extract_image_patches(lhs,
         'Current implementation does not support dilations in the batch '
         'and depth dimensions.')
 
-  # Replicating tensorflow's implementation.
-  lhs_perm = lax.conv_general_permutations(
-      (data_format, 'HWIO', data_format))[0]
-  kernel_shape = [rhs_shape[i] for i in lhs_perm[2:]]
-
-  kernel_size = np.prod(kernel_shape)
-  conv_filter_shape = kernel_shape[:]
-  conv_filter_shape.append(1)
-  conv_filter_shape.append(kernel_size * depth)
-
-  iota_kernel_shape = (kernel_size, depth, kernel_size)
-
-  conv_filter = lax.eq(
-      lax.broadcasted_iota(jnp.int32, iota_kernel_shape, 0),
-      lax.broadcasted_iota(jnp.int32, iota_kernel_shape, 2),
+  filter_shape = tuple(rhs_shape[i] for i in range(num_dims) if i not in
+                       (batch_dim, feature_dim))
+  patches = lax.conv_general_dilated_patches(
+      lhs=lhs,
+      filter_shape=filter_shape,
+      padding=padding,
+      window_strides=tuple(strides[i] for i in range(num_dims) if i not in
+                           (batch_dim, feature_dim)),
+      dimension_numbers=(data_format, 'HWIO', 'NHWC')
   )
-  conv_filter = lax.convert_element_type(conv_filter, lhs.dtype)
-  conv_filter = lax.reshape(conv_filter, conv_filter_shape)
-
-  dim_num = lax.conv_dimension_numbers(lhs.shape, conv_filter.shape,
-                                       (data_format, 'HWIO', data_format))
-  conv_strides = [0] * num_spatial_dims
-  conv_rhs_dilation = [0] * num_spatial_dims
-  for i in range(num_spatial_dims):
-    dim = dim_num.lhs_spec[i + 2]
-    conv_strides[i] = strides[dim]
-    conv_rhs_dilation[i] = rhs_dilation[dim]
-
-  conv = lax.conv_general_dilated(lhs, conv_filter, conv_strides, padding, None,
-                                  conv_rhs_dilation, dim_num, depth)
-
-  conv_dims = list(conv.shape[:-1])
-  conv_dims.append(depth)
-  conv_dims.extend(kernel_shape)
-  conv = lax.reshape(conv, conv_dims)
-
-  permutation = list(range(len(conv_dims)))
-  depth_dim = permutation.pop(-3)
-  permutation.append(depth_dim)
-
-  return lax.transpose(conv, permutation)
-
-
-def extract_patches(lhs, rhs_shape, strides=(1, 1)):
-  """Extracts patches from an image using a convolution operator.
-
-  Args:
-    lhs: A tensor of images of shapes (B, H, W, C).
-    rhs_shape: The size of the patches to extract (h, w).
-    strides: The shift between extracted patches (s1, s2)
-
-  Returns:
-    All the patches in a tensor of dimension
-      (B, (H - h + 1) // s1, (W - w + 1) // s2, h, w, C).
-  """
-  # [batch, channels, height, width]
-  lhs = jnp.moveaxis(lhs, -1, 1)
-  d = lhs.shape[1]
-  h, w = rhs_shape
-
-  # Construct the lookup conv weights.
-  dim_out = jnp.arange(d * h * w).reshape((-1, 1, 1, 1))
-  dim_in = jnp.arange(d).reshape((1, -1, 1, 1))
-  i = jnp.arange(h).reshape((1, 1, -1, 1))
-  j = jnp.arange(w).reshape((1, 1, 1, -1))
-  weights = ((w * i + j) * d + dim_in == dim_out).astype(jnp.float32)
-
-  # [batch, h * w * d, (H - h + 1) // s1, (W - w + 1) // s2]
-  concatenated_patches = lax.conv(
-      lhs, weights, window_strides=strides, padding='VALID')
-
-  # [batch, (H - h + 1) // s1, (W - w + 1) // s2, h * w * d]
-  concatenated_patches = jnp.moveaxis(concatenated_patches, 1, -1)
-
-  # [batch, (H - h + 1) // s1, (W - w + 1) // s2, h, w, d]
-  shape = concatenated_patches.shape[:3] + (h, w, d)
-  return concatenated_patches.reshape(shape)
+  shape = patches.shape[:-1] + (depth,) + filter_shape
+  patches = patches.reshape(shape)
+  patches = jnp.moveaxis(patches, -1 - num_spatial_dims, -1)
+  return patches
 
 
 def compute_relative_positions(query_spatial_shape,
