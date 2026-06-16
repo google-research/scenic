@@ -301,7 +301,9 @@ def train_and_evaluate(
     dataset: dataset_utils.Dataset,
     workdir: str,
     writer: metric_writers.MetricWriter,
-) -> Tuple[train_utils.TrainState, Dict[str, Any], Dict[str, Any]]:
+) -> Tuple[
+    train_utils.TrainState, Dict[str, Any] | None, Dict[str, Any] | None
+]:
   """Main training loop lives in this function.
 
   Given the model class and dataset, it prepares the items needed to run the
@@ -318,10 +320,12 @@ def train_and_evaluate(
     writer: CLU metrics writer instance.
 
   Returns:
-    train_sate that has the state of training (including current
-      global_step, model_state, rng, and the optimizer), train_summary
-      and eval_summary which are dict of metrics. These outputs are used for
-      regression testing.
+    `train_state` that has the state of training (including current
+      `global_step`, `model_state`, `rng`, and `optimizer`), `train_summary`
+      and `eval_summary` which are dict of metrics. `train_summary` and
+      `eval_summary` will be None if evaluation or logging does not occur
+      before training completes (e.g. if dataset.valid_iter is None for
+      `eval_summary`). These outputs are used for regression testing.
   """
   lead_host = jax.process_index() == 0
 
