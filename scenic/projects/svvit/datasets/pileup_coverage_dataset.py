@@ -31,7 +31,7 @@ def _extract_metadata_from_first_example(filename: str) -> Tuple[int]:
   """Extracts the image shape from the first example."""
   raw_example = next(
       iter(
-          tf.data.TFRecordDataset(
+          tf.data.TFRecordDataset(  # pyrefly: ignore[bad-instantiation]
               filenames=filename,
               compression_type=_filename_to_compression(filename))))
   example = tf.train.Example.FromString(raw_example.numpy())
@@ -96,7 +96,7 @@ def create_coverage_based_dataset(
   # interleave parallelizes the data loading step by interleaving the I/O
   # operation to read the file. It speeds up the I/O step.
   dataset = dataset.interleave(
-      lambda filename: tf.data.TFRecordDataset(
+      lambda filename: tf.data.TFRecordDataset(  # pyrefly: ignore[bad-instantiation]
           filename,
           compression_type=compression,
       ).map(
@@ -207,19 +207,19 @@ def get_dataset(*,
     """dataset_fn called by data.build_dataset(**kwargs)."""
 
     if split == 'train':
-      if dataset_configs.train_path:
+      if dataset_configs.train_path:  # pyrefly: ignore[missing-attribute]
         path = dataset_configs.train_path
       else:
         # Add path to your training data here:
         path = ''
     elif split == 'valid':
-      if dataset_configs.eval_path:
+      if dataset_configs.eval_path:  # pyrefly: ignore[missing-attribute]
         path = dataset_configs.eval_path
       else:
         # Add path to your validation data here:
         path = ''
     elif split == 'test':
-      if dataset_configs.test_path:
+      if dataset_configs.test_path:  # pyrefly: ignore[missing-attribute]
         path = dataset_configs.test_path
       else:
         # Add path to your test data here:
@@ -230,7 +230,7 @@ def get_dataset(*,
     if not path:
       raise ValueError('No path provide. Please modify the path variable to '
                        'hardcode the %s path.' %split)
-    dataset = create_coverage_based_dataset(filenames=path)
+    dataset = create_coverage_based_dataset(filenames=path)  # pyrefly: ignore[bad-argument-type]
 
     # Creating a Dataset that includes only 1/num_shards of data so the data is
     # splitted between different hosts.
