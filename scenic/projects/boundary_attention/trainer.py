@@ -74,7 +74,7 @@ def train_step(
 
   # Bind the rng to the host/device we are on.
   # dropout_rng, rng = jax.random.split(rng)
-  dropout_rng, params_rng, codebook_rng, rng = jax.random.split(key=rng, num=4)
+  dropout_rng, params_rng, codebook_rng, rng = jax.random.split(key=rng, num=4)  # pyrefly: ignore[bad-argument-type]
   dropout_rng = scenic_train_utils.bind_rng_to_host_device(
       dropout_rng, axis_name='batch', bind_to='device')
   params_rng = scenic_train_utils.bind_rng_to_host_device(
@@ -87,7 +87,7 @@ def train_step(
           'codebook': codebook_rng}
 
   def training_loss_fn(params):
-    variables = {'params': params, **train_state.model_state}
+    variables = {'params': params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
     model_outputs, new_model_state = flax_model.apply(
         variables,
         batch['image'],
@@ -113,9 +113,9 @@ def train_step(
   if train_state.tx is None:
     raise ValueError('train_state.tx is None')
 
-  updates, new_opt_state = train_state.tx.update(grad, train_state.opt_state,
+  updates, new_opt_state = train_state.tx.update(grad, train_state.opt_state,  # pyrefly: ignore[bad-argument-type]
                                                  train_state.params)
-  new_params = optax.apply_updates(params=train_state.params, updates=updates)
+  new_params = optax.apply_updates(params=train_state.params, updates=updates)  # pyrefly: ignore[bad-argument-type]
 
   # Explicit weight decay, if necessary.
   # if config.get('explicit_weight_decay', None) is not None:
@@ -131,7 +131,7 @@ def train_step(
   metrics = metrics_fn(model_outputs, batch)
   new_rng, _ = jax.random.split(rng)
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=train_state.global_step + 1,
+      global_step=train_state.global_step + 1,  # pyrefly: ignore[unsupported-operation]
       opt_state=new_opt_state,
       params=new_params,
       model_state=new_model_state,
@@ -295,7 +295,7 @@ def train(
   extra_training_logs = []
   train_summary, eval_summary = None, None
 
-  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
+  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)  # pyrefly: ignore[bad-argument-type]
 
   logging.info('Starting training loop at step %d.', start_step)
 
@@ -307,12 +307,12 @@ def train(
 
   hooks = [report_progress]
   if config.get('xprof', True) and lead_host:
-    hooks.append(periodic_actions.Profile(num_profile_steps=5, logdir=workdir))
+    hooks.append(periodic_actions.Profile(num_profile_steps=5, logdir=workdir))  # pyrefly: ignore[bad-argument-type]
 
   if start_step == 0:
     step0_log = {'num_trainable_params': num_trainable_params}
     if gflops:
-      step0_log['gflops'] = gflops
+      step0_log['gflops'] = gflops  # pyrefly: ignore[bad-assignment]
     writer.write_scalars(1, step0_log)
 
   def write_note(note):
@@ -321,7 +321,7 @@ def train(
 
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
-      train_batch = next(dataset.train_iter)
+      train_batch = next(dataset.train_iter)  # pyrefly: ignore[bad-argument-type]
 
       train_state, t_metrics, model_outputs = train_step_pmapped(
           train_state, train_batch)
@@ -390,7 +390,7 @@ def train(
 
     if config.eval_during_train:
       chrono.pause(wait_for=(train_state.params))
-      evaler.run_one_eval(  # pylint: disable=undefined-variable
+      evaler.run_one_eval(  # pylint: disable=undefined-variable  # pyrefly: ignore[unbound-name]
           train_state, step, dataset, writer, is_final=(step == total_steps))
       chrono.resume()
 

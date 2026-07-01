@@ -162,7 +162,7 @@ def make_schedule(
   if schedule is None:
     schedule = ml_collections.ConfigDict(
         {'all': ml_collections.ConfigDict({'re': '(.*)', 'lr_configs': None})})
-  schedule = [(cfg.re, name, cfg.lr_configs) for name, cfg in schedule.items()]
+  schedule = [(cfg.re, name, cfg.lr_configs) for name, cfg in schedule.items()]  # pyrefly: ignore[bad-assignment]
 
   # Create actual schedules funtions.
   def create_schedule(lr_configs):
@@ -174,8 +174,8 @@ def make_schedule(
     base_lr = lr_configs.get('base_learning_rate', 1.0)
     return fn, base_lr
 
-  schedule = [(re, name, create_schedule(lr_configs))
-              for re, name, lr_configs in schedule]
+  schedule = [(re, name, create_schedule(lr_configs))  # pyrefly: ignore[bad-assignment]
+              for re, name, lr_configs in schedule]  # pyrefly: ignore[not-iterable]
   return schedule  # pytype: disable=bad-return-type
 
 
@@ -327,7 +327,7 @@ def aggregate_gradients_pmean(
 # This is following the BV codebase pattern for defining a custom optimizer.
 # A dummy object to allow for foo.bar access syntax, see
 # https://stackoverflow.com/a/19476841/2366315
-optax.scenic = type('', (), {})()
+optax.scenic = type('', (), {})()  # pyrefly: ignore[missing-attribute]
 
 
 def scale_by_adafactor(min_dim_size_to_factor=32,

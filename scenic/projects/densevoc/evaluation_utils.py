@@ -129,7 +129,7 @@ def inference_on_image_dataset(
     if is_host:
       xm_utils.get_xm_note_writer()(
           f'Running eval step {eval_step_i} / {total_eval_steps}')
-    eval_batch = next(dataset.valid_iter)
+    eval_batch = next(dataset.valid_iter)  # pyrefly: ignore[bad-argument-type]
 
     eval_batch_all_hosts, predictions_all_hosts, metrics = eval_step_pmapped(
         train_state, eval_batch)
@@ -147,7 +147,7 @@ def inference_on_image_dataset(
           predictions_all_hosts, eval_batch_all_hosts['batch_mask'])
 
       for pred, label in zip(results, labels):
-        texts = [tokenizer.indices_to_string(
+        texts = [tokenizer.indices_to_string(  # pyrefly: ignore[missing-attribute]
             x[1:].tolist()) for x in pred['text_tokens']]
         detection_pred = (
             pred['detection_boxes'], pred['detection_scores'],
@@ -374,7 +374,7 @@ def inference_on_video_dataset(
     if is_host:
       xm_utils.get_xm_note_writer()(
           f'Running eval step {eval_step_i} / {total_eval_steps}')
-    eval_batch = next(dataset.valid_iter)
+    eval_batch = next(dataset.valid_iter)  # pyrefly: ignore[bad-argument-type]
 
     eval_batch_all_hosts, predictions_all_hosts = (
         inference_step_pmapped(train_state, eval_batch))

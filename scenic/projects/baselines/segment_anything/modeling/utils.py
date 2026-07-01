@@ -95,6 +95,6 @@ def calculate_stability_score(
 
 def nms(boxes, scores, iou_threshold, num_outputs=100):
   _, _, keep = nms_lib.non_max_suppression_padded(
-      scores[None], boxes[None], num_outputs, iou_threshold,
+      scores[None], boxes[None], num_outputs, iou_threshold,  # pyrefly: ignore[bad-argument-type]
       return_idx=True)  # pytype: disable=wrong-arg-types
   return keep[0]  # undo batch

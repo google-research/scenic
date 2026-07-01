@@ -121,7 +121,7 @@ class VidSTGiouEvaluator:
 
       # compute temporal iou
       if self.tmp_loc:
-        max_start = max(gt_sted[0], pred_sted[0])
+        max_start = max(gt_sted[0], pred_sted[0])  # pyrefly: ignore[unbound-name]
         min_end = min(gt_sted[1], pred_sted[1])
         min_start = min(gt_sted[0], pred_sted[0])
         max_end = max(gt_sted[1], pred_sted[1])
@@ -184,11 +184,11 @@ class VidSTGiouEvaluator:
         # Update viou if this frame is in the intersection between the
         # annotated moment and the predicted moment
         if (frame_id in inter_predgt and self.tmp_loc):
-          viou += iou
+          viou += iou  # pyrefly: ignore[unbound-name]
         gt_viou += iou
 
       if self.tmp_loc:  # compute viou@R
-        viou = viou / max(len(union_predgt), 1)
+        viou = viou / max(len(union_predgt), 1)  # pyrefly: ignore[unbound-name]
         vid_metrics[video_id]["viou"] = viou
         recalls = {thresh: 0 for thresh in self.iou_thresholds}
         for thresh in self.iou_thresholds:
@@ -305,7 +305,7 @@ class VidSTGEvaluator(object):
         metrics[qtype][f"gt_viou@{thresh}"] += x[f"gt_viou@{thresh}"]
       counter[qtype] += 1
     for category in categories:  # average results per category
-      for key in metrics[qtype]:
+      for key in metrics[qtype]:  # pyrefly: ignore[unbound-name]
         metrics[category][key] = metrics[category][key] / counter[category]
         logging.info(f"{category} {key}: {metrics[category][key]:.4f}")
     out = {  # pylint: disable=g-complex-comprehension

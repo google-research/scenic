@@ -94,7 +94,7 @@ def main(rng: jnp.ndarray, config: ml_collections.ConfigDict, workdir: str,
     # the path can be distinguished from the "Last evaluated checkpoint"
     # artifact written by the evaluator.
     # TODO(b/210825478): Remove prepended string.
-    artifact = 'TRAIN' + checkpoints.latest_checkpoint(workdir)
+    artifact = 'TRAIN' + checkpoints.latest_checkpoint(workdir)  # pyrefly: ignore[unsupported-operation]
     platform.work_unit().create_artifact(platform.ArtifactType.FILE, artifact,
                                          FINAL_CKPT_ARTIFACT_DESCRIPTION)
 

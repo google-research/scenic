@@ -331,7 +331,7 @@ def get_dataset(*,
       eval_batch_size,
       train=False,
       preprocess_fn=eval_preprocess_fn,
-      max_size=valid_max_size,
+      max_size=valid_max_size,  # pyrefly: ignore[bad-argument-type]
       max_boxes=max_boxes,
       decode_fn=decode_fn,
       data_dir=dataset_configs.get('data_dir'))
