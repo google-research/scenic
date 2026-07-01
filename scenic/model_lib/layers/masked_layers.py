@@ -147,9 +147,9 @@ def _bn_agg_mean_var(
   acc_sum = jnp.sum(x, axis=axis, keepdims=False)
   acc_sum2 = jnp.sum(lax.square(x), axis=axis, keepdims=False)
   if spatial_shape is None:
-    denom = np.prod([x.shape[i] for i in axis])
+    denom = np.prod([x.shape[i] for i in axis])  # pyrefly: ignore[not-iterable]
   else:
-    reduction_axis_shifted = tuple(i - 1 for i in axis if i > 0)
+    reduction_axis_shifted = tuple(i - 1 for i in axis if i > 0)  # pyrefly: ignore[not-iterable]
     denom = jnp.prod(spatial_shape[:, reduction_axis_shifted], axis=-1)
     denom = jnp.sum(denom)
 
@@ -505,7 +505,7 @@ def apply_spatial_mask(
   assert inputs.shape[0] == spatial_shape.shape[0]
   assert spatial_shape.shape[1] == inputs.ndim - 2
   mask = mask_from_spatial(inputs.shape[1:-1], spatial_shape, per_axis=False)
-  mask = jnp.expand_dims(mask, axis=-1)
+  mask = jnp.expand_dims(mask, axis=-1)  # pyrefly: ignore[bad-argument-type]
   inputs = jnp.where(mask, inputs, value)
   return inputs
 
@@ -563,9 +563,9 @@ def _dilate_shape(shape: jnp.ndarray, dilation: Tuple[int, ...]):
   if not np.all(np.greater(dilation, 0)):
     raise TypeError(f'All dilations must be positive, got {dilation}.')
   dilation = (1,) * (shape.shape[1] - len(dilation)) + tuple(dilation)
-  dilation = jnp.array(dilation)
+  dilation = jnp.array(dilation)  # pyrefly: ignore[bad-assignment]
   return jnp.where(shape == 0, 0,
-                   jnp.multiply(dilation, jnp.subtract(shape, 1)) + 1)
+                   jnp.multiply(dilation, jnp.subtract(shape, 1)) + 1)  # pyrefly: ignore[bad-argument-type]
 
 
 def _conv_output_shape(
@@ -637,17 +637,17 @@ def padtype_to_pads(
   if isinstance(padding, str):
     mapping = {'VALID': PaddingType.VALID, 'SAME': PaddingType.SAME}
     try:
-      padding = mapping[padding.upper()]
+      padding = mapping[padding.upper()]  # pyrefly: ignore[bad-assignment]
     except KeyError as err:
       msg = "Unrecognized padding type: expected 'VALID' or 'SAME', got {}."
       raise RuntimeError(msg.format(padding)) from err
 
   if padding == PaddingType.SAME:
-    window_shape = jnp.array(window_shape)
-    window_strides = jnp.array(window_strides)
-    out_shape = _ceil_divide(in_shape, window_strides)
+    window_shape = jnp.array(window_shape)  # pyrefly: ignore[bad-assignment]
+    window_strides = jnp.array(window_strides)  # pyrefly: ignore[bad-assignment]
+    out_shape = _ceil_divide(in_shape, window_strides)  # pyrefly: ignore[bad-argument-type]
     pad_sizes = jnp.maximum(
-        (out_shape - 1) * window_strides + window_shape - in_shape, 0)
+        (out_shape - 1) * window_strides + window_shape - in_shape, 0)  # pyrefly: ignore[unsupported-operation]
     pad_sizes = jnp.stack([pad_sizes // 2, pad_sizes - pad_sizes // 2], axis=1)
     return pad_sizes
   elif padding == PaddingType.VALID:
@@ -674,19 +674,19 @@ def conv_shape_tuple(
     (batch, len(spatial_dims)).
   """
   if isinstance(pads, str):
-    pads = padtype_to_pads(lhs_shape[:, 2:], rhs_shape[2:], strides, pads)
+    pads = padtype_to_pads(lhs_shape[:, 2:], rhs_shape[2:], strides, pads)  # pyrefly: ignore[bad-assignment]
   else:
-    pads = jnp.expand_dims(jnp.array(pads), axis=0)
+    pads = jnp.expand_dims(jnp.array(pads), axis=0)  # pyrefly: ignore[bad-assignment]
 
   if pads.shape[1] != lhs_shape.shape[1] - 2:
     msg = 'Wrong number of explicit pads for convolution: expected {}, got {}.'
     raise TypeError(msg.format(lhs_shape.shape[1] - 2, pads.shape[1]))
-  lhs_padded = jnp.add(lhs_shape[:, 2:], jnp.sum(pads, axis=2))
+  lhs_padded = jnp.add(lhs_shape[:, 2:], jnp.sum(pads, axis=2))  # pyrefly: ignore[bad-argument-type]
 
-  rhs_shape = jnp.array(rhs_shape, dtype=jnp.int32)
-  strides = jnp.array(strides, dtype=jnp.int32)
+  rhs_shape = jnp.array(rhs_shape, dtype=jnp.int32)  # pyrefly: ignore[bad-assignment]
+  strides = jnp.array(strides, dtype=jnp.int32)  # pyrefly: ignore[bad-assignment]
   out_space = jnp.floor_divide(
-      jnp.subtract(lhs_padded, rhs_shape[2:]), strides) + 1
+      jnp.subtract(lhs_padded, rhs_shape[2:]), strides) + 1  # pyrefly: ignore[bad-argument-type]
   out_space = jnp.maximum(0, out_space)
   out_shape = jnp.stack(
       [lhs_shape[:, 0], jnp.full((lhs_shape.shape[0],), rhs_shape[0])],

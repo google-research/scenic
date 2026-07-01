@@ -60,10 +60,10 @@ class TransformerBlock(nn.Module):
          bin_mask.shape[3]*bin_mask.shape[4], bin_mask.shape[5]]).squeeze(-1)
 
     # Process through transformer encoder layers
-    for _ in range(self.num_layers):
+    for _ in range(self.num_layers):  # pyrefly: ignore[bad-argument-type]
       hidden_state = EncoderBlock(hidden_state.shape[-1],
-                                  self.encoding_dim, self.num_heads,
-                                  self.attn_dropout_prob)(
+                                  self.encoding_dim, self.num_heads,  # pyrefly: ignore[bad-argument-type]
+                                  self.attn_dropout_prob)(  # pyrefly: ignore[bad-argument-type]
                                       jnp.expand_dims(hidden_state, 3),
                                       hidden_state_patches_flattened,
                                       jnp.expand_dims(bin_mask_flattened,

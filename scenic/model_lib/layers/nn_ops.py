@@ -344,7 +344,7 @@ def pooling(inputs,
   # TODO(dehghani): add positional embedding to other type of pooling?
   strides = strides or window_shape
 
-  pooling_type = pooling_configs.get('pooling_type')
+  pooling_type = pooling_configs.get('pooling_type')  # pyrefly: ignore[missing-attribute]
   if pooling_type == 'avg_pooling':
     x = nn.avg_pool(inputs, window_shape, strides=strides, padding=padding)
 

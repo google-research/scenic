@@ -245,7 +245,7 @@ def axial_dot_product_attention(
           attn_weights,
           rate=dropout_rate,
           broadcast=broadcast_dropout,
-          dropout_rng=dropout_rng)
+          dropout_rng=dropout_rng)  # pyrefly: ignore[bad-argument-type]
     einsum_str = f'{batch_dims}x...y,{batch_dims}y...z->{batch_dims}x...z'
     outputs.append(
         jnp.einsum(einsum_str, attn_weights, value, precision=precision))
@@ -703,7 +703,7 @@ class RelativeAttentionBias(nn.Module):
         tile *= l
         biases.append(new_bias)
 
-    return sum(biases)
+    return sum(biases)  # pyrefly: ignore[bad-return]
 
   def relative_attn_bias(self, length, num_heads, name):
     """Computes attention bias based on relative positions.
