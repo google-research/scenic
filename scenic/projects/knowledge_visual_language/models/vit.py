@@ -188,7 +188,7 @@ class _Model(nn.Module):
 
     if self.num_classes:
       kw = {"kernel_init": nn.initializers.zeros} if self.head_zeroinit else {}
-      head = nn.Dense(self.num_classes, name="head", dtype=self.dtype, **kw)
+      head = nn.Dense(self.num_classes, name="head", dtype=self.dtype, **kw)  # pyrefly: ignore[bad-argument-type]
       x_2d = out["logits_2d"] = head(x_2d)
       x = out["logits"] = head(x)
     x = jnp.array(x, dtype=self.dtype)
