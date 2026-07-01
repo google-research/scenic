@@ -51,7 +51,7 @@ class PolyVit(nn.Module):
     if self.stochastic_droplayer_config is None:
       stochastic_droplayer_rate = None
     else:
-      stochastic_droplayer_rate = self.stochastic_droplayer_config.get(dataset)
+      stochastic_droplayer_rate = self.stochastic_droplayer_config.get(dataset)  # pyrefly: ignore[bad-argument-type]
 
     x = layers.Tokenizer(
         config=self.modalities_config, dtype=self.dtype, name='tokenizer')(
@@ -59,7 +59,7 @@ class PolyVit(nn.Module):
             train=train,
             modality=modality,
             stochastic_droplayer_rate=stochastic_droplayer_rate,
-            dataset=dataset)
+            dataset=dataset)  # pyrefly: ignore[bad-argument-type]
 
     x = layers.PolyViTEncoder(
         mlp_dim=self.encoder_config.mlp_dim,
@@ -73,7 +73,7 @@ class PolyVit(nn.Module):
             x,
             train=train,
             stochastic_droplayer_rate=stochastic_droplayer_rate,
-            dataset=dataset)
+            dataset=dataset)  # pyrefly: ignore[bad-argument-type]
 
     if self.encoder_config.get('freeze_body', False):
       x = jax.lax.stop_gradient(x)
@@ -91,7 +91,7 @@ class PolyVit(nn.Module):
           output_proj_zero_init=head_config.get('output_proj_zero_init', False),
           classifier=head_config.classifier,
           dtype=self.dtype,
-          name='classification_head_' + dataset)(
+          name='classification_head_' + dataset)(  # pyrefly: ignore[unsupported-operation]
               x, train=train)
 
       return x
@@ -106,7 +106,7 @@ class PolyVit(nn.Module):
           output_proj_zero_init=head_config.get('output_proj_zero_init', False),
           classifier=head_config.classifier,
           dtype=self.dtype,
-          name='bag_of_words_head_' + dataset)(
+          name='bag_of_words_head_' + dataset)(  # pyrefly: ignore[unsupported-operation]
               x, train=train)
 
       return x
