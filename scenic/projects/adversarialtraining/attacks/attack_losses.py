@@ -33,7 +33,7 @@ def get_attack_fn(attack_fn_str,
       key=dropout_rng,
       shape=true_labels.shape[:-1],
       minval=0,
-      maxval=config.advprop.num_classes,
+      maxval=config.advprop.num_classes,  # pyrefly: ignore[missing-attribute]
       dtype=jnp.int16)
 
   # build loss functions
@@ -53,7 +53,7 @@ def get_attack_fn(attack_fn_str,
 
     target_labels_one_hot = jax.nn.one_hot(
         target_labels,
-        num_classes=config.advprop.num_classes).astype(jnp.float32)
+        num_classes=config.advprop.num_classes).astype(jnp.float32)  # pyrefly: ignore[missing-attribute]
 
     new_batch['label'] = target_labels_one_hot
     misc_artifacts['target_labels_one_hot'] = target_labels_one_hot

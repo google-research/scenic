@@ -240,8 +240,8 @@ class PonderNetEncoder(nn.Module):
       (all_states, all_p, n_updates) = auxiliary_outputs
     encoded_norm_layer = nn.LayerNorm(name='encoder_norm')
     encoded = encoded_norm_layer(x)
-    all_states = encoded_norm_layer(all_states)
-    return encoded, (all_states, all_p, n_updates)
+    all_states = encoded_norm_layer(all_states)  # pyrefly: ignore[unbound-name]
+    return encoded, (all_states, all_p, n_updates)  # pyrefly: ignore[unbound-name]
 
 
 class PonderViT(nn.Module):
@@ -313,22 +313,22 @@ class PonderViT(nn.Module):
 
     if self.classifier in ('token', '0'):
       x = x[:, 0]
-      all_states = all_states[:, :, 0]
+      all_states = all_states[:, :, 0]  # pyrefly: ignore[unbound-name]
     elif self.classifier in ('gap', 'gmp', 'gsp'):
       fn = {'gap': jnp.mean, 'gmp': jnp.max, 'gsp': jnp.sum}[self.classifier]
       x = fn(x, axis=1)
-      all_states = fn(all_states, axis=2)
+      all_states = fn(all_states, axis=2)  # pyrefly: ignore[unbound-name]
 
     pre_logits_layer = nn_layers.IdentityLayer(name='pre_logits')
     x = pre_logits_layer(x)
-    all_states = pre_logits_layer(all_states)
+    all_states = pre_logits_layer(all_states)  # pyrefly: ignore[unbound-name]
     output_projection_layer = nn.Dense(
         self.num_classes,
         kernel_init=nn.initializers.zeros,
         name='output_projection')
     x = output_projection_layer(x)
     all_states = output_projection_layer(all_states)
-    return x, (all_states, all_p, n_updates)
+    return x, (all_states, all_p, n_updates)  # pyrefly: ignore[unbound-name]
 
 
 class PonderViTMultiLabelClassificationModel(MultiLabelClassificationModel):
@@ -353,7 +353,7 @@ class PonderViTMultiLabelClassificationModel(MultiLabelClassificationModel):
         dtype=model_dtype,
     )
 
-  def loss_function(
+  def loss_function(  # pyrefly: ignore[bad-override]
       self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
       logits: jnp.ndarray,
       auxiliary_outputs: Any,

@@ -37,7 +37,7 @@ class AttentionLayersTest(parameterized.TestCase):
     encoder_vars = encoder_self_attention_def().init(rng, x, deterministic=True)
     y = encoder_self_attention_def().apply(encoder_vars, x, deterministic=True)
     # Test outputs shape.
-    self.assertEqual(y.shape, x.shape)
+    self.assertEqual(y.shape, x.shape)  # pyrefly: ignore[missing-attribute]
 
   def test_linformer_encoder_self_attention_w_dropout(self):
     """Tests EncoderSelfAttention with dropout."""
@@ -53,7 +53,7 @@ class AttentionLayersTest(parameterized.TestCase):
     y = encoder_self_attention_def().apply(
         encoder_vars, x, deterministic=False, rngs={'dropout': dropout_rng})
     # Test outputs shape.
-    self.assertEqual(y.shape, x.shape)
+    self.assertEqual(y.shape, x.shape)  # pyrefly: ignore[missing-attribute]
 
   @parameterized.named_parameters([
       ('test_softmax', 'softmax'),
@@ -73,7 +73,7 @@ class AttentionLayersTest(parameterized.TestCase):
     y = encoder_self_attention_def().apply(
         encoder_vars, x, x, deterministic=True)
     # Test outputs shape.
-    self.assertEqual(y.shape, x.shape)
+    self.assertEqual(y.shape, x.shape)  # pyrefly: ignore[missing-attribute]
 
   @parameterized.named_parameters([
       ('test_softmax', 'softmax'),
@@ -94,7 +94,7 @@ class AttentionLayersTest(parameterized.TestCase):
     y = encoder_self_attention_def().apply(
         encoder_vars, x, x, deterministic=False, rngs={'dropout': dropout_rng})
     # Test outputs shape.
-    self.assertEqual(y.shape, x.shape)
+    self.assertEqual(y.shape, x.shape)  # pyrefly: ignore[missing-attribute]
 
   @parameterized.named_parameters([('test_axi1', 1), ('test_axi2', 2)])
   def test_axial_reshaping_utils(self, axis):
@@ -141,7 +141,7 @@ class TopKTokenSelectorTest(parameterized.TestCase):
         variable, x, train=True, rngs={'dropout': sample_rng})
     # Test outputs shape.
     expected_shape = (4, expected_output_len, 32)
-    self.assertEqual(y.shape, expected_shape)
+    self.assertEqual(y.shape, expected_shape)  # pyrefly: ignore[missing-attribute]
 
   @parameterized.named_parameters([
       ('replacement',

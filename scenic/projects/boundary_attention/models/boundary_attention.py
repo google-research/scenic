@@ -44,7 +44,7 @@ class BoundaryAttention(scenic_base_model.BaseModel):
     self.loss_fn = boundary_attention_loss.BoundaryAttentionLoss(
         config, params2maps=self.params2maps)
 
-  def loss_function(self, model_outputs: Dict[str, jnp.ndarray],
+  def loss_function(self, model_outputs: Dict[str, jnp.ndarray],  # pyrefly: ignore[bad-override]
                     batch: jnp.ndarray) -> Any:
 
     return self.loss_fn.get_loss(model_outputs, batch)

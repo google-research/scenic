@@ -108,7 +108,7 @@ def get_dataset_and_count(
       'boundaries': jnp.concatenate(boundaries, axis=0),
   }
 
-  dataset = tf.data.Dataset.from_tensor_slices(data).shuffle(
+  dataset = tf.data.Dataset.from_tensor_slices(data).shuffle(  # pyrefly: ignore[bad-argument-type]
       num_images, seed=1, reshuffle_each_iteration=False
   )
   dataset = dataset.map(normalize_input)

@@ -84,7 +84,7 @@ def log_param_shapes(
       operator.add, tree_map(lambda x: x.size, params)
   )
   logging.info('Total params: %d', total_params)
-  return total_params
+  return total_params  # pyrefly: ignore[bad-return]
 
 
 def input_spec_to_jax_shape_dtype_struct(
@@ -92,7 +92,7 @@ def input_spec_to_jax_shape_dtype_struct(
     batch_size: Optional[int] = None,
 ) -> jax.ShapeDtypeStruct:
   """Parse an input specs into a jax.ShapeDtypeStruct."""
-  spec = tuple(spec)
+  spec = tuple(spec)  # pyrefly: ignore[bad-assignment]
   if batch_size and len(spec) == 1:
     raise ValueError('batch_size unsupported when len(spec) is 1.')
   if len(spec) == 2 and isinstance(spec[0], abc.Iterable):
@@ -182,7 +182,7 @@ def compute_flops_with_pytree(
       return {k: create_dummy_input(v) for k, v in spec.items()}
     elif isinstance(spec, abc.Sequence):
       if check_leaf_spec(spec):
-        in_st = input_spec_to_jax_shape_dtype_struct(spec, batch_size=1)
+        in_st = input_spec_to_jax_shape_dtype_struct(spec, batch_size=1)  # pyrefly: ignore[bad-argument-type]
         return jnp.zeros(in_st.shape, in_st.dtype)
       else:
         return tuple(create_dummy_input(child) for child in spec)

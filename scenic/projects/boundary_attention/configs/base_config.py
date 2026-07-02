@@ -52,7 +52,7 @@ def get_config(
   config.dataset_name = dataset_name
   config.training_type = training_type
   time_now = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
-  config.experiment_name = (model_name + '_' + dataset_name + '_' +
+  config.experiment_name = (model_name + '_' + dataset_name + '_' +  # pyrefly: ignore[unsupported-operation]
                             training_type + '_' + time_now)
 
   # Infra.
@@ -63,7 +63,7 @@ def get_config(
 
   # Dataset.
   config.dataset = dataset_configs.get_dataset_config(dataset_name,
-                                                      dataset_dir,
+                                                      dataset_dir,  # pyrefly: ignore[bad-argument-type]
                                                       input_size)
   config.batch_size = config.dataset.get('train_batchsize', 1)
   config.eval_batch_size = config.dataset.get('eval_batchsize', 1)

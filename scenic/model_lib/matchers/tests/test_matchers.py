@@ -106,22 +106,22 @@ def compute_cost(
 
   if out_bbox is not None:
     # [B, N, M, 4]
-    diff = jnp.abs(out_bbox[:, :, None] - tgt_bbox[:, None, :])
+    diff = jnp.abs(out_bbox[:, :, None] - tgt_bbox[:, None, :])  # pyrefly: ignore[unsupported-operation]
     cost_bbox = jnp.sum(diff, axis=-1)  # [B, N, M]
-    cost = cost + bbox_loss_coef * cost_bbox
+    cost = cost + bbox_loss_coef * cost_bbox  # pyrefly: ignore[unsupported-operation]
 
     # Cost_upper_bound is the approximate maximal possible total cost:
-    cost_upper_bound = cost_upper_bound + bbox_loss_coef * 4.0  # cost_bbox <= 4
+    cost_upper_bound = cost_upper_bound + bbox_loss_coef * 4.0  # cost_bbox <= 4  # pyrefly: ignore[unsupported-operation]
 
     # [B, N, M]
     cost_giou = -box_utils.generalized_box_iou(
         box_utils.box_cxcywh_to_xyxy(out_bbox),
-        box_utils.box_cxcywh_to_xyxy(tgt_bbox),
+        box_utils.box_cxcywh_to_xyxy(tgt_bbox),  # pyrefly: ignore[bad-argument-type]
         all_pairs=True)
-    cost = cost + giou_loss_coef * cost_giou
+    cost = cost + giou_loss_coef * cost_giou  # pyrefly: ignore[unsupported-operation]
 
     # cost_giou < 0, but can be a bit higher in the beginning of training:
-    cost_upper_bound = cost_upper_bound + giou_loss_coef * 1.0
+    cost_upper_bound = cost_upper_bound + giou_loss_coef * 1.0  # pyrefly: ignore[unsupported-operation]
 
   # Don't make costs too large w.r.t. the rest to avoid numerical instability.
   mask = mask[:, None]
@@ -396,7 +396,7 @@ class MatchingTest(parameterized.TestCase):
     for i, ((sp_row, sp_col), (row, col)) in enumerate(zip(sp_ind, ind)):
       sp_cost = cost_matrix[i, sp_row, sp_col].sum()
       cost = cost_matrix[i, row, col].sum()
-      self.assertAlmostEqual(sp_cost, cost, places=4)
+      self.assertAlmostEqual(sp_cost, cost, places=4)  # pyrefly: ignore[no-matching-overload]
 
   class TestLazyMatcher(parameterized.TestCase):
     """Test lazy_matcher function."""

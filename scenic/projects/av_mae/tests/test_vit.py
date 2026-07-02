@@ -49,7 +49,7 @@ class TestViT(parameterized.TestCase):
 
     params, _, _, _ = train_utils.initialize_model(
         model_def=scenic_model.flax_model,
-        input_spec=[(dataset_meta_data['input_shape'],
+        input_spec=[(dataset_meta_data['input_shape'],  # pyrefly: ignore[bad-argument-type]
                      dataset_meta_data.get('input_dtype', jnp.float32))],
         config=scenic_model.config,
         rngs=init_rngs,
@@ -141,7 +141,7 @@ class TestViTMaeFinetuning(parameterized.TestCase):
 
     params, model_state, _, _ = train_utils.initialize_model(
         model_def=scenic_model.flax_model,
-        input_spec=[(dataset_meta_data['input_shape'],
+        input_spec=[(dataset_meta_data['input_shape'],  # pyrefly: ignore[bad-argument-type]
                      dataset_meta_data.get('input_dtype', jnp.float32))],
         config=scenic_model.config,
         rngs=init_rngs,

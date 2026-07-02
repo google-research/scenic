@@ -352,7 +352,7 @@ class UViTMultiLabelClassificationModel(MultiLabelClassificationModel):
         dtype=model_dtype,
     )
 
-  def loss_function(
+  def loss_function(  # pyrefly: ignore[bad-override]
       self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
       logits: jnp.ndarray,
       auxiliary_outputs: Any,

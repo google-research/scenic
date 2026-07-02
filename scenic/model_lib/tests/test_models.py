@@ -86,7 +86,7 @@ class ModelsTest(parameterized.TestCase):
     # Test batch_norm in inference mode.
     outputs = model.flax_model.apply(
         variables, xs, mutable=False, train=False, debug=False)
-    self.assertEqual(outputs.shape, (INPUT_SHAPE[0], NUM_OUTPUTS))
+    self.assertEqual(outputs.shape, (INPUT_SHAPE[0], NUM_OUTPUTS))  # pyrefly: ignore[missing-attribute]
 
   @parameterized.named_parameters(*SEGMENTATION_KEYS)
   def test_segmentation_models(self, model_name):
@@ -131,7 +131,7 @@ class ModelsTest(parameterized.TestCase):
     # Test batch_norm in inference mode.
     outputs = model.flax_model.apply(
         variables, xs, mutable=False, train=False, debug=False)
-    self.assertEqual(outputs.shape, INPUT_SHAPE[:3] + (NUM_OUTPUTS,))
+    self.assertEqual(outputs.shape, INPUT_SHAPE[:3] + (NUM_OUTPUTS,))  # pyrefly: ignore[missing-attribute]
 
 
 if __name__ == '__main__':

@@ -33,7 +33,7 @@ class VideoUtilsTest(parameterized.TestCase):
     self.assertSequenceEqual(
         output_shape,
         video_utils.sample_frames_uniformly(
-            np.zeros(input_shape), n_sampled_frames).shape)
+            np.zeros(input_shape), n_sampled_frames).shape)  # pyrefly: ignore[bad-argument-type]
 
 
 if __name__ == '__main__':

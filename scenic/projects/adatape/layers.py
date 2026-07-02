@@ -404,10 +404,10 @@ class Encoder1DBlock(nn.Module):
   @nn.compact
   def __call__(self,  # pytype: disable=annotation-type-mismatch  # jax-ndarray
                inputs_q: jnp.ndarray,
-               inputs_kv: jnp.ndarray = None,
+               inputs_kv: jnp.ndarray = None,  # pyrefly: ignore[bad-function-definition]
                input_mask: Optional[jnp.ndarray] = None,
                added_tape_len: int = 0,
-               deterministic: bool = None) -> jnp.ndarray:
+               deterministic: bool = None) -> jnp.ndarray:  # pyrefly: ignore[bad-function-definition]
     """Applies Encoder1DBlock module.
 
     Args:
@@ -472,7 +472,7 @@ class Encoder1DBlock(nn.Module):
         bias_init=nn.initializers.normal(stddev=1e-6))(
             y, deterministic=deterministic)
     if use_tap_mlp:
-      y = jnp.concatenate([y, y_tapes], axis=1)
+      y = jnp.concatenate([y, y_tapes], axis=1)  # pyrefly: ignore[unbound-name]
 
     y = nn_layers.StochasticDepth(rate=self.stochastic_depth)(y, deterministic)
     return y + x
@@ -620,7 +620,7 @@ class AdaTapeEncoder(nn.Module):
           name=f'encoderblock_{lyr}',
           dtype=jax.dtypes.canonicalize_dtype(self.dtype))(
               x_q,
-              x_kv,
+              x_kv,  # pyrefly: ignore[bad-argument-type]
               input_mask=input_mask,
               added_tape_len=tape_added,
               deterministic=not train)
