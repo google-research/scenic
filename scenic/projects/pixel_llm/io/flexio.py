@@ -201,10 +201,10 @@ def _get_single_tfds_dataset(
   if repeat_dataset:
     ds = ds.repeat()  # Repeat indefinitly.
   if shuffle:
-    ds = ds.shuffle(shuffle_buffer_size, seed=rng[0])
+    ds = ds.shuffle(shuffle_buffer_size, seed=rng[0])  # pyrefly: ignore[unsupported-operation]
   if preprocess_fn is not None:
     if rng is not None:
-      ds = apply_process_fn_with_populated_seed(ds, preprocess_fn, rng=rng)
+      ds = apply_process_fn_with_populated_seed(ds, preprocess_fn, rng=rng)  # pyrefly: ignore[bad-argument-type]
     else:
       ds = ds.map(preprocess_fn, num_parallel_calls=tf.data.AUTOTUNE)
   if batch_size:
@@ -215,7 +215,7 @@ def _get_single_tfds_dataset(
         deterministic=True)
   if postprocess_fn is not None:
     if rng is not None:
-      ds = apply_process_fn_with_populated_seed(ds, postprocess_fn, rng=rng)
+      ds = apply_process_fn_with_populated_seed(ds, postprocess_fn, rng=rng)  # pyrefly: ignore[bad-argument-type]
     else:
       ds = ds.map(postprocess_fn, num_parallel_calls=tf.data.AUTOTUNE)
 
@@ -278,7 +278,7 @@ def _get_single_grain_dataset(
       shuffle=shuffle,
       seed=global_rng,
       shard_options=grain.ShardByJaxProcess(drop_remainder=True),
-      transformations=preprocess_fn or (),
+      transformations=preprocess_fn or (),  # pyrefly: ignore[bad-argument-type]
       batch_size=batch_size).as_dataset(start_index=start_index)
 
   if postprocess_fn is not None:
@@ -348,7 +348,7 @@ def _get_single_tfrecord_dataset(
   if rng is None and shuffle:
     raise ValueError("Please set 'rng' when shuffling.")
 
-  ds = tf.data.TFRecordDataset(decode_sharded_names(tfrecords))
+  ds = tf.data.TFRecordDataset(decode_sharded_names(tfrecords))  # pyrefly: ignore[bad-instantiation]
   # Split datasets into machines. Otherwise multi-machine evaluation takes the
   # same images.
   ds = ds.shard(jax.process_count(), jax.process_index())
@@ -373,10 +373,10 @@ def _get_single_tfrecord_dataset(
   if repeat_dataset:
     ds = ds.repeat()  # Repeat indefinitly.
   if shuffle:
-    ds = ds.shuffle(shuffle_buffer_size, seed=rng[0])
+    ds = ds.shuffle(shuffle_buffer_size, seed=rng[0])  # pyrefly: ignore[unsupported-operation]
   if preprocess_fn is not None:
     if rng is not None:
-      ds = apply_process_fn_with_populated_seed(ds, preprocess_fn, rng=rng)
+      ds = apply_process_fn_with_populated_seed(ds, preprocess_fn, rng=rng)  # pyrefly: ignore[bad-argument-type]
     else:
       ds = ds.map(preprocess_fn, num_parallel_calls=tf.data.AUTOTUNE)
   if batch_size:
@@ -388,7 +388,7 @@ def _get_single_tfrecord_dataset(
     )
   if postprocess_fn is not None:
     if rng is not None:
-      ds = apply_process_fn_with_populated_seed(ds, postprocess_fn, rng=rng)
+      ds = apply_process_fn_with_populated_seed(ds, postprocess_fn, rng=rng)  # pyrefly: ignore[bad-argument-type]
     else:
       ds = ds.map(postprocess_fn, num_parallel_calls=tf.data.AUTOTUNE)
   return ds
@@ -427,7 +427,7 @@ def _build_pipeline(
     return None
 
   mode_config = dataset_configs.get(split)
-  config = ml_collections.ConfigDict({**dataset_configs, **mode_config})
+  config = ml_collections.ConfigDict({**dataset_configs, **mode_config})  # pyrefly: ignore[invalid-argument]
 
   merge_sources = config.get('merge_sources', True)
 
@@ -452,7 +452,7 @@ def _build_pipeline(
   for src_id, src in enumerate(config.sources):
     src_name = src.get('name', f'src_{src_id}')
     if rng is not None:
-      rng, ds_rng = jax.random.split(rng)
+      rng, ds_rng = jax.random.split(rng)  # pyrefly: ignore[bad-argument-type]
     else:
       ds_rng = None
 
@@ -592,7 +592,7 @@ def _build_pipeline(
         ds_sources = [_batch_and_prefetch(ds, batch_size) for ds in ds_sources]
         ds_already_batched = True
       ds = tf.data.Dataset.sample_from_datasets(
-          ds_sources, ds_weights, seed=rng[0] if rng is not None else None)
+          ds_sources, ds_weights, seed=rng[0] if rng is not None else None)  # pyrefly: ignore[bad-argument-type]
     else:
       ds = ds_sources[0]
 
@@ -601,7 +601,7 @@ def _build_pipeline(
         ds_pp: tf.data.Dataset, pp_str: str) -> tf.data.Dataset:
       if rng is not None:
         return apply_process_fn_with_populated_seed(
-            ds_pp, process_fn(pp_str), rng=rng)
+            ds_pp, process_fn(pp_str), rng=rng)  # pyrefly: ignore[bad-argument-type]
       else:
         return ds_pp.map(
             process_fn(pp_str),
@@ -647,7 +647,7 @@ def get_iterator(
 
   if ds is not None:
     total_examples = {}
-    for src_id, src in enumerate(configs.sources):
+    for src_id, src in enumerate(configs.sources):  # pyrefly: ignore[missing-attribute]
       total_examples[src.get('name',
                              f'src_{src_id}')] = get_number_of_examples(src)
     if isinstance(ds, dict):
@@ -659,7 +659,7 @@ def get_iterator(
           ds_it = iter(dataset)
           ds_iter[dataset_name] = map(dataset_utils.tf_to_numpy, ds_it)
         input_spec[dataset_name] = _get_input_spec(dataset)
-      if configs.merge_sources:
+      if configs.merge_sources:  # pyrefly: ignore[missing-attribute]
         first_input_spec = list(input_spec.values())[0]
         for in_spec in input_spec.values():
           assert in_spec == first_input_spec, (
@@ -679,7 +679,7 @@ def get_iterator(
     input_spec = None
     total_examples = -1
 
-  return ds_iter, input_spec, total_examples
+  return ds_iter, input_spec, total_examples  # pyrefly: ignore[bad-return]
 
 
 @datasets.add_dataset('custom_flexio')
@@ -728,7 +728,7 @@ def get_dataset(
 
   # Ensure a different key on each worker:
   global_rng = rng
-  rng = jax.random.fold_in(rng, jax.process_index())
+  rng = jax.random.fold_in(rng, jax.process_index())  # pyrefly: ignore[bad-argument-type]
 
   # Training dataset:
   rng, train_rng = jax.random.split(rng)
@@ -755,11 +755,11 @@ def get_dataset(
 
   return_iterators = dataset_configs.get('return_iterators', True)
   train_iter, train_input_spec, total_train_examples = get_iterator(
-      train_ds,
+      train_ds,  # pyrefly: ignore[bad-argument-type]
       dataset_configs.get('train'),
       return_iterator=return_iterators)
   eval_iter, eval_input_spec, total_eval_examples = get_iterator(
-      eval_ds,
+      eval_ds,  # pyrefly: ignore[bad-argument-type]
       dataset_configs.get('eval'),
       return_iterator=return_iterators)
 
@@ -775,7 +775,7 @@ def get_dataset(
       rng=test_rng)
 
   test_iter, test_input_spec, total_test_examples = get_iterator(
-      test_ds,
+      test_ds,  # pyrefly: ignore[bad-argument-type]
       dataset_configs.get('test'),
       return_iterator=return_iterators)
 
@@ -787,11 +787,11 @@ def get_dataset(
   }
 
   if train_ds is not None:
-    meta_data['input_spec'] = train_input_spec
+    meta_data['input_spec'] = train_input_spec  # pyrefly: ignore[bad-assignment]
   if eval_ds is not None:
-    meta_data['eval_input_spec'] = eval_input_spec
+    meta_data['eval_input_spec'] = eval_input_spec  # pyrefly: ignore[bad-assignment]
   if test_ds is not None:
-    meta_data['test_input_spec'] = test_input_spec
+    meta_data['test_input_spec'] = test_input_spec  # pyrefly: ignore[bad-assignment]
 
   # Update metadata if any extra was provided via config.
   meta_data.update(dataset_configs.get('extra_meta_data', {}))
@@ -802,4 +802,4 @@ def get_dataset(
     dataset.update(
         {'train_ds': train_ds, 'valid_ds': eval_ds, 'test_ds': test_ds})
   logging.info('Dataset metadata: %s', dataset['meta_data'])
-  return dataset_utils.Dataset(**dataset)
+  return dataset_utils.Dataset(**dataset)  # pyrefly: ignore[bad-argument-type]

@@ -109,7 +109,7 @@ class InitPaddingMask:
   """Create a `padding_mask` of `ones` to match the current unpadded image."""
 
   def __call__(self, features):
-    with tf.name_scope(type(self).__name__):
+    with tf.name_scope(type(self).__name__):  # pyrefly: ignore[bad-instantiation]
       h, w = transforms.get_hw(features, dtype=tf.int32)
       # padding_mask is initialized as ones. It will later be padded with zeros.
       features_new = features.copy()
@@ -126,7 +126,7 @@ class FixedSizeCrop:
   crop_size: int
 
   def __call__(self, features):
-    with tf.name_scope(type(self).__name__):
+    with tf.name_scope(type(self).__name__):  # pyrefly: ignore[bad-instantiation]
       h, w = transforms.get_hw(features, dtype=tf.int32)
       wcrop = tf.cast(tf.minimum(w, self.crop_size), tf.int32)
       hcrop = tf.cast(tf.minimum(h, self.crop_size), tf.int32)
@@ -145,7 +145,7 @@ class CenterCrop:
   crop_size: int
 
   def __call__(self, features):
-    with tf.name_scope(type(self).__name__):
+    with tf.name_scope(type(self).__name__):  # pyrefly: ignore[bad-instantiation]
       h, w = transforms.get_hw(features, dtype=tf.int32)
       wcrop = tf.cast(tf.minimum(w, self.crop_size), tf.int32)
       hcrop = tf.cast(tf.minimum(h, self.crop_size), tf.int32)
@@ -165,7 +165,7 @@ class RandomRatioResize:
   target_size: int
 
   def __call__(self, features):
-    with tf.name_scope(type(self).__name__):
+    with tf.name_scope(type(self).__name__):  # pyrefly: ignore[bad-instantiation]
       # TODO(aarnab, zhouxy): Should use stateless rng and provide seeds.
       ratio = tf.random.uniform(
           [], self.min_scale, self.max_scale, dtype=tf.float32)
@@ -182,7 +182,7 @@ class ResizeShorter:
   max_size: Optional[int] = None
 
   def __call__(self, features):
-    with tf.name_scope(type(self).__name__):
+    with tf.name_scope(type(self).__name__):  # pyrefly: ignore[bad-instantiation]
       features_new = features.copy()
       return transforms.resize(
           features_new, self.target_size, max_size=self.max_size)
@@ -243,7 +243,7 @@ class DecodeCocoCaptionAnnotations:
     image = tf.cast(features['image'], tf.float32)
     text_features = features['captions']['text']
     text_tokens = self._tokenizer.string_tensor_to_indices(
-        text_features,
+        text_features,  # pyrefly: ignore[bad-argument-type]
         prepend_bos=True,
         append_eos=True,
         max_num_tokens=self.max_text_tokens,
@@ -268,7 +268,7 @@ class DecodeCocoCaptionAnnotations:
         context = context + tf.constant(
             self.context_suffix, dtype=tf.string)[None]
       context_tokens = self._tokenizer.string_tensor_to_indices(
-          context,
+          context,  # pyrefly: ignore[bad-argument-type]
           prepend_bos=False,
           append_eos=self.append_context_eos,
           max_num_tokens=max_context_tokens,
@@ -392,7 +392,7 @@ class PadMasks:
     features_new = features.copy()
     pad_w = self.pad_w or self.pad_h
 
-    masks = features['label']['masks'][:self.max_masks]
+    masks = features['label']['masks'][:self.max_masks]  # pyrefly: ignore[bad-index]
     num_masks = tf.shape(masks)[0]
     h = tf.shape(masks)[1]
     w = tf.shape(masks)[2]
@@ -442,7 +442,7 @@ class PadDetectionAnnotations:
     ]:
       if key not in features['label']:
         continue
-      item = features['label'][key][: self.max_boxes]
+      item = features['label'][key][: self.max_boxes]  # pyrefly: ignore[bad-index]
       num_item = tf.shape(item)[0]
       features_new['label'][key] = tf.pad(
           item,
@@ -476,7 +476,7 @@ class PadLocoAnnotations:
     for key in ['points', 'prompt_points', 'token_phrase_idx']:
       if key not in features['label']:
         continue
-      item = features['label'][key][: self.num_prompts]
+      item = features['label'][key][: self.num_prompts]  # pyrefly: ignore[bad-index]
       num_item = tf.shape(item)[0]
       features_new['label'][key] = tf.pad(
           item,
@@ -513,7 +513,7 @@ class PadCaptionAnnotations:
     ]:
       if key not in features['label']:
         continue
-      item = features['label'][key][: self.max_captions]
+      item = features['label'][key][: self.max_captions]  # pyrefly: ignore[bad-index]
       num_item = tf.shape(item)[0]
       features_new['label'][key] = tf.pad(
           item,
@@ -980,10 +980,10 @@ class AddTaskMask:
         objcap_loss_valid_mask = 1
       else:
         raise ValueError(f'Unsupported task: {task}')
-    features['label']['cap_loss_valid_mask'] = cap_loss_valid_mask
-    features['label']['proposal_loss_valid_mask'] = proposal_loss_valid_mask
-    features['label']['objcap_loss_valid_mask'] = objcap_loss_valid_mask
-    features['label']['point_loss_valid_mask'] = point_loss_valid_mask
+    features['label']['cap_loss_valid_mask'] = cap_loss_valid_mask  # pyrefly: ignore[unsupported-operation]
+    features['label']['proposal_loss_valid_mask'] = proposal_loss_valid_mask  # pyrefly: ignore[unsupported-operation]
+    features['label']['objcap_loss_valid_mask'] = objcap_loss_valid_mask  # pyrefly: ignore[unsupported-operation]
+    features['label']['point_loss_valid_mask'] = point_loss_valid_mask  # pyrefly: ignore[unsupported-operation]
 
     return features
 
@@ -1023,7 +1023,7 @@ class SplitText:
     features_new = features.copy()
     text_features = features['captions']['text']
     assert 'context' not in features
-    left_text, right_text = split_string(text_features[0])
+    left_text, right_text = split_string(text_features[0])  # pyrefly: ignore[bad-index]
     features_new['context'] = left_text[None]
     features_new['captions']['text'] = right_text[None]
 
@@ -1088,7 +1088,7 @@ class DecodeVgAnnotations:
       )
 
     text_tokens = self._tokenizer.string_tensor_to_indices(
-        text_features,
+        text_features,  # pyrefly: ignore[bad-argument-type]
         prepend_bos=True,
         append_eos=True,
         max_num_tokens=self.max_text_tokens,

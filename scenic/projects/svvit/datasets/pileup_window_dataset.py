@@ -82,7 +82,7 @@ def pileup_normalizer(
     labels: tf.Tensor,
 ) -> Tuple[Dict[str, tf.Tensor], tf.Tensor]:
   """Normalization."""
-  features['pileup'] = features['pileup'] / 255
+  features['pileup'] = features['pileup'] / 255  # pyrefly: ignore[unsupported-operation]
   return features, labels
 
 
@@ -210,24 +210,24 @@ def get_dataset(*,
     """dataset_fn called by data.build_dataset(**kwargs)."""
 
     if split == 'train':
-      if dataset_configs.train_path:
+      if dataset_configs.train_path:  # pyrefly: ignore[missing-attribute]
         path = dataset_configs.train_path
       else:
         # Add path to your training data here:
         path = ''
     elif split == 'valid':
-      if dataset_configs.eval_path:
+      if dataset_configs.eval_path:  # pyrefly: ignore[missing-attribute]
         path = dataset_configs.eval_path
       else:
         # Add path to your test data here:
         path = ''
     elif split == 'test':
-      if dataset_configs.test_path:
+      if dataset_configs.test_path:  # pyrefly: ignore[missing-attribute]
         path = dataset_configs.test_path
       else:
         # Add path to your test data here:
         path = ''
-    if not path:
+    if not path:  # pyrefly: ignore[unbound-name]
       raise ValueError('No path provide. Please modify the path variable to '
                        'hardcode the %s path.' %split)
     dataset_files = tf.io.matching_files(path)
@@ -239,11 +239,11 @@ def get_dataset(*,
     if len(dataset_files) >= num_hosts:
       # Sharding on data sources (e.g. filenames) if there are enough files.
       dataset_files = np.array_split(dataset_files, num_hosts)[host_id]
-      dataset = tf.data.TFRecordDataset(
+      dataset = tf.data.TFRecordDataset(  # pyrefly: ignore[bad-instantiation]
           dataset_files, num_parallel_reads=tf.data.experimental.AUTOTUNE)
     else:
       # Sharding using tf.shard.
-      dataset = tf.data.TFRecordDataset(
+      dataset = tf.data.TFRecordDataset(  # pyrefly: ignore[bad-instantiation]
           dataset_files, num_parallel_reads=tf.data.experimental.AUTOTUNE)
       dataset = dataset.shard(num_shards=num_hosts, index=host_id)
 
@@ -329,8 +329,8 @@ def get_dataset(*,
       'num_train_examples': 30_000 * 19,
       'num_eval_examples': 30_000 * 5,
       'num_test_examples': 30_000,
-      'test_name': get_dataset_name(dataset_configs.test_path),
-      'eval_name': get_dataset_name(dataset_configs.eval_path),
+      'test_name': get_dataset_name(dataset_configs.test_path),  # pyrefly: ignore[missing-attribute]
+      'eval_name': get_dataset_name(dataset_configs.eval_path),  # pyrefly: ignore[missing-attribute]
       'input_dtype': getattr(jnp, dtype_str),
       'target_is_onehot': True,
   }
