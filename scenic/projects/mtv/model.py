@@ -382,7 +382,7 @@ class MultiviewEncoder(nn.Module):
       return self._build_with_cross_view_attention(xs, fusion_layers,
                                                    max_num_layers, train, dtype)
     if self.cross_view_fusion.type == 'bottleneck':
-      return self._build_with_bottleneck(xs, bottleneck, fusion_layers,
+      return self._build_with_bottleneck(xs, bottleneck, fusion_layers,  # pyrefly: ignore[bad-argument-type]
                                          max_num_layers, train, dtype)
     raise ValueError(
         f'Invalid cross view fusion type: {self.cross_view_fusion.type}.')

@@ -79,7 +79,7 @@ def train_step(
     Updated state of training and computed metrics and some training logs.
   """
   training_logs = {}
-  new_rng, rng = jax.random.split(train_state.rng)
+  new_rng, rng = jax.random.split(train_state.rng)  # pyrefly: ignore[bad-argument-type]
 
   if config.get('mixup') and config.mixup.alpha:
     mixup_rng, rng = jax.random.split(rng, 2)
@@ -99,7 +99,7 @@ def train_step(
       rng, axis_name='batch', bind_to='device')
 
   def training_loss_fn(params):
-    variables = {'params': params, **train_state.model_state}
+    variables = {'params': params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
     logits, new_model_state = flax_model.apply(
         variables,
         batch['inputs'],
@@ -123,9 +123,9 @@ def train_step(
 
   assert train_state.tx is not None
   updates, new_opt_state = train_state.tx.update(
-      grad, train_state.opt_state, train_state.params
+      grad, train_state.opt_state, train_state.params  # pyrefly: ignore[bad-argument-type]
   )
-  new_params = optax.apply_updates(train_state.params, updates)
+  new_params = optax.apply_updates(train_state.params, updates)  # pyrefly: ignore[bad-argument-type]
 
   training_logs['l2_grads'] = jnp.sqrt(
       sum([jnp.vdot(g, g) for g in jax.tree_util.tree_leaves(grad)])
@@ -135,12 +135,12 @@ def train_step(
   us = jax.tree_util.tree_leaves(updates)
   training_logs['l2_updates'] = jnp.sqrt(sum([jnp.vdot(u, u) for u in us]))
   # TODO(dehghani): Can we get this from the optimizer instead?
-  training_logs['learning_rate'] = lr_fn(train_state.global_step)
+  training_logs['learning_rate'] = lr_fn(train_state.global_step)  # pyrefly: ignore[bad-argument-type]
 
   metrics = metrics_fn(logits, batch)
 
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=train_state.global_step + 1,
+      global_step=train_state.global_step + 1,  # pyrefly: ignore[unsupported-operation]
       opt_state=new_opt_state,
       params=new_params,
       model_state=new_model_state,
@@ -200,14 +200,14 @@ def eval_step(
   Returns:
     Calculated metrics [and optionally logits or confusion matrix].
   """
-  variables = {'params': train_state.params, **train_state.model_state}
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
   logits = flax_model.apply(
-      variables, batch['inputs'], train=False, mutable=False, debug=debug)
-  metrics = metrics_fn(logits, batch)
+      variables, batch['inputs'], train=False, mutable=False, debug=debug)  # pyrefly: ignore[bad-argument-type]
+  metrics = metrics_fn(logits, batch)  # pyrefly: ignore[bad-argument-type]
 
   if return_confusion_matrix:
     confusion_matrix = vivit_train_utils.get_confusion_matrix(
-        labels=batch['label'], logits=logits, batch_mask=batch['batch_mask']
+        labels=batch['label'], logits=logits, batch_mask=batch['batch_mask']  # pyrefly: ignore[bad-argument-type]
     )
     confusion_matrix = jax.lax.all_gather(confusion_matrix, 'batch')
     return metrics, confusion_matrix
@@ -274,14 +274,14 @@ def test_step(
 
   num_crops = batch['inputs'].shape[0]
 
-  variables = {'params': train_state.params, **train_state.model_state}
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
   for idx in range(0, num_crops, n_clips):
     temp_input = batch['inputs'][idx:idx + n_clips]
     logits = flax_model.apply(
-        variables, temp_input, train=False, mutable=False, debug=debug)
+        variables, temp_input, train=False, mutable=False, debug=debug)  # pyrefly: ignore[bad-argument-type]
     if softmax_logits:
-      logits = nn.softmax(logits, axis=-1)
-    logits = jnp.sum(logits, axis=0)
+      logits = nn.softmax(logits, axis=-1)  # pyrefly: ignore[bad-argument-type]
+    logits = jnp.sum(logits, axis=0)  # pyrefly: ignore[bad-argument-type]
     all_logits = all_logits + logits
 
   all_logits = all_logits / num_crops

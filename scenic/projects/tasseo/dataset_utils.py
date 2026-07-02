@@ -65,7 +65,7 @@ def load_data(prefix, is_train=False, parallel_reads=4):
     raise ValueError(
         'Zero dataset filenames assigned to host %d for reading; %d available'
         ' for all hosts' % (host_id, len(filenames)))
-  files = tf.data.Dataset.list_files(filenames_host_split)
+  files = tf.data.Dataset.list_files(filenames_host_split)  # pyrefly: ignore[bad-argument-type]
 
   data = files.interleave(
       tf.data.TFRecordDataset,

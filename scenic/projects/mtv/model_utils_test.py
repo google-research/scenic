@@ -214,7 +214,7 @@ class ModelUtilsTest(tf.test.TestCase, parameterized.TestCase):
   def test_interpolate_cls_tokens(self):
     cls = np.zeros((1, 4, 1, 4))
     restored_cls = np.ones((1, 8, 1, 4))
-    actual = model_utils.interpolate_cls_tokens(cls, restored_cls)
+    actual = model_utils.interpolate_cls_tokens(cls, restored_cls)  # pyrefly: ignore[bad-argument-type]
     self.assertAllClose(actual, np.ones((1, 4, 1, 4)))
 
   def test_init_bottleneck_same_dim(self):
@@ -222,7 +222,7 @@ class ModelUtilsTest(tf.test.TestCase, parameterized.TestCase):
         'bottleneck': np.zeros((1, 4, 4, 8))
     }
     restored_bottleneck = np.ones((1, 4, 4, 8))
-    model_utils.init_bottleneck(params, restored_bottleneck)
+    model_utils.init_bottleneck(params, restored_bottleneck)  # pyrefly: ignore[bad-argument-type]
     self.assertAllClose(params['bottleneck'], restored_bottleneck)
 
   def test_init_bottleneck_diff_dim(self):
@@ -230,7 +230,7 @@ class ModelUtilsTest(tf.test.TestCase, parameterized.TestCase):
         'bottleneck': np.zeros((1, 4, 4, 8))
     }
     restored_bottleneck = np.ones((1, 6, 4, 8))
-    model_utils.init_bottleneck(params, restored_bottleneck)
+    model_utils.init_bottleneck(params, restored_bottleneck)  # pyrefly: ignore[bad-argument-type]
     self.assertAllClose(params['bottleneck'], np.ones((1, 4, 4, 8)))
 
   def test_interpolate_input_embedding(self):
@@ -242,8 +242,8 @@ class ModelUtilsTest(tf.test.TestCase, parameterized.TestCase):
         'kernel': np.ones((2, 4, 4, 3, 8)),
         'bias': np.ones((8)),
     }
-    model_utils.interpolate_input_embedding(embedding_params,
-                                            restored_embedding_params)
+    model_utils.interpolate_input_embedding(embedding_params,  # pyrefly: ignore[bad-argument-type]
+                                            restored_embedding_params)  # pyrefly: ignore[bad-argument-type]
     self.assertAllClose(embedding_params['kernel'], np.ones((4, 6, 6, 3, 8)))
     self.assertAllClose(embedding_params['bias'], np.ones((8)))
 
@@ -272,7 +272,7 @@ class ModelUtilsTest(tf.test.TestCase, parameterized.TestCase):
 
   def test_initialize_from_mtv_parameters_classifier_token(self):
     self.mtv_cfg.init_from.positional_embed_size_change = 'resize'
-    self.mtv_params.update({
+    self.mtv_params.update({  # pyrefly: ignore[no-matching-overload]
         'cls_view0': np.zeros((1, 2, 1, 8)),
         'cls_view1': np.zeros((1, 1, 1, 16)),
     })
@@ -280,7 +280,7 @@ class ModelUtilsTest(tf.test.TestCase, parameterized.TestCase):
         'pos_embedding'] = np.zeros((1, 1 + 6 * 6, 8))
     self.mtv_params['MultiviewEncoder']['posembed_input_view1'][
         'pos_embedding'] = np.zeros((1, 1 + 6 * 6, 16))
-    self.restored_mtv_params.update({
+    self.restored_mtv_params.update({  # pyrefly: ignore[no-matching-overload]
         'cls_view0': np.ones((1, 4, 1, 8)),
         'cls_view1': np.ones((1, 2, 1, 16)),
     })
@@ -296,14 +296,14 @@ class ModelUtilsTest(tf.test.TestCase, parameterized.TestCase):
         self.restored_mtv_cfg,
         self.restored_mtv_params,
         restore_output_projection=False)
-    self.expected_updated_mtv_params.update({
+    self.expected_updated_mtv_params.update({  # pyrefly: ignore[no-matching-overload]
         'cls_view0': np.ones((1, 2, 1, 8)),
         'cls_view1': np.ones((1, 1, 1, 16)),
     })
     self.expected_updated_mtv_params['MultiviewEncoder'][
-        'posembed_input_view0']['pos_embedding'] = jnp.ones((1, 1 + 6 * 6, 8))
+        'posembed_input_view0']['pos_embedding'] = jnp.ones((1, 1 + 6 * 6, 8))  # pyrefly: ignore[bad-assignment]
     self.expected_updated_mtv_params['MultiviewEncoder'][
-        'posembed_input_view1']['pos_embedding'] = jnp.ones((1, 1 + 6 * 6, 16))
+        'posembed_input_view1']['pos_embedding'] = jnp.ones((1, 1 + 6 * 6, 16))  # pyrefly: ignore[bad-assignment]
     self.assertDictEqualRecursive(self.mtv_params,
                                   self.expected_updated_mtv_params)
 
@@ -326,7 +326,7 @@ class ModelUtilsTest(tf.test.TestCase, parameterized.TestCase):
   def test_initialize_one_view_from_vit_parameters_cross_attention(self):
     self.mtv_params['MultiviewEncoder'].pop('encoderblock_1_view0')
     self.mtv_params['MultiviewEncoder'].pop('encoderblock_1_view1')
-    self.mtv_params['MultiviewEncoder']['cross_view_encoderblock_1'] = {
+    self.mtv_params['MultiviewEncoder']['cross_view_encoderblock_1'] = {  # pyrefly: ignore[bad-assignment]
         'msa_ln_view0': jnp.zeros((10)),
         'msa_ln_view1': jnp.zeros((10)),
         'msa_view0': jnp.zeros((10)),
@@ -339,7 +339,7 @@ class ModelUtilsTest(tf.test.TestCase, parameterized.TestCase):
         'mlp_view0': jnp.zeros((10)),
         'mlp_view1': jnp.zeros((10)),
     }
-    self.restored_vit_params['Transformer']['encoderblock_1'] = {
+    self.restored_vit_params['Transformer']['encoderblock_1'] = {  # pyrefly: ignore[bad-assignment]
         'LayerNorm_0': jnp.ones((10)),
         'LayerNorm_1': jnp.ones((10)),
         'MultiHeadDotProductAttention_0': jnp.ones((10)),
@@ -376,7 +376,7 @@ class ModelUtilsTest(tf.test.TestCase, parameterized.TestCase):
   def test_initialize_one_view_from_vit_parameters_classifier_token(
       self, restored_model_classifier):
     self.mtv_cfg.model.classifier = 'token'
-    self.mtv_params.update({
+    self.mtv_params.update({  # pyrefly: ignore[no-matching-overload]
         'cls_view0': np.zeros((1, 2, 1, 8)),
         'cls_view1': np.zeros((1, 1, 1, 16)),
     })
@@ -386,7 +386,7 @@ class ModelUtilsTest(tf.test.TestCase, parameterized.TestCase):
         'pos_embedding'] = np.zeros((1, 1 + 6 * 6, 8))
     self.restored_vit_cfg.model.classifier = restored_model_classifier
     if restored_model_classifier == 'token':
-      self.restored_vit_params.update({'cls': np.ones((1, 1, 8))})
+      self.restored_vit_params.update({'cls': np.ones((1, 1, 8))})  # pyrefly: ignore[no-matching-overload]
       self.restored_vit_params['Transformer']['posembed_input'][
           'pos_embedding'] = jnp.ones((1, 1 + 6 * 6, 8))
       self.expected_updated_mtv_params_from_vit['MultiviewEncoder'][
@@ -401,12 +401,12 @@ class ModelUtilsTest(tf.test.TestCase, parameterized.TestCase):
     self.expected_updated_mtv_params_from_vit['MultiviewEncoder'][
         'posembed_input_view1']['pos_embedding'] = np.zeros((1, 1 + 6 * 6, 8))
     if restored_model_classifier == 'token':
-      self.expected_updated_mtv_params_from_vit.update({
+      self.expected_updated_mtv_params_from_vit.update({  # pyrefly: ignore[no-matching-overload]
           'cls_view0': jnp.ones((1, 2, 1, 8)),
           'cls_view1': np.zeros((1, 1, 1, 16)),
       })
     else:
-      self.expected_updated_mtv_params_from_vit.update({
+      self.expected_updated_mtv_params_from_vit.update({  # pyrefly: ignore[no-matching-overload]
           'cls_view0': np.zeros((1, 2, 1, 8)),
           'cls_view1': np.zeros((1, 1, 1, 16)),
       })

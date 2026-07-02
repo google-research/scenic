@@ -87,7 +87,7 @@ def train_step(
     Updated state of training and computed metrics and some training logs.
   """
   training_logs = {}
-  new_rng, rng = jax.random.split(train_state.rng)
+  new_rng, rng = jax.random.split(train_state.rng)  # pyrefly: ignore[bad-argument-type]
 
   if config.get('mixup') and config.mixup.alpha:
     mixup_rng, rng = jax.random.split(rng, 2)
@@ -106,7 +106,7 @@ def train_step(
       rng, axis_name='batch', bind_to='device')
 
   def training_loss_fn(params):
-    variables = {'params': params, **train_state.model_state}
+    variables = {'params': params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
     logits, new_model_state = flax_model.apply(
         variables,
         batch['inputs'],
@@ -128,9 +128,9 @@ def train_step(
   if config.get('max_grad_norm') is not None:
     grad = clip_grads(grad, config.max_grad_norm)
 
-  updates, new_opt_state = train_state.tx.update(grad, train_state.opt_state,
+  updates, new_opt_state = train_state.tx.update(grad, train_state.opt_state,  # pyrefly: ignore[missing-attribute]
                                                  train_state.params)
-  new_params = optax.apply_updates(train_state.params, updates)
+  new_params = optax.apply_updates(train_state.params, updates)  # pyrefly: ignore[bad-argument-type]
 
   training_logs['l2_grads'] = jnp.sqrt(
       sum([jnp.vdot(g, g) for g in jax.tree_util.tree_leaves(grad)]))
@@ -139,11 +139,11 @@ def train_step(
   us = jax.tree_util.tree_leaves(updates)
   training_logs['l2_updates'] = jnp.sqrt(sum([jnp.vdot(u, u) for u in us]))
   # TODO(dehghani): Can we get this from the optimizer instead?
-  training_logs['learning_rate'] = lr_fn(train_state.global_step)
+  training_logs['learning_rate'] = lr_fn(train_state.global_step)  # pyrefly: ignore[bad-argument-type]
 
   metrics = metrics_fn(logits, batch)
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=train_state.global_step + 1,
+      global_step=train_state.global_step + 1,  # pyrefly: ignore[unsupported-operation]
       opt_state=new_opt_state,
       params=new_params,
       model_state=new_model_state,
@@ -195,10 +195,10 @@ def eval_step(
   Returns:
     Calculated metrics and optionally output, and batch after all_gather.
   """
-  variables = {'params': train_state.params, **train_state.model_state}
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
   logits = flax_model.apply(
-      variables, batch['inputs'], train=False, mutable=False, debug=debug)
-  metrics = metrics_fn(logits, batch)
+      variables, batch['inputs'], train=False, mutable=False, debug=debug)  # pyrefly: ignore[bad-argument-type]
+  metrics = metrics_fn(logits, batch)  # pyrefly: ignore[bad-argument-type]
   if all_gather:
     targets = {'label': batch['label'], 'batch_mask': batch['batch_mask']}
     logits = jax.lax.all_gather(logits, 'batch')
@@ -247,7 +247,7 @@ def train(
   (params, model_state, num_trainable_params,
    gflops) = train_utils.initialize_model(
        model_def=model.flax_model,
-       input_spec=[(dataset.meta_data['input_shape'],
+       input_spec=[(dataset.meta_data['input_shape'],  # pyrefly: ignore[bad-argument-type]
                     dataset.meta_data.get('input_dtype', jnp.float32))],
        config=config,
        rngs=init_rng)
@@ -279,8 +279,8 @@ def train(
   if config.checkpoint:
     train_state, start_step = train_utils.restore_checkpoint(
         workdir, train_state)
-  chrono.load(train_state.metadata['chrono'])
-  train_state = train_state.replace(metadata={})
+  chrono.load(train_state.metadata['chrono'])  # pyrefly: ignore[unsupported-operation]
+  train_state = train_state.replace(metadata={})  # pyrefly: ignore[missing-attribute]
   # Replicate the optimizer, state, and rng.
   train_state = jax_utils.replicate(train_state)
   del params  # Do not keep a copy of the initial params.
@@ -337,8 +337,8 @@ def train(
   train_metrics, extra_training_logs = [], []
   train_summary, eval_summary = None, None
 
-  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
-  logging.info('Starting training loop at step %d.', start_step + 1)
+  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)  # pyrefly: ignore[bad-argument-type]
+  logging.info('Starting training loop at step %d.', start_step + 1)  # pyrefly: ignore[unsupported-operation]
   report_progress = periodic_actions.ReportProgress(
       num_train_steps=total_steps,
       writer=writer,
@@ -359,13 +359,13 @@ def train(
   if start_step == 0:
     step0_log = {'num_trainable_params': num_trainable_params}
     if gflops:
-      step0_log['gflops'] = gflops
+      step0_log['gflops'] = gflops  # pyrefly: ignore[bad-assignment]
     writer.write_scalars(1, step0_log)
 
   write_note(f'First step compilations...\n{chrono.note}')
-  for step in range(start_step + 1, total_steps + 1):
+  for step in range(start_step + 1, total_steps + 1):  # pyrefly: ignore[unsupported-operation]
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
-      train_batch = next(dataset.train_iter)
+      train_batch = next(dataset.train_iter)  # pyrefly: ignore[bad-argument-type]
       train_state, t_metrics, t_logs = train_step_pmapped(
           train_state, train_batch)
       # This will accumulate metrics in TPU memory up to the point that we log
@@ -411,7 +411,7 @@ def train(
         # Sync model state across replicas.
         train_state = train_utils.sync_model_state_across_replicas(train_state)
         for _ in range(steps_per_eval):
-          eval_batch = next(dataset.valid_iter)
+          eval_batch = next(dataset.valid_iter)  # pyrefly: ignore[bad-argument-type]
           e_metrics, e_output, e_batch = eval_step_pmapped(
               train_state, eval_batch)
           eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
@@ -420,7 +420,7 @@ def train(
             # `lax.all_gather`, fetch to the host and add to the Evaluator:
             e_batch_mask = train_utils.unreplicate_and_get(
                 e_batch['batch_mask']).astype(bool)
-            global_metrics_evaluator.add_batch_of_examples(
+            global_metrics_evaluator.add_batch_of_examples(  # pyrefly: ignore[unbound-name]
                 target=train_utils.unreplicate_and_get(
                     e_batch['label'])[e_batch_mask],
                 output=train_utils.unreplicate_and_get(e_output)[e_batch_mask])
@@ -428,7 +428,7 @@ def train(
         eval_global_metrics_summary = None
         if compute_global_metrics:
           eval_global_metrics_summary = (
-              global_metrics_evaluator.compute_metrics(clear_annotations=True))
+              global_metrics_evaluator.compute_metrics(clear_annotations=True))  # pyrefly: ignore[unbound-name]
         eval_summary = train_utils.log_eval_summary(
             step=step,
             eval_metrics=eval_metrics,
@@ -449,4 +449,4 @@ def train(
   # Wait until computations are done before exiting.
   train_utils.barrier_across_hosts()
   # Return the train and eval summary after last step for regression testing.
-  return train_state, train_summary, eval_summary
+  return train_state, train_summary, eval_summary  # pyrefly: ignore[bad-return]

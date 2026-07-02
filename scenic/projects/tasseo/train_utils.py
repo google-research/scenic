@@ -195,27 +195,27 @@ class TasseoGlobalEvaluator():
     if 'chrom_f1' in self.global_metrics:
       metrics.update(
           try_with_default(lambda: chrom_f1_score(
-              target=self.batches[0], prediction=self.batches[1])))
+              target=self.batches[0], prediction=self.batches[1])))  # pyrefly: ignore[unsupported-operation]
     if 'chrom_recall' in self.global_metrics:
       metrics.update(
           try_with_default(lambda: chrom_recall(
-              target=self.batches[0], prediction=self.batches[1])))
+              target=self.batches[0], prediction=self.batches[1])))  # pyrefly: ignore[unsupported-operation]
     if 'chrom_precision' in self.global_metrics:
       metrics.update(
           try_with_default(lambda: chrom_precision(
-              target=self.batches[0], prediction=self.batches[1])))
+              target=self.batches[0], prediction=self.batches[1])))  # pyrefly: ignore[unsupported-operation]
     if 'chrom_roc_auc_score' in self.global_metrics:
       metrics.update(
           try_with_default(lambda: chrom_roc_auc_score(
-              target=self.batches[0], prediction=self.batches[1])))
+              target=self.batches[0], prediction=self.batches[1])))  # pyrefly: ignore[unsupported-operation]
     if 'chrom_specificity' in self.global_metrics:
       metrics.update(
           try_with_default(lambda: chrom_specificity(
-              target=self.batches[0], prediction=self.batches[1])))
+              target=self.batches[0], prediction=self.batches[1])))  # pyrefly: ignore[unsupported-operation]
     if 'chrom_auc_pr_score' in self.global_metrics:
       metrics.update(
           try_with_default(lambda: chrom_auc_pr_score(
-              target=self.batches[0], prediction=self.batches[1])))
+              target=self.batches[0], prediction=self.batches[1])))  # pyrefly: ignore[unsupported-operation]
     if clear_annotations:
       self.clear()
     # pylint: enable=g-long-lambda

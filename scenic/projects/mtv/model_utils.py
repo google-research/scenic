@@ -289,12 +289,12 @@ def initialize_from_mtv_train_state(
     Updated train_state.
   """
 
-  params = flax.core.unfreeze(train_state.params)
-  restored_params = flax.core.unfreeze(restored_train_state.params)
+  params = flax.core.unfreeze(train_state.params)  # pyrefly: ignore[bad-argument-type]
+  restored_params = flax.core.unfreeze(restored_train_state.params)  # pyrefly: ignore[bad-argument-type]
   initialize_from_mtv_parameters(config, params, restored_model_cfg,
                                  restored_params, restore_output_projection,
                                  model_prefix_path)
-  return train_state.replace(params=flax.core.freeze(params))
+  return train_state.replace(params=flax.core.freeze(params))  # pyrefly: ignore[missing-attribute]
 
 
 def initialize_one_view_from_vit_parameters(
@@ -398,11 +398,11 @@ def initialize_from_vit_train_states(
   assert len(restored_train_states) == len(restored_model_formats), (
       'restored_train_states must have the same dimension as '
       'restored_model_formats.')
-  params = flax.core.unfreeze(train_state.params)
+  params = flax.core.unfreeze(train_state.params)  # pyrefly: ignore[bad-argument-type]
   for view_idx, restored_state in enumerate(restored_train_states):
-    restored_model_params = flax.core.unfreeze(restored_state.params)
+    restored_model_params = flax.core.unfreeze(restored_state.params)  # pyrefly: ignore[bad-argument-type]
     initialize_one_view_from_vit_parameters(config, params,
                                             restored_model_cfgs[view_idx],
                                             restored_model_params, view_idx)
 
-  return train_state.replace(params=flax.core.freeze(params))
+  return train_state.replace(params=flax.core.freeze(params))  # pyrefly: ignore[missing-attribute]

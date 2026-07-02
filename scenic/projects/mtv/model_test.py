@@ -119,7 +119,7 @@ class ModelTest(tf.test.TestCase, parameterized.TestCase):
     inputs = [jnp.ones((2, 4, 8)), jnp.ones((2, 8, 16))]
     temporal_dims = [2, 4]
     outputs, vars_dict = model.MultiviewEncoder(
-        self.view_configs, self.cross_view_fusion,
+        self.view_configs, self.cross_view_fusion,  # pyrefly: ignore[bad-argument-type]
         temporal_dims).init_with_output(rng, inputs, temporal_dims, None)
     self.assertEqual(outputs[0].shape, (2, 4, 8))
     self.assertEqual(outputs[1].shape, (2, 8, 16))
@@ -200,7 +200,7 @@ class ModelTest(tf.test.TestCase, parameterized.TestCase):
     self.global_encoder_config.hidden_size = 16
     outputs, vars_dict = model.MTV(
         view_configs=self.view_configs,
-        cross_view_fusion=self.cross_view_fusion,
+        cross_view_fusion=self.cross_view_fusion,  # pyrefly: ignore[bad-argument-type]
         temporal_encoding_config=self.temporal_encoding_config,
         global_encoder_config=self.global_encoder_config,
         input_token_temporal_dims=[1, 2],
@@ -239,7 +239,7 @@ class ModelTest(tf.test.TestCase, parameterized.TestCase):
     images = jnp.ones((2, 4, 8, 8, 3))
     outputs, _ = model.MTV(
         view_configs=self.view_configs,
-        cross_view_fusion=self.cross_view_fusion,
+        cross_view_fusion=self.cross_view_fusion,  # pyrefly: ignore[bad-argument-type]
         temporal_encoding_config=self.temporal_encoding_config,
         global_encoder_config=self.global_encoder_config,
         input_token_temporal_dims=[1, 2],
@@ -348,7 +348,7 @@ class ModelTest(tf.test.TestCase, parameterized.TestCase):
         inputs,
         train=True,
         rngs={'dropout': dropout_rng})
-    self.assertEqual(outputs.shape, (2, 10))
+    self.assertEqual(outputs.shape, (2, 10))  # pyrefly: ignore[missing-attribute]
 
   def test_mtv_multihead_classification_model(self):
     rng = random.PRNGKey(0)
@@ -374,7 +374,7 @@ class ModelTest(tf.test.TestCase, parameterized.TestCase):
         inputs,
         train=True,
         rngs={'dropout': dropout_rng})
-    self.assertEqual(outputs.shape, (2, 10))
+    self.assertEqual(outputs.shape, (2, 10))  # pyrefly: ignore[missing-attribute]
 
 
 if __name__ == '__main__':
