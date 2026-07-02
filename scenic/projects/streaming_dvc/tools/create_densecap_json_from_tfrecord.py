@@ -91,7 +91,7 @@ def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError('Too many command-line arguments.')
   dataset_files = decode_sharded_names(FLAGS.input)
-  ds = tf.data.TFRecordDataset(dataset_files)
+  ds = tf.data.TFRecordDataset(dataset_files)  # pyrefly: ignore[bad-instantiation]
   ds = ds.map(
       lambda x: tf.io.parse_sequence_example(
           x,

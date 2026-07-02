@@ -209,7 +209,7 @@ class ModifiedResNet(nn.Module):
         self.features * 8, self.num_layers[3], stride=2, name='layer4')
     if self.out_features is not None:
       self.attnpool = AttentionPool(
-          self.num_heads, self.out_features, name='attnpool')
+          self.num_heads, self.out_features, name='attnpool')  # pyrefly: ignore[bad-argument-type]
 
   def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
 
@@ -499,9 +499,9 @@ class CLIP(nn.Module):
     else:
       self.vision_num_heads = self.vision_features // 64
       self.visual = VisionTransformer(
-          patch_size=self.vision_patch_size,
+          patch_size=self.vision_patch_size,  # pyrefly: ignore[bad-argument-type]
           features=self.vision_features,
-          num_layers=self.vision_num_layers,
+          num_layers=self.vision_num_layers,  # pyrefly: ignore[bad-argument-type]
           num_heads=self.vision_num_heads,
           out_features=None if self.vision_return_map else self.embed_dim,
           stochastic_droplayer_rate=self.vision_stochastic_droplayer_rate,
@@ -520,7 +520,7 @@ class CLIP(nn.Module):
                    normalize: bool = True,
                    *,
                    deterministic: bool = True) -> jnp.ndarray:
-    x = self.visual(image, deterministic=deterministic)[0]
+    x = self.visual(image, deterministic=deterministic)[0]  # pyrefly: ignore[unexpected-keyword]
     if normalize:
       x /= jnp.linalg.norm(x, axis=-1, keepdims=True)
     return x

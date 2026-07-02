@@ -327,7 +327,7 @@ class TokenTuringMachineSimpleUnit(nn.Module):
                 output_tokens, deterministic=not train)
       output_tokens = nn.LayerNorm()(output_tokens)
 
-    mem_out_tokens = output_tokens[:, self.process_size:, :]
+    mem_out_tokens = output_tokens[:, self.process_size:, :]  # pyrefly: ignore[unbound-name]
     output_tokens = output_tokens[:, :self.process_size, :]
 
     return (mem_out_tokens, output_tokens)

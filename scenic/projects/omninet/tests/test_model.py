@@ -50,7 +50,7 @@ class OmniNetModelTest(parameterized.TestCase):
     omnimixer_encoder_vars = omnimixer_encoder_def().init(rng, x, train=False)
     y = omnimixer_encoder_def().apply(omnimixer_encoder_vars, x, train=False)
     # Test outputs shape.
-    self.assertEqual(y.shape, x.shape)
+    self.assertEqual(y.shape, x.shape)  # pyrefly: ignore[missing-attribute]
 
 
 if __name__ == '__main__':

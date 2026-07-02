@@ -147,7 +147,7 @@ def adapt_attention_weights(params: Dict[str, Array],
       query, key, value = np.split(parameter, 3, axis=0)
       query, key, value = query.transpose(), key.transpose(), value.transpose()
       d, _ = query.shape
-      query = query.reshape(d, num_heads, -1)
+      query = query.reshape(d, num_heads, -1)  # pyrefly: ignore[unbound-name]
       key = key.reshape(d, num_heads, -1)
       value = value.reshape(d, num_heads, -1)
 
@@ -178,7 +178,7 @@ def adapt_attention_weights(params: Dict[str, Array],
     elif 'attn.proj.weight' in name:
       # Reshape the output projection with the number of heads.
       d, _ = parameter.shape
-      output_proj = parameter.transpose().reshape((num_heads, -1, d))
+      output_proj = parameter.transpose().reshape((num_heads, -1, d))  # pyrefly: ignore[unbound-name]
       new_params[name] = output_proj
 
     else:

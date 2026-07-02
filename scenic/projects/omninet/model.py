@@ -77,12 +77,12 @@ class OmnidirectionalEncoder1D(nn.Module):
         x = fast_vit_model_utils.Encoder1DBlock(  # pytype: disable=wrong-arg-types  # jax-ndarray
             mlp_dim=self.mlp_dim,
             attention_fn=self.attention_fn,
-            attention_configs=self.attention_configs,
+            attention_configs=self.attention_configs,  # pyrefly: ignore[bad-argument-type]
             dropout_rate=self.dropout_rate,
             attention_dropout_rate=self.attention_dropout_rate,
             droplayer_p=droplayer_p,
             name=f'encoder_block_{lyr}')(
-                x, inputs_kv=None, deterministic=not train)
+                x, inputs_kv=None, deterministic=not train)  # pyrefly: ignore[bad-argument-type]
         partition_layers.append(x)
 
       if len(partition_layers) == (self.omninet.partition - 1):
@@ -131,7 +131,7 @@ class OmnidirectionalEncoder1D(nn.Module):
                 droplayer_p=droplayer_p,
                 post_sa_fn=post_sa_fn,
                 name=f'omni_encoder_block_{lyr}')(
-                    xp, inputs_kv=None, deterministic=not train)
+                    xp, inputs_kv=None, deterministic=not train)  # pyrefly: ignore[bad-argument-type]
           elif self.omninet.encoder.type == 'factorized':
             if self.omninet.integrate != 'factorized':
               raise ValueError(
@@ -173,7 +173,7 @@ class OmnidirectionalEncoder1D(nn.Module):
               name=f'omni_encoder_block_{lyr}')(
                   x, xp, deterministic=not train)
         ########################################################
-        x = x + xp
+        x = x + xp  # pyrefly: ignore[unbound-name]
         partition_layers = []
         skip = True
 
@@ -243,7 +243,7 @@ class OmniNet(nn.Module):
         mlp_dim=self.mlp_dim,
         num_layers=self.num_layers,
         attention_configs=self.attention_configs,
-        attention_fn=self.attention_fn,
+        attention_fn=self.attention_fn,  # pyrefly: ignore[bad-argument-type]
         omninet=self.omninet,
         dropout_rate=self.dropout_rate,
         attention_dropout_rate=self.attention_dropout_rate,

@@ -346,7 +346,7 @@ def expplus_softmax_kernel_transformation(
     data /= lengths
     data *= jnp.sqrt(jnp.sqrt(data.shape[-1]))
 
-  ratio = 1.0 / jnp.sqrt(projection_matrix.shape[0])
+  ratio = 1.0 / jnp.sqrt(projection_matrix.shape[0])  # pyrefly: ignore[missing-attribute]
   data_dash = jnp.einsum('blhd,md->blhm', data_normalizer * data,
                          projection_matrix)
   diag_data = jnp.square(data)
@@ -374,7 +374,7 @@ def expplus_softmax_kernel_transformation(
   d_prod *= (data_normalizer * data_normalizer)
   d_prod *= (2.0 / (l * l))
   ave = first_sum_of_squares + second_sum_of_squares + d_prod
-  dim = projection_matrix.shape[-1]
+  dim = projection_matrix.shape[-1]  # pyrefly: ignore[missing-attribute]
   A = (1.0 / (4.0 * ave)) * (
       jnp.sqrt((2.0 * ave + dim) *
                (2.0 * ave + dim) + 8.0 * dim * ave) - 2.0 * ave - dim)
@@ -382,8 +382,8 @@ def expplus_softmax_kernel_transformation(
   B = jnp.sqrt(1.0 - 4.0 * A)
   D = jnp.power(1.0 - 4.0 * A, dim / 4.0)
 
-  diag_omega = jnp.square(projection_matrix)
-  diag_omega = jnp.sum(diag_omega, axis=projection_matrix.ndim - 1)
+  diag_omega = jnp.square(projection_matrix)  # pyrefly: ignore[bad-argument-type]
+  diag_omega = jnp.sum(diag_omega, axis=projection_matrix.ndim - 1)  # pyrefly: ignore[missing-attribute]
   diag_omega = jnp.expand_dims(diag_omega, axis=0)
   diag_omega = jnp.expand_dims(diag_omega, axis=0)
   diag_omega = jnp.expand_dims(diag_omega, axis=0)
@@ -826,7 +826,7 @@ def favor_attention(query,
   # TODO(kchoro): Add support for padding + hybrid.
   if hybrid_global_size > 0:
     attention_output = jnp.concatenate(
-        [global_full_attn_output, attention_output], 1)
+        [global_full_attn_output, attention_output], 1)  # pyrefly: ignore[unbound-name]
   return attention_output
 
 
@@ -873,8 +873,8 @@ def masked_favor_attention(query, key, value, masker, mask, kernel_config):
 
     kernel_transformation = gen_transformation
 
-  query_prime = kernel_transformation(query, True, projection_matrix)
-  key_prime = kernel_transformation(key, False, projection_matrix)
+  query_prime = kernel_transformation(query, True, projection_matrix)  # pyrefly: ignore[bad-argument-type]
+  key_prime = kernel_transformation(key, False, projection_matrix)  # pyrefly: ignore[bad-argument-type]
   av_attention = masked_numerator(query_prime, key_prime, value, masker, mask)
   attention_normalizer = masked_denominator(query_prime, key_prime, masker,
                                             mask)
@@ -1153,7 +1153,7 @@ def sharp_masked_favor_attention(query,
   # TODO(kchoro): Add support for padding + hybrid.
   if hybrid_global_size > 0:
     attention_output = jnp.concatenate(
-        [global_full_attn_output, attention_output], 1)
+        [global_full_attn_output, attention_output], 1)  # pyrefly: ignore[unbound-name]
   return attention_output
 
 
@@ -1209,7 +1209,7 @@ def regular_performer_dot_product_attention(
   del precision
   del toeplitz_params
 
-  if kernel_config['kernel_transformation'] == 'softmax':
+  if kernel_config['kernel_transformation'] == 'softmax':  # pyrefly: ignore[unsupported-operation]
     kernel_transformation = exp_softmax_kernel_transformation
   elif kernel_config['kernel_transformation'] == 'linear_gaussian':
     kernel_transformation = sat.softmax_positive_rfs
@@ -1228,13 +1228,13 @@ def regular_performer_dot_product_attention(
       value,
       inputs_mask=None,
       kernel_transformation=kernel_transformation,
-      num_features=kernel_config['num_features'],
+      num_features=kernel_config['num_features'],  # pyrefly: ignore[unsupported-operation]
       head_dim=query.shape[-1],
       seed=0,
-      rpe_method=kernel_config['rpe_method'],
-      num_realizations=kernel_config['num_realizations'],
-      num_sines=kernel_config['num_sines'],
-      use_random_projections=kernel_config['use_random_projections'],
+      rpe_method=kernel_config['rpe_method'],  # pyrefly: ignore[unsupported-operation]
+      num_realizations=kernel_config['num_realizations'],  # pyrefly: ignore[unsupported-operation]
+      num_sines=kernel_config['num_sines'],  # pyrefly: ignore[unsupported-operation]
+      use_random_projections=kernel_config['use_random_projections'],  # pyrefly: ignore[unsupported-operation]
       hybrid_global_size=0,
       segment_ids=None,
       data_dependent_kfs=False)
@@ -1349,7 +1349,7 @@ def sharp_masked_performer_dot_product_attention(
   del deterministic
   del dtype
   del precision
-  if kernel_config['kernel_transformation'] == 'softmax':
+  if kernel_config['kernel_transformation'] == 'softmax':  # pyrefly: ignore[unsupported-operation]
     kernel_transformation = exp_softmax_kernel_transformation
   elif kernel_config['kernel_transformation'] == 'linear_gaussian':
     kernel_transformation = sat.softmax_positive_rfs
@@ -1371,13 +1371,13 @@ def sharp_masked_performer_dot_product_attention(
       toeplitz_params,
       inputs_mask=None,
       kernel_transformation=kernel_transformation,
-      num_features=kernel_config['num_features'],
+      num_features=kernel_config['num_features'],  # pyrefly: ignore[unsupported-operation]
       head_dim=query.shape[-1],
       seed=0,
-      rpe_method=kernel_config['rpe_method'],
-      num_realizations=kernel_config['num_realizations'],
-      num_sines=kernel_config['num_sines'],
-      use_random_projections=kernel_config['use_random_projections'],
+      rpe_method=kernel_config['rpe_method'],  # pyrefly: ignore[unsupported-operation]
+      num_realizations=kernel_config['num_realizations'],  # pyrefly: ignore[unsupported-operation]
+      num_sines=kernel_config['num_sines'],  # pyrefly: ignore[unsupported-operation]
+      use_random_projections=kernel_config['use_random_projections'],  # pyrefly: ignore[unsupported-operation]
       hybrid_global_size=0,
       segment_ids=None,
       data_dependent_kfs=False)
