@@ -108,7 +108,7 @@ def run_model_all_gather_results(variables: Dict[str, Any],
       train=train,
       rngs={'dropout': dropout_rng} if train else None,
       method=flax_model.fuse_video_text)
-  logits = gather_flatten(logits)
+  logits = gather_flatten(logits)  # pyrefly: ignore[bad-argument-type]
 
   return logits  # pytype: disable=bad-return-type  # jax-ndarray
 
@@ -175,22 +175,22 @@ def eval_step(
     Calculated metrics and logits.
   """
 
-  variables = {'params': train_state.params, **train_state.model_state}
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
   if all_gather_loss:
     assert task == 'moment_retrieval'
     metrics, logits = _eval_step_all_gather(variables, batch, task, dataset,
                                             flax_model, metrics_fn, debug)
   else:
     logits = flax_model.apply(
-        variables,
+        variables,  # pyrefly: ignore[bad-argument-type]
         batch['inputs'],
         task=task,
         dataset=dataset,
         train=False,
         mutable=False,
         debug=debug)
-    metrics = metrics_fn(logits, batch)
-  return metrics, logits
+    metrics = metrics_fn(logits, batch)  # pyrefly: ignore[bad-argument-type]
+  return metrics, logits  # pyrefly: ignore[bad-return]
 
 
 def _get_input_batch_from_one_prompt(
@@ -246,7 +246,7 @@ def _average_multicrop_multiprompts(train_state: train_utils.TrainState,
       'Spatial padding is not supported in multi-crop evaluation.')
 
   num_crops = batch['label'].shape[0]
-  variables = {'params': train_state.params, **train_state.model_state}
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
   if prompt_index is not None:
     prompt_indices = [prompt_index]
   else:
@@ -260,7 +260,7 @@ def _average_multicrop_multiprompts(train_state: train_utils.TrainState,
           crop_index=idx,
           n_clips=n_clips)
       logits = flax_model.apply(
-          variables,
+          variables,  # pyrefly: ignore[bad-argument-type]
           temp_input,
           task=task,
           dataset=dataset,
@@ -268,8 +268,8 @@ def _average_multicrop_multiprompts(train_state: train_utils.TrainState,
           mutable=False,
           debug=debug)
       if softmax_logits:
-        logits = nn.softmax(logits, axis=-1)
-      logits = jnp.sum(logits, axis=0)
+        logits = nn.softmax(logits, axis=-1)  # pyrefly: ignore[bad-argument-type]
+      logits = jnp.sum(logits, axis=0)  # pyrefly: ignore[bad-argument-type]
       all_logits = all_logits + logits
   return all_logits / (num_crops * num_prompts)
 
@@ -370,7 +370,7 @@ def run_classification_test_steps_and_save_eval_summary(
 
   all_logits, all_labels, all_batch_masks, all_vids = [], [], [], []
   for step in range(total_eval_steps):
-    test_batch = next(dataset.test_iter)
+    test_batch = next(dataset.test_iter)  # pyrefly: ignore[bad-argument-type]
     logits, label, batch_mask, vids = test_step_pmapped(train_state, test_batch)
     (logits, label, batch_mask, vids) = jax.tree_util.tree_map(
         jax_utils.unreplicate, (logits, label, batch_mask, vids)
@@ -440,7 +440,7 @@ def run_action_segmentation_test_steps_and_save_eval_summary(
       [], [], [], [], [],
       )
   for step in range(total_eval_steps):
-    test_batch = next(dataset.test_iter)
+    test_batch = next(dataset.test_iter)  # pyrefly: ignore[bad-argument-type]
     logits, label, batch_mask, frame_mask, vids = test_step_pmapped(
         train_state, test_batch)
     (logits, label, batch_mask, frame_mask, vids) = jax.tree_util.tree_map(
@@ -530,7 +530,7 @@ def temporal_localization_test_step(
     logits = jnp.zeros((num_frames, num_classes * 3), dtype=jnp.float32)
   else:
     logits = jnp.zeros((num_frames, num_classes + 2), dtype=jnp.float32)
-  variables = {'params': train_state.params, **train_state.model_state}
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
   for prompt_index in range(num_prompts):
     temp_input = _get_input_batch_from_one_prompt(
         batch,
@@ -539,7 +539,7 @@ def temporal_localization_test_step(
         crop_index=0,
         n_clips=1)
     temp_logits = flax_model.apply(
-        variables,
+        variables,  # pyrefly: ignore[bad-argument-type]
         temp_input,
         task=task,
         dataset=dataset,
@@ -547,7 +547,7 @@ def temporal_localization_test_step(
         mutable=False,
         debug=debug,
     )
-    logits = logits + temp_logits
+    logits = logits + temp_logits  # pyrefly: ignore[unsupported-operation]
   logits = logits[None, ...] / num_prompts
   if output_per_class_displacements:
     logits = logits.reshape((bs, num_frames, num_classes, 3))
@@ -599,7 +599,7 @@ def _run_temporal_localization_test_steps(
           'multiclass_nms', False) else
       postprocessing_utils.non_max_suppression)
   for step in range(total_eval_steps):
-    test_batch = next(dataset.test_iter)
+    test_batch = next(dataset.test_iter)  # pyrefly: ignore[bad-argument-type]
     output = test_step_pmapped(train_state, test_batch)
     output = jax.tree_util.tree_map(train_utils.unreplicate_and_get, output)
     (
@@ -745,17 +745,17 @@ def moment_retrieval_test_step(
       batch['label'].shape[0] == 1
   )  # For multicrop to work the local batch size needs to be 1
   bs, num_captions, num_frames, _ = batch['label'].shape
-  variables = {'params': train_state.params, **train_state.model_state}
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
   logits = flax_model.apply(
-      variables,
+      variables,  # pyrefly: ignore[bad-argument-type]
       batch['inputs'],
       task='moment_retrieval',
       dataset=dataset,
       train=False,
       mutable=False,
       debug=debug)
-  assert logits.shape[0] == 1 and logits.shape[1] == num_captions
-  logits = logits[None, ...]
+  assert logits.shape[0] == 1 and logits.shape[1] == num_captions  # pyrefly: ignore[missing-attribute]
+  logits = logits[None, ...]  # pyrefly: ignore[bad-index]
   logits = logits.reshape((bs, bs, num_captions, num_frames, 3))
   logits = logits[jnp.arange(bs), jnp.arange(bs)]
   class_probs = nn.sigmoid(logits[..., 0])
@@ -787,7 +787,7 @@ def _run_moment_retrieval_test_steps(
   duplicates = 0
   nms_fn = postprocessing_utils.non_max_suppression_mr
   for step in range(total_eval_steps):
-    test_batch = next(dataset.test_iter)
+    test_batch = next(dataset.test_iter)  # pyrefly: ignore[bad-argument-type]
     output = test_step_pmapped(train_state, test_batch)
     output = jax.tree_util.tree_map(train_utils.unreplicate_and_get, output)
     (pred_class_probs, pred_displacements, batch_mask, input_mask, caption_mask,
@@ -829,8 +829,8 @@ def _run_moment_retrieval_test_steps(
             )
         )
         cur_pred_scores, cur_pred_segments = nms_fn(
-            cur_pred_scores,
-            cur_pred_segments,
+            cur_pred_scores,  # pyrefly: ignore[bad-argument-type]
+            cur_pred_segments,  # pyrefly: ignore[bad-argument-type]
             config,
         )
 

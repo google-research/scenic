@@ -125,8 +125,8 @@ def weighted_unnormalized_box_regression_loss(
   # Only compute the losses on the positive segments.
   box_regression_loss = box_regression_loss * label
   if weights is None:
-    return box_regression_loss
-  return model_utils.apply_weights(box_regression_loss, weights)
+    return box_regression_loss  # pyrefly: ignore[bad-return]
+  return model_utils.apply_weights(box_regression_loss, weights)  # pyrefly: ignore[bad-argument-type]
 
 
 def weighted_unnormalized_iou(
@@ -157,7 +157,7 @@ def weighted_unnormalized_iou(
   iou = unloc_metrics.temporal_iou(displacements, gt_displacements)
   # Only compute the losses on the positive segments.
   iou = iou * label
-  return model_utils.apply_weights(iou, weights)
+  return model_utils.apply_weights(iou, weights)  # pyrefly: ignore[bad-argument-type]
 
 
 def num_positive_frames(

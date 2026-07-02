@@ -114,7 +114,7 @@ class ViViT(nn.Module):
     n_batch, n_tokens, hidden_dim = x_tokens.shape
     if self.modality == base_model.FeatureTargets.RGB:
       height = width = int(np.sqrt(n_tokens // temporal_dims))
-      if height * width * temporal_dims != n_tokens:
+      if height * width * temporal_dims != n_tokens:  # pyrefly: ignore[unsupported-operation]
         raise ValueError('Input is assumed to be square.')
 
     if (self.modality == base_model.FeatureTargets.SPECTROGRAM
@@ -125,12 +125,12 @@ class ViViT(nn.Module):
     # Add positional encodings.
     input_shape = None
     if self.positional_embedding == 'sinusoidal_3d':
-      input_shape = [n_batch, temporal_dims, height, width, hidden_dim]
+      input_shape = [n_batch, temporal_dims, height, width, hidden_dim]  # pyrefly: ignore[unbound-name]
     elif self.positional_embedding == 'learned_space_time':
-      input_shape = [n_batch, temporal_dims, height * width, hidden_dim]
+      input_shape = [n_batch, temporal_dims, height * width, hidden_dim]  # pyrefly: ignore[unbound-name]
 
     x_tokens = model_utils.add_positional_embeddings(
-        x_tokens, self.positional_embedding, input_shape=input_shape)
+        x_tokens, self.positional_embedding, input_shape=input_shape)  # pyrefly: ignore[bad-argument-type]
 
     x_tokens = self.add_modality_token(x_tokens)
 
@@ -362,8 +362,8 @@ class ViViTMaskedAutoencoder(nn.Module):
     # add positional encodings in the decoder without having to worry about
     # their ordering.
     x_all = jnp.zeros((n_batch, n_tokens, self.decoder_config.hidden_size))
-    x_all = x_all.at[batch_indices, unmasked_indices].set(x_unmasked_proj)
-    x_all = x_all.at[batch_indices, mask_indices].set(mask_token)
+    x_all = x_all.at[batch_indices, unmasked_indices].set(x_unmasked_proj)  # pyrefly: ignore[unbound-name]
+    x_all = x_all.at[batch_indices, mask_indices].set(mask_token)  # pyrefly: ignore[unbound-name]
 
     # Note. VideoMAE (Facebook) adds positional encodinggs to the CLS token at
     # the encoder as well. VideoMAE (Tong et al) don't use a CLS token.
@@ -377,7 +377,7 @@ class ViViTMaskedAutoencoder(nn.Module):
         layer_name='posembed_decoder')
 
     if self.classifier == 'token':
-      x_all = jnp.concatenate([cls_encoded, x_all], axis=1)
+      x_all = jnp.concatenate([cls_encoded, x_all], axis=1)  # pyrefly: ignore[unbound-name]
 
     x_decoded = vivit_model.Encoder(
         temporal_dims=temporal_dims,

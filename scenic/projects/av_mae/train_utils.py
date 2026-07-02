@@ -425,7 +425,7 @@ def _do_cutmix(inputs: jnp.ndarray, rng: Any,
 
   # TODO(unterthiner): we are using the same bounding box for the whole batch
   y_min, y_max, x_min, x_max = get_random_bounding_box(
-      inputs.shape[-3:-1], ratio, rng)
+      inputs.shape[-3:-1], ratio, rng)  # pyrefly: ignore[bad-argument-type]
 
   height, width = inputs.shape[-3], inputs.shape[-2]
   y_idx = jnp.arange(height)
@@ -578,12 +578,12 @@ def test_step(
   if isinstance(train_state, train_utils.TrainState):
     variables = {
         'params': train_state.params,
-        **train_state.model_state
+        **train_state.model_state  # pyrefly: ignore[invalid-argument]
     }
   elif isinstance(train_state, train_utils_deprecated.TrainState):
     variables = {
         'params': train_state.optimizer.target,  # pytype: disable=attribute-error
-        **train_state.model_state
+        **train_state.model_state  # pyrefly: ignore[invalid-argument]
     }
   else:
     raise ValueError('Unknown train_state type.')
@@ -592,10 +592,10 @@ def test_step(
   for idx in range(0, num_crops, n_clips):
     temp_input = batch['inputs'][idx:idx + n_clips]
     logits = flax_model.apply(
-        variables, temp_input, train=False, mutable=False, debug=debug)
+        variables, temp_input, train=False, mutable=False, debug=debug)  # pyrefly: ignore[bad-argument-type]
     if softmax_logits:
-      logits = nn.softmax(logits, axis=-1)
-    logits = jnp.sum(logits, axis=0)
+      logits = nn.softmax(logits, axis=-1)  # pyrefly: ignore[bad-argument-type]
+    logits = jnp.sum(logits, axis=0)  # pyrefly: ignore[bad-argument-type]
     all_logits = all_logits + logits
 
   all_logits = all_logits / num_crops
@@ -665,28 +665,28 @@ def test_step_multimodal(
   if isinstance(train_state, train_utils.TrainState):
     variables = {
         'params': train_state.params,
-        **train_state.model_state
+        **train_state.model_state  # pyrefly: ignore[invalid-argument]
     }
   elif isinstance(train_state, train_utils_deprecated.TrainState):
     variables = {
         'params': train_state.optimizer.target,  # pytype: disable=attribute-error
-        **train_state.model_state
+        **train_state.model_state  # pyrefly: ignore[invalid-argument]
     }
   else:
     raise ValueError('Unknown train_state type.')
 
   for modality in batch['inputs']:
     num_crops = batch['inputs'][modality].shape[0]
-  for idx in range(0, num_crops, n_clips):
+  for idx in range(0, num_crops, n_clips):  # pyrefly: ignore[unbound-name]
     current_input = {}
     for modality in batch['inputs']:
       current_input[modality] = batch['inputs'][modality][idx:idx + n_clips]
     logits = flax_model.apply(
-        variables, current_input, train=False, mutable=False, debug=debug)
+        variables, current_input, train=False, mutable=False, debug=debug)  # pyrefly: ignore[bad-argument-type]
 
     if softmax_logits:
-      logits = nn.softmax(logits, axis=-1)
-    logits = jnp.sum(logits, axis=0)
+      logits = nn.softmax(logits, axis=-1)  # pyrefly: ignore[bad-argument-type]
+    logits = jnp.sum(logits, axis=0)  # pyrefly: ignore[bad-argument-type]
     all_logits = all_logits + logits
 
   # Average logits accross all views (segments) within the clip.
@@ -749,9 +749,9 @@ def mixup_modalities(batch: Dict[str, Any],
   batch_size = labels.shape[0]
 
   if mixmod:
-    weights = list(jax.random.beta(rng, alpha, alpha, shape=[num_modalities]))
+    weights = list(jax.random.beta(rng, alpha, alpha, shape=[num_modalities]))  # pyrefly: ignore[bad-argument-type]
   else:
-    weights = [jax.random.beta(rng, alpha, alpha)] * num_modalities
+    weights = [jax.random.beta(rng, alpha, alpha)] * num_modalities  # pyrefly: ignore[bad-argument-type]
   for i in range(num_modalities):
     weights[i] *= jnp.ones((batch_size, 1))
 

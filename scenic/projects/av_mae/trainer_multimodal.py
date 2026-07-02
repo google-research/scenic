@@ -101,7 +101,7 @@ def initialize_model(
     return init_params, init_model_state
 
   if not isinstance(rngs, dict):
-    rngs = {'params': rngs}
+    rngs = {'params': rngs}  # pyrefly: ignore[bad-assignment]
   init_params, init_model_state = _initialize_model(rngs)
   # Pop out params rng:
   rngs.pop('params')
@@ -191,7 +191,7 @@ def train_step(
   Returns:
     Updated state of training, computed metrics, and learning rate for logging.
   """
-  new_rng, rng = jax.random.split(train_state.rng)
+  new_rng, rng = jax.random.split(train_state.rng)  # pyrefly: ignore[bad-argument-type]
 
   if config.get('mixup') and config.mixup.alpha:
     raise ValueError('mixup is not supported yet!')
@@ -204,7 +204,7 @@ def train_step(
   compute_feature_targets(batch, config)
 
   def training_loss_fn(params, batch, dropout_rng):
-    variables = {'params': params, **train_state.model_state}
+    variables = {'params': params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
     (logits, token_mask), new_model_state = flax_model.apply(
         variables,
         batch['inputs'],
@@ -222,10 +222,10 @@ def train_step(
   metrics['total_loss'] = (loss, 1)
 
   for key, token_mask_  in token_mask.items():
-    metrics[f'mask_ratio_{key}'] = (jnp.mean(token_mask_), 1)
+    metrics[f'mask_ratio_{key}'] = (jnp.mean(token_mask_), 1)  # pyrefly: ignore[unsupported-operation]
 
   step = train_state.global_step
-  lr = learning_rate_fn(step)
+  lr = learning_rate_fn(step)  # pyrefly: ignore[bad-argument-type]
   # Re-use same axis_name as in the call to `pmap(...train_step...)` below.
   grad = jax.lax.pmean(grad, axis_name='batch')
 
@@ -247,7 +247,7 @@ def train_step(
             new_optimizer.target,
             match_name_fn=lambda name: 'kernel' in name))
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=step + 1,
+      global_step=step + 1,  # pyrefly: ignore[unsupported-operation]
       optimizer=new_optimizer,
       model_state=new_model_state,
       rng=new_rng)
@@ -296,7 +296,7 @@ def eval_step(
   """
   variables = {
       'params': train_state.optimizer.target,  # pytype: disable=attribute-error
-      **train_state.model_state
+      **train_state.model_state  # pyrefly: ignore[invalid-argument]
   }
 
   # Compute the targets for feature regression.
@@ -305,16 +305,16 @@ def eval_step(
   # We need an rng for masking at test time.
   # Note that we are using the same rng for the whole validation set (ie each
   # batch will have the same token mask).
-  _, rng = jax.random.split(train_state.rng)
+  _, rng = jax.random.split(train_state.rng)  # pyrefly: ignore[bad-argument-type]
   dropout_rng = train_utils.bind_rng_to_host_device(
       rng, axis_name='batch', bind_to='device')
 
   logits, token_mask = flax_model.apply(
       variables, batch['inputs'], train=True, mutable=False, debug=debug,
       rngs={'dropout': dropout_rng})
-  metrics = metrics_fn(logits, token_mask, batch)
+  metrics = metrics_fn(logits, token_mask, batch)  # pyrefly: ignore[bad-argument-type]
 
-  return metrics, logits, token_mask, batch['targets']
+  return metrics, logits, token_mask, batch['targets']  # pyrefly: ignore[bad-return]
 
 
 def get_image_grid(
@@ -335,7 +335,7 @@ def get_image_grid(
 
     image_grid = avmae_train_utils.generate_image_grid(
         targets, predictions, token_mask,
-        patch_size, n_columns=n_columns, input_size=input_size,
+        patch_size, n_columns=n_columns, input_size=input_size,  # pyrefly: ignore[bad-argument-type]
         modality=target_modality)
   elif len(config.model.patches.size) == 3:
     num_img_in_column = config.masked_feature_loss.get(
@@ -348,7 +348,7 @@ def get_image_grid(
     image_grid = avmae_train_utils.generate_image_grid_from_video(
         targets, predictions, token_mask,
         tuple(config.model.patches.size),
-        input_size, num_img_in_column=num_img_in_column,
+        input_size, num_img_in_column=num_img_in_column,  # pyrefly: ignore[bad-argument-type]
         select_central_frame=select_central_frame)
   else:
     raise ValueError(
@@ -383,7 +383,7 @@ def representation_fn(
   """
   variables = {
       'params': train_state.optimizer.target,  # pytype: disable=attribute-error
-      **train_state.model_state
+      **train_state.model_state  # pyrefly: ignore[invalid-argument]
   }
 
   representation_layer_parts = representation_layer.split('/')
@@ -548,10 +548,10 @@ def train(
     eval_summary = {}
     image_summary = {}
     if not isinstance(valid_iter, dict):  # Only on validation set.
-      valid_iter, num_valid_ex = {'valid': valid_iter}, {'valid': num_valid_ex}
+      valid_iter, num_valid_ex = {'valid': valid_iter}, {'valid': num_valid_ex}  # pyrefly: ignore[bad-assignment]
 
-    for val_name, val_iter in valid_iter.items():
-      num_ex = num_valid_ex[val_name]
+    for val_name, val_iter in valid_iter.items():  # pyrefly: ignore[missing-attribute]
+      num_ex = num_valid_ex[val_name]  # pyrefly: ignore[bad-index]
       # Ceil rounding such that we include the last incomplete batch.
       total_eval_steps = int(np.ceil(num_ex / config.batch_size))
       steps_per_eval = config.get('steps_per_eval') or total_eval_steps
@@ -598,9 +598,9 @@ def train(
   train_summary, eval_summary = None, None
 
   chrono = train_utils.Chrono(
-      first_step=start_step,
+      first_step=start_step,  # pyrefly: ignore[bad-argument-type]
       total_steps=total_steps,
-      steps_per_epoch=steps_per_epoch,
+      steps_per_epoch=steps_per_epoch,  # pyrefly: ignore[bad-argument-type]
       global_bs=config.batch_size,
       accum_train_time=int(jax_utils.unreplicate(train_state.accum_train_time)))
 
@@ -618,12 +618,12 @@ def train(
   if start_step == 0:
     step0_log = {'num_trainable_params': num_trainable_params}
     if gflops:
-      step0_log['gflops'] = gflops
+      step0_log['gflops'] = gflops  # pyrefly: ignore[bad-assignment]
     writer.write_scalars(1, step0_log)
 
-  for step in range(start_step + 1, total_steps + 1):
+  for step in range(start_step + 1, total_steps + 1):  # pyrefly: ignore[unsupported-operation]
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
-      train_batch = next(dataset.train_iter)
+      train_batch = next(dataset.train_iter)  # pyrefly: ignore[bad-argument-type]
 
 
       train_state, t_metrics, lr = train_step_pmapped(train_state, train_batch)
@@ -657,7 +657,7 @@ def train(
       # Sync model state across replicas.
       with report_progress.timed('eval'):
         train_state = train_utils.sync_model_state_across_replicas(train_state)
-        eval_summary = evaluate(train_state, step, dataset.valid_iter,
+        eval_summary = evaluate(train_state, step, dataset.valid_iter,  # pyrefly: ignore[bad-argument-type]
                                 dataset.meta_data['num_eval_examples'])
 
     ##################### CHECKPOINTING ############################

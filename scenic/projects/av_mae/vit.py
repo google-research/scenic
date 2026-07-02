@@ -287,8 +287,8 @@ class ViTMaskedAutoencoder(nn.Module):
     # add positional encodings in the decoder without having to worry about
     # their ordering.
     x_all = jnp.zeros((n_batch, n_tokens, self.decoder_config.hidden_size))
-    x_all = x_all.at[batch_indices, unmasked_indices].set(x_unmasked_proj)
-    x_all = x_all.at[batch_indices, mask_indices].set(mask_token)
+    x_all = x_all.at[batch_indices, unmasked_indices].set(x_unmasked_proj)  # pyrefly: ignore[unbound-name]
+    x_all = x_all.at[batch_indices, mask_indices].set(mask_token)  # pyrefly: ignore[unbound-name]
 
     # Add positional encodings to the decoder.
     x_all = model_utils.add_positional_embeddings(
@@ -296,7 +296,7 @@ class ViTMaskedAutoencoder(nn.Module):
         [n_batch, height, width, self.decoder_config.hidden_size])
 
     if self.classifier == 'token':
-      x_all = jnp.concatenate([cls_encoded, x_all], axis=1)
+      x_all = jnp.concatenate([cls_encoded, x_all], axis=1)  # pyrefly: ignore[unbound-name]
 
     x_decoded = vit.Encoder(
         mlp_dim=self.decoder_config.mlp_dim,

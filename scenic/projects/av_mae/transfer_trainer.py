@@ -85,7 +85,7 @@ def train_step(
   Returns:
     Updated state of training, computed metrics, and learning rate for logging.
   """
-  new_rng, rng = jax.random.split(train_state.rng)
+  new_rng, rng = jax.random.split(train_state.rng)  # pyrefly: ignore[bad-argument-type]
 
   if config.get('mixup') and config.mixup.alpha:
     mixup_rng, rng = jax.random.split(rng, 2)
@@ -106,7 +106,7 @@ def train_step(
       rng, axis_name='batch', bind_to='device')
 
   def training_loss_fn(params):
-    variables = {'params': params, **train_state.model_state}
+    variables = {'params': params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
     logits, new_model_state = flax_model.apply(
         variables,
         batch['inputs'],
@@ -147,19 +147,19 @@ def train_step(
   # AdamW instead of Adam.
   updates, new_opt_state = train_state.tx.update(grad, train_state.opt_state,  # pytype: disable=attribute-error
                                                  train_state.params)
-  new_params = optax.apply_updates(train_state.params, updates)
+  new_params = optax.apply_updates(train_state.params, updates)  # pyrefly: ignore[bad-argument-type]
 
   # Log additional statistics. These are the L2 norms of the entire flattened
   # vector.
-  metrics['l2_grads'] = (jnp.sqrt(
+  metrics['l2_grads'] = (jnp.sqrt(  # pyrefly: ignore[unsupported-operation]
       sum([jnp.vdot(g, g) for g in jax.tree_util.tree_leaves(grad)])), 1)
-  metrics['l2_params'] = (jnp.sqrt(
+  metrics['l2_params'] = (jnp.sqrt(  # pyrefly: ignore[unsupported-operation]
       sum([jnp.vdot(p, p) for p in jax.tree_util.tree_leaves(new_params)])), 1)
-  metrics['l2_updates'] = (jnp.sqrt(
+  metrics['l2_updates'] = (jnp.sqrt(  # pyrefly: ignore[unsupported-operation]
       sum([jnp.vdot(u, u) for u in jax.tree_util.tree_leaves(updates)])), 1)
 
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=train_state.global_step + 1,
+      global_step=train_state.global_step + 1,  # pyrefly: ignore[unsupported-operation]
       opt_state=new_opt_state,
       params=new_params,
       model_state=new_model_state,
@@ -207,12 +207,12 @@ def eval_step(
   """
   variables = {
       'params': train_state.params,
-      **train_state.model_state
+      **train_state.model_state  # pyrefly: ignore[invalid-argument]
   }
   logits = flax_model.apply(
-      variables, batch['inputs'], train=False, mutable=False, debug=debug)
-  metrics = metrics_fn(logits, batch)
-  return metrics, logits
+      variables, batch['inputs'], train=False, mutable=False, debug=debug)  # pyrefly: ignore[bad-argument-type]
+  metrics = metrics_fn(logits, batch)  # pyrefly: ignore[bad-argument-type]
+  return metrics, logits  # pyrefly: ignore[bad-return]
 
 
 def representation_fn(
@@ -241,13 +241,13 @@ def representation_fn(
   """
   variables = {
       'params': train_state.params,
-      **train_state.model_state
+      **train_state.model_state  # pyrefly: ignore[invalid-argument]
   }
 
   representation_layer_parts = representation_layer.split('/')
   filter_rep = lambda mdl, _: mdl.name == representation_layer_parts[-1]
   _, model_state = flax_model.apply(
-      variables,
+      variables,  # pyrefly: ignore[bad-argument-type]
       batch['inputs'],
       train=False,
       capture_intermediates=filter_rep,
@@ -306,7 +306,7 @@ def train(
   (params, model_state, num_trainable_params,
    gflops) = train_utils.initialize_model(
        model_def=model.flax_model,
-       input_spec=[(dataset.meta_data['input_shape'],
+       input_spec=[(dataset.meta_data['input_shape'],  # pyrefly: ignore[bad-argument-type]
                     dataset.meta_data.get('input_dtype', jnp.float32))],
        config=config,
        rngs=init_rng)
@@ -341,8 +341,8 @@ def train(
     logging.info('Parameter summary after restoring checkpoint')
     debug_utils.log_param_shapes(train_state.params)
 
-  chrono.load(train_state.metadata['chrono'])
-  train_state = train_state.replace(metadata={})
+  chrono.load(train_state.metadata['chrono'])  # pyrefly: ignore[unsupported-operation]
+  train_state = train_state.replace(metadata={})  # pyrefly: ignore[missing-attribute]
   if (start_step == 0  # Which means "no" checkpoint is restored!
       and config.get('init_from') is not None):
     restored_model_cfg = config.init_from.get('model_config')
@@ -369,7 +369,7 @@ def train(
             'classifier_type', 'token')
 
       train_state = model.init_from_train_state(train_state,  # pytype: disable=attribute-error
-                                                restored_train_state,
+                                                restored_train_state,  # pyrefly: ignore[unbound-name]
                                                 restored_model_cfg)
       # Free unnecessary memory.
       del restored_train_state
@@ -465,10 +465,10 @@ def train(
                num_valid_ex: int) -> Dict[str, Any]:
     eval_summary = {}
     if not isinstance(valid_iter, dict):  # Only on validation set.
-      valid_iter, num_valid_ex = {'valid': valid_iter}, {'valid': num_valid_ex}
+      valid_iter, num_valid_ex = {'valid': valid_iter}, {'valid': num_valid_ex}  # pyrefly: ignore[bad-assignment]
 
-    for val_name, val_iter in valid_iter.items():
-      num_ex = num_valid_ex[val_name]
+    for val_name, val_iter in valid_iter.items():  # pyrefly: ignore[missing-attribute]
+      num_ex = num_valid_ex[val_name]  # pyrefly: ignore[bad-index]
       # Ceil rounding such that we include the last incomplete batch.
       eval_batch_size = config.get('eval_batch_size', config.batch_size)
       total_eval_steps = int(np.ceil(num_ex / eval_batch_size))
@@ -493,7 +493,7 @@ def train(
 
   train_metrics, extra_training_logs = [], []
   train_summary, eval_summary = None, None
-  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
+  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)  # pyrefly: ignore[bad-argument-type]
   logging.info('Starting training loop at step %d.', start_step)
 
   report_progress = periodic_actions.ReportProgress(
@@ -507,12 +507,12 @@ def train(
   if start_step == 0:
     step0_log = {'num_trainable_params': num_trainable_params}
     if gflops:
-      step0_log['gflops'] = gflops
+      step0_log['gflops'] = gflops  # pyrefly: ignore[bad-assignment]
     writer.write_scalars(1, step0_log)
 
-  for step in range(start_step + 1, total_steps + 1):
+  for step in range(start_step + 1, total_steps + 1):  # pyrefly: ignore[unsupported-operation]
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
-      train_batch = next(dataset.train_iter)
+      train_batch = next(dataset.train_iter)  # pyrefly: ignore[bad-argument-type]
       train_state, t_metrics = train_step_pmapped(train_state, train_batch)
       train_metrics.append(t_metrics)
       # Additional training logs: learning rate:
@@ -545,7 +545,7 @@ def train(
       with report_progress.timed('eval'):
         # Sync model state across replicas.
         train_state = train_utils.sync_model_state_across_replicas(train_state)
-        eval_summary = evaluate(train_state, step, dataset.valid_iter,
+        eval_summary = evaluate(train_state, step, dataset.valid_iter,  # pyrefly: ignore[bad-argument-type]
                                 dataset.meta_data['num_eval_examples'])
       chrono.resume()
 
@@ -563,17 +563,17 @@ def train(
       if (step % config.fewshot.log_eval_steps == 1) or (step == total_steps):
         chrono.pause(wait_for=(train_state.params))
         with report_progress.timed('fewshot'):
-          results = fewshotter.run_all(train_state, config.fewshot.datasets)
+          results = fewshotter.run_all(train_state, config.fewshot.datasets)  # pyrefly: ignore[unbound-name]
           fewshotter.log_fewshot_summary(
               writer=writer, step=step, results=results)
           del results
-          writer.write_scalars(step, {'zz/epoch': step / steps_per_epoch})
+          writer.write_scalars(step, {'zz/epoch': step / steps_per_epoch})  # pyrefly: ignore[unsupported-operation]
         writer.flush()
         chrono.resume()
 
     ############# MULTICROP TESTING ############################
     if (config.get('dataset_configs', dict()).get('do_multicrop_test') and
-        ((step % log_test_steps == 1) or step == total_steps)):
+        ((step % log_test_steps == 1) or step == total_steps)):  # pyrefly: ignore[unbound-name]
 
       chrono.pause(wait_for=(train_state.params))
       with report_progress.timed('checkpoint'):
@@ -583,12 +583,12 @@ def train(
 
         # At the end of training, evaluate on the whole test set.
         if step == total_steps:
-          steps_per_test = total_test_steps
+          steps_per_test = total_test_steps  # pyrefly: ignore[unbound-name]
 
         logging.info('Starting multicrop test')
-        for _ in range(steps_per_test):
-          test_batch = next(dataset.test_iter)
-          t_metrics = test_step_pmapped(train_state, test_batch)
+        for _ in range(steps_per_test):  # pyrefly: ignore[unbound-name]
+          test_batch = next(dataset.test_iter)  # pyrefly: ignore[bad-argument-type]
+          t_metrics = test_step_pmapped(train_state, test_batch)  # pyrefly: ignore[unbound-name]
           # Fetch t_metrics to host and store.
           test_metrics.append(train_utils.unreplicate_and_get(t_metrics))
         # Log eval summary.

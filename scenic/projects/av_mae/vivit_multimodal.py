@@ -109,7 +109,7 @@ class ViViTMultiMaskedAutoencoder(nn.Module):
     # inputs will be a dictionary
 
     x_tokens_dict = tokenize_input(
-        inputs, temporal_encoding_config=self.temporal_encoding_config,
+        inputs, temporal_encoding_config=self.temporal_encoding_config,  # pyrefly: ignore[bad-argument-type]
         patches=self.patches, hidden_size=self.hidden_size)
 
     x_tokens_dict = add_positional_embeddings(

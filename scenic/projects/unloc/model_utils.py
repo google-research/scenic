@@ -110,7 +110,7 @@ def create_pyramid_input_masks(input_mask: jnp.ndarray,
       num_pyramid_levels,
       feature_pyramid_downsample_stride,
       num_extra_features_per_level=num_text_tokens)
-  return np.split(input_mask, split_indices, axis=1)
+  return np.split(input_mask, split_indices, axis=1)  # pyrefly: ignore[bad-return]
 
 
 def merge_pyramid_input_masks(
@@ -365,7 +365,7 @@ def initialize_from_clip_model(
     text_encoder_name: str = 'text_encoder',
 ) -> train_utils.TrainState:
   """Initializes a video-text model from an pretrained image-text model."""
-  params = flax.core.unfreeze(train_state.params)
+  params = flax.core.unfreeze(train_state.params)  # pyrefly: ignore[bad-argument-type]
   if load_image_tower:
     if config.init_from.get('video_encoder'):
       load_image_tower_projection = config.init_from.video_encoder.get(
@@ -406,4 +406,4 @@ def initialize_from_clip_model(
     if load_text_tower_projection:
       params['text_projection'] = restored_params['params']['text'][
           'text_projection']
-  return train_state.replace(params=flax.core.freeze(params))
+  return train_state.replace(params=flax.core.freeze(params))  # pyrefly: ignore[missing-attribute]

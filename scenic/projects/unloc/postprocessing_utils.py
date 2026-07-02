@@ -573,7 +573,7 @@ def get_segments_from_frame_predictions_jax(
     segments.append(cur_segments)
   segments = jnp.concatenate(segments, axis=0)
   input_mask = jnp.array(input_mask, dtype=bool)
-  total_frames = jnp.array(
+  total_frames = jnp.array(  # pyrefly: ignore[bad-assignment]
       jnp.full((segments.shape[0], num_classes), total_frames)
   )
   segments = segments.at[..., 0].set(jnp.maximum(segments[..., 0], 0))

@@ -114,7 +114,7 @@ class TransformerEncoder1DBlock(nn.Module):
     y = nn.LayerNorm(dtype=self.dtype)(x)
     y = attention_layers.MlpBlock(  # pytype: disable=wrong-arg-types  # jnp-type
         mlp_dim=self.mlp_dim,
-        dtype=self.dtype,
+        dtype=self.dtype,  # pyrefly: ignore[bad-argument-type]
         dropout_rate=self.dropout_rate,
         activation_fn=nn.gelu,
         kernel_init=nn.initializers.xavier_uniform(),
@@ -230,7 +230,7 @@ class ResidualAttentionBlock(nn.Module):
     y = nn_layers.StochasticDepth(rate=self.stochastic_depth)(y, deterministic)
     return x + y
 
-  @functools.partial(nn.remat, static_argnums=(3,))
+  @functools.partial(nn.remat, static_argnums=(3,))  # pyrefly: ignore[bad-specialization]
   def remat_call(
       self,
       x: jnp.ndarray,
@@ -339,7 +339,7 @@ class ClipVisionTransformer(nn.Module):
       otherwise.
     """
     if self.classifier == 'token':
-      x = jnp.concatenate((jnp.tile(class_embedding[None, None, :],
+      x = jnp.concatenate((jnp.tile(class_embedding[None, None, :],  # pyrefly: ignore[unsupported-operation]
                                     (x.shape[0], 1, 1)), x),
                           axis=1)
     scale = 1.0 / jnp.sqrt(self.features)
@@ -439,10 +439,10 @@ class ClipVideoTower(nn.Module):
       x = jnp.mean(x, axis=2)
     if self.temporal_encoder_config is None:
       return jnp.mean(x, axis=1)
-    temporal_encoder = TransformerEncoder(
+    temporal_encoder = TransformerEncoder(  # pyrefly: ignore[missing-argument]
         dtype=self.dtype,
         name='TemporalTransformer',
-        **self.temporal_encoder_config,  # pylint: disable=not-a-mapping
+        **self.temporal_encoder_config,  # pylint: disable=not-a-mapping  # pyrefly: ignore[bad-unpacking]
     )  # pylint:disable=not-a-mapping
     self._add_cls_token(x)
     x = temporal_encoder(x, train=is_train)
@@ -507,8 +507,8 @@ class ClipVideoTower(nn.Module):
     features = self.image_encoder_config.features
     scale = 1.0 / jnp.sqrt(features)
     per_frame_encoder = functools.partial(
-        ClipVisionTransformer(
-            name='VisionTransformer', **self.image_encoder_config
+        ClipVisionTransformer(  # pyrefly: ignore[missing-argument]
+            name='VisionTransformer', **self.image_encoder_config  # pyrefly: ignore[bad-unpacking]
         ),
         is_train=train,
     )

@@ -127,7 +127,7 @@ def train(
   if config.checkpoint:
     train_state, start_step = train_utils.restore_checkpoint(
         workdir, train_state)
-  chrono.load(train_state.metadata['chrono'])
+  chrono.load(train_state.metadata['chrono'])  # pyrefly: ignore[unsupported-operation]
   if (start_step == 0 and config.get('init_from') is not None):
     if config.init_from.get('load_from_unloc_checkpoint', False):
       train_state = unloc_train_utils.init_from_unloc_checkpoint(
@@ -251,8 +251,8 @@ def train(
   train_metrics, extra_training_logs = [], []
   train_summary, eval_summary = None, None
 
-  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
-  logging.info('Starting training loop at step %d.', start_step + 1)
+  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)  # pyrefly: ignore[bad-argument-type]
+  logging.info('Starting training loop at step %d.', start_step + 1)  # pyrefly: ignore[unsupported-operation]
   report_progress = periodic_actions.ReportProgress(
       num_train_steps=total_steps, writer=writer)
 
@@ -269,7 +269,7 @@ def train(
   if start_step == 0:
     step0_log = {'num_trainable_params': num_trainable_params}
     if gflops:
-      step0_log['gflops'] = gflops
+      step0_log['gflops'] = gflops  # pyrefly: ignore[bad-assignment]
     writer.write_scalars(1, step0_log)
 
   test_step_fn = {
@@ -290,9 +290,9 @@ def train(
       ),
   }
   write_note(f'First step compilations...\n{chrono.note}')
-  for step in range(start_step + 1, total_steps + 1):
+  for step in range(start_step + 1, total_steps + 1):  # pyrefly: ignore[unsupported-operation]
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
-      train_batch = next(dataset.train_iter)
+      train_batch = next(dataset.train_iter)  # pyrefly: ignore[bad-argument-type]
       train_state, t_metrics, t_logs = train_step_pmapped(
           train_state, train_batch)
       # This will accumulate metrics in TPU memory up to the point that we log
@@ -338,7 +338,7 @@ def train(
         # Sync model state across replicas.
         train_state = train_utils.sync_model_state_across_replicas(train_state)
         for _ in range(steps_per_eval):
-          eval_batch = next(dataset.valid_iter)
+          eval_batch = next(dataset.valid_iter)  # pyrefly: ignore[bad-argument-type]
           e_metrics, _ = eval_step_pmapped(train_state, eval_batch)
           eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
         eval_summary = train_utils.log_eval_summary(
@@ -348,11 +348,11 @@ def train(
       chrono.resume()
     ################### TESTING #######################
     if (config.dataset_configs.get('do_multicrop_test') and
-        (step % log_test_steps == 1 and step > 1 or step == total_steps)):
+        (step % log_test_steps == 1 and step > 1 or step == total_steps)):  # pyrefly: ignore[unbound-name, unsupported-operation]
       chrono.pause(wait_for=(train_state.params))
       with report_progress.timed('test'):
         test_step_fn[config.dataset_configs.get('task', 'classification')](
-            config, step, dataset, test_step_pmapped, train_state, writer)
+            config, step, dataset, test_step_pmapped, train_state, writer)  # pyrefly: ignore[unbound-name]
       chrono.resume()
     ##################### CHECKPOINTING ###################
     if ((step % checkpoint_steps == 0 and step > 0) or

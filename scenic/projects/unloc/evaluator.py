@@ -39,7 +39,7 @@ def init_model(
   if checkpoint_path is not None:
     checkpoint_dir = checkpoint_path
   train_state, step = train_utils.restore_checkpoint(
-      checkpoint_dir, train_state, step=config.get('checkpoint_step')
+      checkpoint_dir, train_state, step=config.get('checkpoint_step')  # pyrefly: ignore[bad-argument-type]
   )
   return train_state, step
 

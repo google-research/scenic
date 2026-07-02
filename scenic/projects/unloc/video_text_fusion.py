@@ -462,8 +462,8 @@ class VideoTextEmbSelfAttentionFusion(nn.Module):
       channels) and text tokens in shape (batch_size, num_classes, channels) if
       task is `action_segmentation`.
     """
-    encoder = _VIDEO_TEXT_ENCODER[self.self_attention_encoder_name](
-        name='video_text_encoder', **self.self_attention_encoder_config)
+    encoder = _VIDEO_TEXT_ENCODER[self.self_attention_encoder_name](  # pyrefly: ignore[missing-argument]
+        name='video_text_encoder', **self.self_attention_encoder_config)  # pyrefly: ignore[bad-unpacking]
     if video_input_mask is None:
       feature_pyramid_config = self.self_attention_encoder_config.get(
           'feature_pyramid_config')
@@ -763,8 +763,8 @@ class VideoTextSelfAttentionFusion(nn.Module):
         it is num_classes.
     """
 
-    encoder = _VIDEO_TEXT_ENCODER[self.self_attention_encoder_name](
-        name='video_text_encoder', **self.self_attention_encoder_config)
+    encoder = _VIDEO_TEXT_ENCODER[self.self_attention_encoder_name](  # pyrefly: ignore[missing-argument]
+        name='video_text_encoder', **self.self_attention_encoder_config)  # pyrefly: ignore[bad-unpacking]
     if video_input_mask is None:
       video_input_mask = jnp.ones(video_tokens.shape[:2], dtype=jnp.int32)
     if task == 'highlight_detection':
@@ -772,8 +772,8 @@ class VideoTextSelfAttentionFusion(nn.Module):
           video_tokens,
           video_input_mask,
           text_tokens,
-          input_word_ids,
-          text_input_mask,
+          input_word_ids,  # pyrefly: ignore[bad-argument-type]
+          text_input_mask,  # pyrefly: ignore[bad-argument-type]
           encoder,
           train,
       )

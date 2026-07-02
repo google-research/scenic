@@ -180,10 +180,10 @@ def initialize_from_unloc_train_state(
     Updated train_state.
   """
 
-  params = flax.core.unfreeze(train_state.params)
-  restored_params = flax.core.unfreeze(restored_train_state.params)
+  params = flax.core.unfreeze(train_state.params)  # pyrefly: ignore[bad-argument-type]
+  restored_params = flax.core.unfreeze(restored_train_state.params)  # pyrefly: ignore[bad-argument-type]
   params = initialize_from_unloc_parameters(params, restored_params, skip_regex)
-  return train_state.replace(params=flax.core.freeze(params))
+  return train_state.replace(params=flax.core.freeze(params))  # pyrefly: ignore[missing-attribute]
 
 
 def init_from_unloc_checkpoint(
@@ -324,7 +324,7 @@ def initialize_model_with_pytree(
     elif isinstance(spec, collections.Sequence):
       if check_leaf_spec(spec):
         in_st = debug_utils.input_spec_to_jax_shape_dtype_struct(
-            spec, batch_size=batch_size)
+            spec, batch_size=batch_size)  # pyrefly: ignore[bad-argument-type]
         return jnp.zeros(in_st.shape, in_st.dtype)
       else:
         return tuple(create_dummy_input(child) for child in spec)
@@ -374,7 +374,7 @@ def initialize_model_with_pytree(
     return init_params, init_model_state
 
   if not isinstance(rngs, dict):
-    rngs = {'params': rngs}
+    rngs = {'params': rngs}  # pyrefly: ignore[bad-assignment]
   init_params, init_model_state = _initialize_model(rngs)
   # Pop out params rng:
   rngs.pop('params')
@@ -448,7 +448,7 @@ def train_step(
   """
 
   training_logs = {}
-  new_rng, rng = jax.random.split(train_state.rng)
+  new_rng, rng = jax.random.split(train_state.rng)  # pyrefly: ignore[bad-argument-type]
 
   if config.get('mixup') and config.mixup.alpha:
     mixup_rng, rng = jax.random.split(rng, 2)
@@ -477,7 +477,7 @@ def train_step(
   )
 
   def training_loss_fn(params):
-    variables = {'params': params, **train_state.model_state}
+    variables = {'params': params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
     logits = flax_model.apply(
         variables,
         batch['inputs'],
@@ -486,11 +486,11 @@ def train_step(
         train=True,
         rngs={'dropout': dropout_rng},
         debug=debug)
-    loss = loss_fn(logits, batch, variables['params'])
+    loss = loss_fn(logits, batch, variables['params'])  # pyrefly: ignore[bad-argument-type]
     return loss, logits
 
   def training_loss_fn_all_gather(params):
-    variables = {'params': params, **train_state.model_state}
+    variables = {'params': params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
     logits = unloc_eval_utils.run_model_all_gather_results(
         variables,
         batch,
@@ -500,7 +500,7 @@ def train_step(
         dropout_rng=dropout_rng,
         debug=debug,
     )
-    loss = loss_fn(logits, gathered_batch, params)
+    loss = loss_fn(logits, gathered_batch, params)  # pyrefly: ignore[bad-argument-type]
     return loss, logits
 
   compute_gradient_fn = jax.value_and_grad(
@@ -516,9 +516,9 @@ def train_step(
     grad = clip_grads(grad, config.max_grad_norm)
 
   assert train_state.tx is not None
-  updates, new_opt_state = train_state.tx.update(grad, train_state.opt_state,
+  updates, new_opt_state = train_state.tx.update(grad, train_state.opt_state,  # pyrefly: ignore[bad-argument-type]
                                                  train_state.params)
-  new_params = optax.apply_updates(train_state.params, updates)
+  new_params = optax.apply_updates(train_state.params, updates)  # pyrefly: ignore[bad-argument-type]
 
   training_logs['l2_grads'] = jnp.sqrt(
       sum([jnp.vdot(g, g) for g in jax.tree_util.tree_leaves(grad)]))
@@ -527,12 +527,12 @@ def train_step(
   us = jax.tree_util.tree_leaves(updates)
   training_logs['l2_updates'] = jnp.sqrt(sum([jnp.vdot(u, u) for u in us]))
   # TODO(dehghani): Can we get this from the optimizer instead?
-  training_logs['learning_rate'] = lr_fn(train_state.global_step)
+  training_logs['learning_rate'] = lr_fn(train_state.global_step)  # pyrefly: ignore[bad-argument-type]
 
-  metrics = metrics_fn(logits, gathered_batch if all_gather_loss else batch)
+  metrics = metrics_fn(logits, gathered_batch if all_gather_loss else batch)  # pyrefly: ignore[bad-argument-type]
 
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=train_state.global_step + 1,
+      global_step=train_state.global_step + 1,  # pyrefly: ignore[unsupported-operation]
       opt_state=new_opt_state,
       params=new_params,
       rng=new_rng)

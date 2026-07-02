@@ -285,13 +285,13 @@ class ProjectionHeadAndClassifier(nn.Module):
       # Obtaining the CLS tokens for each modality.
       # Note when self.classifier is 'onetoken', counter remains 0.
       for modality in self.modality_fusion:
-        x_out[modality] = x[:, counter]
+        x_out[modality] = x[:, counter]  # pyrefly: ignore[bad-index]
         counter += temporal_dims[modality] + 1
     elif self.classifier in ('gap', 'gmp', 'gsp'):
       fn = {'gap': jnp.mean, 'gmp': jnp.max, 'gsp': jnp.sum}[self.classifier]
       # Note here we pool each modality separately
       for modality in self.modality_fusion:
-        modality_tokens = x[:, counter:counter + temporal_dims[modality]]
+        modality_tokens = x[:, counter:counter + temporal_dims[modality]]  # pyrefly: ignore[bad-index]
         x_out[modality] = fn(
             modality_tokens, axis=list(range(1, modality_tokens.ndim - 1)))
         counter += temporal_dims[modality]
@@ -488,7 +488,7 @@ class MBT(nn.Module):
         share_encoder=self.share_encoder,
         return_bottlenecks=self.return_bottlenecks,
         dtype=self.dtype,
-        name='Transformer')(x, bottleneck, train=train)
+        name='Transformer')(x, bottleneck, train=train)  # pyrefly: ignore[bad-argument-type]
     if self.return_bottlenecks:
       x, bottleneck = output
     else:
@@ -781,7 +781,7 @@ class MBTMultiHeadClassificationModel(MBTClassificationModel):
     assert self.dataset_meta_data.get('target_is_onehot', False)
     if not isinstance(logits, dict):
       all_logits = logits
-      logits = {}
+      logits = {}  # pyrefly: ignore[bad-assignment]
       logits['all'] = all_logits
       if isinstance(labels, dict):
         assert 'all' in labels, 'mixmod must be turned off.'
@@ -799,7 +799,7 @@ class MBTMultiHeadClassificationModel(MBTClassificationModel):
 
       logit_splits = jnp.split(logits[modality],
                                self.class_splits, axis=-1)[:-1]
-      assert not isinstance(labels[modality], dict), labels.keys()
+      assert not isinstance(labels[modality], dict), labels.keys()  # pyrefly: ignore[missing-attribute]
       labels_splits = jnp.split(
           labels[modality], self.class_splits, axis=-1)[:-1]
       label_smoothing = self.config.get('label_smoothing')
@@ -858,11 +858,11 @@ class MBTMultiHeadClassificationModel(MBTClassificationModel):
 
       if len(class_splits) == 2:
         pairwise_acc = base_model_utils.psum_metric_normalizer(
-            (vivit_utils.joint_accuracy(logits, one_hot_targets, class_splits,
+            (vivit_utils.joint_accuracy(logits, one_hot_targets, class_splits,  # pyrefly: ignore[bad-argument-type]
                                         weights),
              base_model_utils.num_examples(logits, one_hot_targets, weights)))
         pairwise_top_five = base_model_utils.psum_metric_normalizer(
-            (vivit_utils.joint_top_k(
+            (vivit_utils.joint_top_k(  # pyrefly: ignore[bad-argument-type]
                 logits, one_hot_targets, class_splits, k=5, weights=weights),
              base_model_utils.num_examples(logits, one_hot_targets, weights)))
         eval_name = f'{split_names[0]}-{split_names[1]}'
@@ -1340,7 +1340,7 @@ def initialise_from_mid_fusion(
         flattened_restored_renamed[new_name] = value
         continue
 
-      layer_id = int(re.match(
+      layer_id = int(re.match(  # pyrefly: ignore[unsupported-operation]
           'Transformer_concat/encoderblock_([0-9]+)', name)[1])
       new_id = layer_id + num_separate_layers
       name_rgb = name.replace('Transformer_concat', 'Transformer_rgb')

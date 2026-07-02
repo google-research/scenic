@@ -405,7 +405,7 @@ class VideoTextSingleTower(nn.Module):
     text_tokens = self.encode_text(inputs, task=task, train=train, debug=debug)
     return self.fuse_video_text(
         video_tokens,
-        text_tokens,
+        text_tokens,  # pyrefly: ignore[bad-argument-type]
         task,
         input_word_ids,
         text_input_mask,

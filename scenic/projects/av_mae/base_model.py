@@ -143,13 +143,13 @@ def get_rgb_targets(inputs: jnp.ndarray,
       raise ValueError('`select_central_frame` must be defined.')
     patched_input = extract_tubelets_from_video(
         inputs,
-        patch_size,
+        patch_size,  # pyrefly: ignore[bad-argument-type]
         select_central_frame)
 
   if standardise_per_patch:
-    patched_input = jax.nn.standardize(patched_input, axis=-1, epsilon=1e-6)
+    patched_input = jax.nn.standardize(patched_input, axis=-1, epsilon=1e-6)  # pyrefly: ignore[unbound-name]
   elif standardise_per_patch_channels:
-    old_shape = patched_input.shape
+    old_shape = patched_input.shape  # pyrefly: ignore[unbound-name]
     batch, num_tokens = patched_input.shape[:2]
     num_channels = inputs.shape[-1]
     patched_input = jnp.reshape(patched_input,
@@ -157,7 +157,7 @@ def get_rgb_targets(inputs: jnp.ndarray,
     patched_input = jax.nn.standardize(patched_input, axis=2, epsilon=1e-6)
     patched_input = jnp.reshape(patched_input, old_shape)
 
-  return patched_input
+  return patched_input  # pyrefly: ignore[unbound-name]
 
 
 def get_spectogram_targets(inputs: jnp.ndarray,
@@ -199,7 +199,7 @@ def feature_regression_metrics_function(  # pytype: disable=annotation-type-mism
     prediction_masks: jnp.ndarray,
     batch: base_model.Batch,
     feature_target: str,
-    metrics: base_model.MetricNormalizerFnDict = _REGRESSION_METRICS,
+    metrics: base_model.MetricNormalizerFnDict = _REGRESSION_METRICS,  # pyrefly: ignore[bad-function-definition]
 ) -> Dict[str, Tuple[float, int]]:
   """Calculate metrics for the feature regression task.
 

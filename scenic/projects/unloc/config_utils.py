@@ -152,7 +152,7 @@ def parse_image_encoder_config(variant: str) -> ml_collections.ConfigDict:
   num_frames = int(num_frames)
   patch_size = int(patch_size)
   config = CLIP_IMAGE_ENCODER_CONFIGS[version]
-  config['patches'] = {'size': (patch_size, patch_size, num_frames)}
+  config['patches'] = {'size': (patch_size, patch_size, num_frames)}  # pyrefly: ignore[bad-assignment]
   return ml_collections.ConfigDict(config)
 
 
