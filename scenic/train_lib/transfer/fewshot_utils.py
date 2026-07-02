@@ -97,7 +97,7 @@ def start_input_pipeline(data, pad=None, num_devices=None, backend='pmap',
         lambda x: prepare_data(x, pad, num_devices=num_devices), train_iter)
   elif backend == 'jit':
     train_iter = map(
-        lambda x: prepare_data_jit(x, pad, global_devices=devices), train_iter)
+        lambda x: prepare_data_jit(x, pad, global_devices=devices), train_iter)  # pyrefly: ignore[bad-argument-type]
   return train_iter
 
 
@@ -240,7 +240,7 @@ class FewShotEvaluator:
     for batch in start_input_pipeline(data,
                                       pad=self.local_batch_size,
                                       backend=self.backend,
-                                      devices=self.devices):
+                                      devices=self.devices):  # pyrefly: ignore[bad-argument-type]
       pre_logits, labels, mask = self.repr_fn(train_state, batch)
       # We need to unreplicate the output of `lax.all_gather`.
       # Shapes at this point are:

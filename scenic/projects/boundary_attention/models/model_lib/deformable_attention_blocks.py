@@ -53,15 +53,15 @@ class DeformableTransformerBlock(nn.Module):
     ref_xy = self.get_ref_xy(hidden_state.shape[1], hidden_state.shape[2])
 
     # Process through transformer encoder layers
-    for ll in range(self.num_layers):
+    for ll in range(self.num_layers):  # pyrefly: ignore[bad-argument-type]
       if self.deformation_type == 'simple':
         hidden_state = DeformableEncoder(
             self.num_samples,
             self.offset_fn,
             self.max_offset,
             self.encoding_dim,
-            self.num_heads,
-            self.attn_dropout_prob,
+            self.num_heads,  # pyrefly: ignore[bad-argument-type]
+            self.attn_dropout_prob,  # pyrefly: ignore[bad-argument-type]
             name='EncoderBlock_{:d}'.format(ll),
         )(hidden_state, embedded_hidden_state, ref_xy, train=train)
       elif self.deformation_type == 'simple_with_rotary_embedding':
@@ -71,8 +71,8 @@ class DeformableTransformerBlock(nn.Module):
             self.max_offset,
             hidden_dim=hidden_state.shape[-1],
             encoding_dim=self.encoding_dim,
-            num_heads=self.num_heads,
-            attn_dropout_prob=self.attn_dropout_prob,
+            num_heads=self.num_heads,  # pyrefly: ignore[bad-argument-type]
+            attn_dropout_prob=self.attn_dropout_prob,  # pyrefly: ignore[bad-argument-type]
             name='EncoderBlock_{:d}'.format(ll),
         )(hidden_state, embedded_hidden_state, ref_xy, train=train)
       else:
@@ -81,8 +81,8 @@ class DeformableTransformerBlock(nn.Module):
             self.offset_fn,
             self.max_offset,
             self.encoding_dim,
-            self.num_heads,
-            self.attn_dropout_prob,
+            self.num_heads,  # pyrefly: ignore[bad-argument-type]
+            self.attn_dropout_prob,  # pyrefly: ignore[bad-argument-type]
             name='EncoderBlock_{:d}'.format(ll),
         )(hidden_state, embedded_hidden_state, ref_xy, train=train)
 
@@ -149,7 +149,7 @@ class PredictOffsets(nn.Module):
     ).reshape((n, 2))[: self.num_samples, :]
     init_bias = init_bias / 15
 
-    return init_bias
+    return init_bias  # pyrefly: ignore[bad-return]
 
 
 class DeformableEncoder(nn.Module):

@@ -143,9 +143,9 @@ def eval_step(
     gather_to_host: Optional[bool] = True,
     ) -> Any:
   """Runs a single step of test."""
-  variables = {'params': train_state.params, **train_state.model_state}
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
   predictions = flax_model.apply(
-      variables,
+      variables,  # pyrefly: ignore[bad-argument-type]
       batch['inputs'],
       context_text_tokens=batch.get('context', None),
       preprocess=True,
@@ -153,10 +153,10 @@ def eval_step(
       mutable=False,
       debug=False)
 
-  batch_size = predictions['visual_features'].shape[0]
-  visual_features = predictions['visual_features']
-  begin_tokens = predictions['begin_tokens']
-  context_tokens = predictions['context_tokens'] if (
+  batch_size = predictions['visual_features'].shape[0]  # pyrefly: ignore[bad-index]
+  visual_features = predictions['visual_features']  # pyrefly: ignore[bad-index]
+  begin_tokens = predictions['begin_tokens']  # pyrefly: ignore[bad-index]
+  context_tokens = predictions['context_tokens'] if (  # pyrefly: ignore[bad-index]
       'context_tokens' in predictions) else None
   beam_size = config.model.decode_beam_size
   visual_features = jnp.broadcast_to(
@@ -174,7 +174,7 @@ def eval_step(
     tokens_to_logits_kwargs['context_tokens'] = context_tokens
   # pylint: disable=g-long-lambda
   tokens_to_logits = lambda x: flax_model.apply(
-      variables={'params': train_state.params},
+      variables={'params': train_state.params},  # pyrefly: ignore[bad-argument-type]
       code_tokens=x,
       visual_features=visual_features,
       method=flax_model.decode_text,

@@ -206,7 +206,7 @@ def load_split(
       },
   }
   if max_context_tokens:
-    padded_shapes['context'] = max_context_tokens
+    padded_shapes['context'] = max_context_tokens  # pyrefly: ignore[bad-assignment]
 
   ds = ds.map(preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
   if dataset.startswith('oven_entities') and max_context_tokens > 0:
@@ -284,7 +284,7 @@ def dataset_builder(*,
   if not isinstance(train_datasets, tuple):
     train_datasets = (train_datasets,)
   eval_datasets = dataset_configs.get('eval_datasets')
-  assert len(eval_datasets) == 2  # seen and unseen
+  assert len(eval_datasets) == 2  # seen and unseen  # pyrefly: ignore[bad-argument-type]
   crop_size = dataset_configs.get('crop_size', 224)
   max_context_tokens = dataset_configs.get('max_context_tokens', 0)
   tokenizer_type = dataset_configs.get('tokenizer_type', 'bert')
@@ -347,7 +347,7 @@ def dataset_builder(*,
 
   wikid2id_path_eval = dataset_configs.get('wikid2id_path_eval', wikid2id_path)
   if wikid2id_path_eval != wikid2id_path:
-    wikid2id = Stringid2IntIdClass(wikid2id_path)
+    wikid2id = Stringid2IntIdClass(wikid2id_path)  # pyrefly: ignore[bad-argument-type]
   # Question id (str) to id (int) (used to get val/test data id)
   questionid2id_path = dataset_configs.get('questionid2id_path', None)
   questionid2id = None
@@ -364,7 +364,7 @@ def dataset_builder(*,
       eval_batch_size, train=False,
       dataset='oven',
       preprocess_fn=eval_preprocess_fn,
-      split=eval_datasets[0],
+      split=eval_datasets[0],  # pyrefly: ignore[unsupported-operation]
       decode_fn=eval_decode_fn,
       tokenizer=tokenizer,
       max_context_tokens=max_context_tokens,
@@ -375,7 +375,7 @@ def dataset_builder(*,
   eval_unseen_ds, num_eval_unseen_examples = load_split(
       eval_batch_size,
       dataset='oven',
-      split=eval_datasets[1],
+      split=eval_datasets[1],  # pyrefly: ignore[unsupported-operation]
       train=False,
       preprocess_fn=eval_preprocess_fn,
       max_size=crop_size,

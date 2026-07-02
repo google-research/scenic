@@ -452,7 +452,7 @@ class GRiTModel(centernet2.CenterNet2Model):
     )  # (text_batch_size, max_caption_length, vocab_size)
 
     text_tokens = text_tokens[:, 1:]  # Shift GT sentence 1 word to right.
-    text_outputs = text_outputs[:, :-1]  # Shift predicted sentence to align GT.
+    text_outputs = text_outputs[:, :-1]  # Shift predicted sentence to align GT.  # pyrefly: ignore[bad-index]
     mask = text_tokens > 0  # (text_batch_size, cap_len - 1)
     prob = jax.nn.softmax(text_outputs)  # (text_batch_size, cap_len - 1, vocab)
     prob = jnp.take_along_axis(
