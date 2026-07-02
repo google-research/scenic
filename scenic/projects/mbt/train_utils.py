@@ -59,7 +59,7 @@ def compute_flops(flax_model_apply_fn: Callable[[jnp.ndarray], Any],
       jax.jit(flax_model_apply_fn).lower(input_placeholder).cost_analysis()
   )
 
-  flops = analysis['flops']
+  flops = analysis['flops']  # pyrefly: ignore[unsupported-operation]
   if fuse_multiply_add:
     flops = flops / 2
   logging.info('GFLOPs %0.3f for input spec: %s', flops / 10**9, input_spec)
@@ -118,7 +118,7 @@ def initialize_model(
     return init_params, init_model_state
 
   if not isinstance(rngs, dict):
-    rngs = {'params': rngs}
+    rngs = {'params': rngs}  # pyrefly: ignore[bad-assignment]
   init_params, init_model_state = _initialize_model(rngs)
   # Pop out params rng:
   rngs.pop('params')

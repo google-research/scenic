@@ -98,7 +98,7 @@ def mixup_modalities(batch: Dict['str', Any],
     else:
       weights = [jax.random.beta(rng, alpha, alpha)] * num_modalities
   for i in range(num_modalities):
-    weights[i] *= np_backend.ones((batch_size, 1))
+    weights[i] *= np_backend.ones((batch_size, 1))  # pyrefly: ignore[unsupported-operation]
 
   # Mixup inputs.
   # Shape calculations use np to avoid device memory fragmentation:
@@ -168,7 +168,7 @@ def train_step(
   Returns:
     Updated state of training, computed metrics, and learning rate for logging.
   """
-  new_rng, rng = jax.random.split(train_state.rng)
+  new_rng, rng = jax.random.split(train_state.rng)  # pyrefly: ignore[bad-argument-type]
 
   if config.get('mixup') and config.mixup.alpha:
     mixup_rng, rng = jax.random.split(rng, 2)
@@ -199,7 +199,7 @@ def train_step(
       rng, axis_name='batch', bind_to='device')
 
   def training_loss_fn(params):
-    variables = {'params': params, **train_state.model_state}
+    variables = {'params': params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
     logits, new_model_state = flax_model.apply(
         variables,
         batch['inputs'],
@@ -212,10 +212,10 @@ def train_step(
 
   compute_gradient_fn = jax.value_and_grad(training_loss_fn, has_aux=True)
   step = train_state.global_step
-  lr = learning_rate_fn(step)
+  lr = learning_rate_fn(step)  # pyrefly: ignore[bad-argument-type]
   (train_cost,
    (new_model_state,
-    logits)), grad = compute_gradient_fn(train_state.optimizer.target)
+    logits)), grad = compute_gradient_fn(train_state.optimizer.target)  # pyrefly: ignore[missing-attribute]
 
   if config.get('max_grad_norm', None) is not None:
     grad = clip_grads(grad, config.max_grad_norm)
@@ -223,7 +223,7 @@ def train_step(
   del train_cost
   # Re-use same axis_name as in the call to `pmap(...train_step...)` below.
   grad = jax.lax.pmean(grad, axis_name='batch')
-  new_optimizer = train_state.optimizer.apply_gradient(grad, learning_rate=lr)
+  new_optimizer = train_state.optimizer.apply_gradient(grad, learning_rate=lr)  # pyrefly: ignore[missing-attribute]
 
   # Explicit weight decay, if necessary.
   if config.get('explicit_weight_decay', None) is not None:
@@ -244,7 +244,7 @@ def train_step(
   else:
     metrics = metrics_fn(logits, batch)
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=step + 1,
+      global_step=step + 1,  # pyrefly: ignore[unsupported-operation]
       optimizer=new_optimizer,
       model_state=new_model_state,
       rng=new_rng)
@@ -293,15 +293,15 @@ def eval_step(
     Calculated metrics [and optionally logits].
   """
   variables = {
-      'params': train_state.optimizer.target,
-      **train_state.model_state
+      'params': train_state.optimizer.target,  # pyrefly: ignore[missing-attribute]
+      **train_state.model_state  # pyrefly: ignore[invalid-argument]
   }
   logits = flax_model.apply(
       variables,
       batch['inputs'],
       train=False, mutable=False, debug=debug)
 
-  metrics = metrics_fn(logits, batch)
+  metrics = metrics_fn(logits, batch)  # pyrefly: ignore[bad-argument-type]
   if return_logits_and_labels:
     logits = jax.lax.all_gather(logits, 'batch')
     labels = jax.lax.all_gather(batch['label'], 'batch')
@@ -362,12 +362,12 @@ def test_step(
       'Spatial padding is not supported in multi-crop evaluation.')
 
   variables = {
-      'params': train_state.optimizer.target,
-      **train_state.model_state
+      'params': train_state.optimizer.target,  # pyrefly: ignore[missing-attribute]
+      **train_state.model_state  # pyrefly: ignore[invalid-argument]
   }
   for modality in batch['inputs']:
     num_crops = batch['inputs'][modality].shape[0]
-  for idx in range(0, num_crops, n_clips):
+  for idx in range(0, num_crops, n_clips):  # pyrefly: ignore[unbound-name]
     current_input = {}
     for modality in batch['inputs']:
       current_input[modality] = batch['inputs'][modality][idx:idx + n_clips]
@@ -375,8 +375,8 @@ def test_step(
         variables, current_input, train=False, mutable=False, debug=debug)
 
     if softmax_logits:
-      logits = nn.softmax(logits, axis=-1)
-    logits = jnp.sum(logits, axis=0)
+      logits = nn.softmax(logits, axis=-1)  # pyrefly: ignore[bad-argument-type]
+    logits = jnp.sum(logits, axis=0)  # pyrefly: ignore[bad-argument-type]
     all_logits = all_logits + logits
 
   all_logits = all_logits / num_crops
@@ -440,7 +440,7 @@ def train(
   (params, model_state, num_trainable_params,
    gflops) = mbt_train_utils.initialize_model(
        model_def=model.flax_model,
-       input_spec=input_spec,
+       input_spec=input_spec,  # pyrefly: ignore[bad-argument-type]
        config=config,
        rngs=init_rng)
 
@@ -483,7 +483,7 @@ def train(
           'classifier_type', 'token')
 
     train_state = model.init_from_train_state(
-        train_state, restored_train_state, restored_model_cfg,
+        train_state, restored_train_state, restored_model_cfg,  # pyrefly: ignore[unbound-name]
         restore_output_proj=config.init_from.get('restore_output_proj', False))
     # Free unnecessary memory.
     del restored_train_state
@@ -571,13 +571,13 @@ def train(
   train_summary, eval_summary = None, None
 
   chrono = train_utils.Chrono(
-      first_step=start_step,
+      first_step=start_step,  # pyrefly: ignore[bad-argument-type]
       total_steps=total_steps,
-      steps_per_epoch=steps_per_epoch,
+      steps_per_epoch=steps_per_epoch,  # pyrefly: ignore[bad-argument-type]
       global_bs=config.batch_size,
       accum_train_time=int(jax_utils.unreplicate(train_state.accum_train_time)))
 
-  logging.info('Starting training loop at step %d.', start_step + 1)
+  logging.info('Starting training loop at step %d.', start_step + 1)  # pyrefly: ignore[unsupported-operation]
   report_progress = periodic_actions.ReportProgress(
       num_train_steps=total_steps, writer=writer)
   hooks = []
@@ -589,12 +589,12 @@ def train(
   if start_step == 0:
     step0_log = {'num_trainable_params': num_trainable_params}
     if gflops:
-      step0_log['gflops'] = gflops
+      step0_log['gflops'] = gflops  # pyrefly: ignore[bad-assignment]
     writer.write_scalars(1, step0_log)
 
-  for step in range(start_step + 1, total_steps + 1):
+  for step in range(start_step + 1, total_steps + 1):  # pyrefly: ignore[unsupported-operation]
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
-      train_batch = next(dataset.train_iter)
+      train_batch = next(dataset.train_iter)  # pyrefly: ignore[bad-argument-type]
       train_state, t_metrics, lr = train_step_pmapped(train_state, train_batch)
       # This will accumulate metrics in TPU memory up to the point that we log
       # them. This is no problem for small metrics but may be a problem for
@@ -638,19 +638,19 @@ def train(
         # Sync model state across replicas.
         train_state = train_utils.sync_model_state_across_replicas(train_state)
         for _ in range(steps_per_eval):
-          eval_batch = next(dataset.valid_iter)
+          eval_batch = next(dataset.valid_iter)  # pyrefly: ignore[bad-argument-type]
           e_metrics = eval_step_pmapped(train_state, eval_batch)
           if is_multilabel_model:
             e_metrics, logits_batch, labels_batch = e_metrics
-            eval_logits.append(vivit_train_utils.to_cpu(logits_batch))
-            eval_labels.append(vivit_train_utils.to_cpu(labels_batch))
+            eval_logits.append(vivit_train_utils.to_cpu(logits_batch))  # pyrefly: ignore[unbound-name]
+            eval_labels.append(vivit_train_utils.to_cpu(labels_batch))  # pyrefly: ignore[unbound-name]
           # Fetch e_metrics to host and store.
           eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
         if is_multilabel_model:
           additional_summary = evaluation_lib.compute_mean_average_precision(
-              np.concatenate(eval_logits, axis=0),
-              np.concatenate(eval_labels, axis=0),
-              return_per_class_ap=n_classes < 10)
+              np.concatenate(eval_logits, axis=0),  # pyrefly: ignore[unbound-name]
+              np.concatenate(eval_labels, axis=0),  # pyrefly: ignore[unbound-name]
+              return_per_class_ap=n_classes < 10)  # pyrefly: ignore[unbound-name]
         # Log eval summary.
         eval_summary = train_utils.log_eval_summary(
             step=step,
@@ -686,25 +686,25 @@ def train(
 
         # At the end of training, evaluate on the whole test set.
         if step == total_steps:
-          steps_per_test = total_test_steps
+          steps_per_test = total_test_steps  # pyrefly: ignore[unbound-name]
 
         logging.info('Starting multicrop test')
-        for _ in range(steps_per_test):
-          test_batch = next(dataset.test_iter)
-          t_metrics = test_step_pmapped(train_state, test_batch)
+        for _ in range(steps_per_test):  # pyrefly: ignore[unbound-name]
+          test_batch = next(dataset.test_iter)  # pyrefly: ignore[bad-argument-type]
+          t_metrics = test_step_pmapped(train_state, test_batch)  # pyrefly: ignore[unbound-name]
           if is_multilabel_model:
             t_metrics, logits_batch, labels_batch = t_metrics
-            test_logits.append(vivit_train_utils.to_cpu(logits_batch))
-            test_labels.append(vivit_train_utils.to_cpu(labels_batch))
+            test_logits.append(vivit_train_utils.to_cpu(logits_batch))  # pyrefly: ignore[unbound-name]
+            test_labels.append(vivit_train_utils.to_cpu(labels_batch))  # pyrefly: ignore[unbound-name]
           # Fetch t_metrics to host and store.
           test_metrics.append(train_utils.unreplicate_and_get(t_metrics))
         if is_multilabel_model:
           # Note that this is the Mean AP computed from the examples processed
           # by a single host.
           additional_summary = evaluation_lib.compute_mean_average_precision(
-              np.concatenate(test_logits, axis=0),
-              np.concatenate(test_labels, axis=0),
-              return_per_class_ap=n_classes < 10)
+              np.concatenate(test_logits, axis=0),  # pyrefly: ignore[unbound-name]
+              np.concatenate(test_labels, axis=0),  # pyrefly: ignore[unbound-name]
+              return_per_class_ap=n_classes < 10)  # pyrefly: ignore[unbound-name]
         # Log eval summary.
         train_utils.log_eval_summary(
             step=step,
@@ -722,4 +722,4 @@ def train(
   # Wait until computations are done before exiting.
   train_utils.barrier_across_hosts()
   # Return the train and eval summary after last step for regression testing.
-  return train_state, train_summary, eval_summary
+  return train_state, train_summary, eval_summary  # pyrefly: ignore[bad-return]

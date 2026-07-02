@@ -187,7 +187,7 @@ def load_dataset(file_patterns,
   data_files = [tf.io.matching_files(f) for f in file_patterns]
   logging.info('File patterns: %s', file_patterns)
   logging.info('Data files: %s', data_files)
-  ds = tf.data.Dataset.from_tensor_slices(data_files)
+  ds = tf.data.Dataset.from_tensor_slices(data_files)  # pyrefly: ignore[bad-argument-type]
   ds = ds.interleave(
       tf.data.Dataset.from_tensor_slices,
       num_parallel_calls=tf.data.AUTOTUNE,
@@ -272,16 +272,16 @@ def get_dataset(*,
   max_size = config.max_image_size
   max_num_boxes = config.max_num_boxes
   train_ds = load_dataset(
-      dataset_configs['train_files'],
+      dataset_configs['train_files'],  # pyrefly: ignore[unsupported-operation]
       dataset_configs,
       max_num_boxes=max_num_boxes,
-      num_examples=dataset_configs['num_train_examples'],
+      num_examples=dataset_configs['num_train_examples'],  # pyrefly: ignore[unsupported-operation]
       cache=False)
   eval_ds = load_dataset(
-      dataset_configs['eval_files'],
+      dataset_configs['eval_files'],  # pyrefly: ignore[unsupported-operation]
       dataset_configs,
       max_num_boxes=max_num_boxes,
-      num_examples=dataset_configs['num_eval_examples'],
+      num_examples=dataset_configs['num_eval_examples'],  # pyrefly: ignore[unsupported-operation]
       cache=False)
 
   padded_shapes = {
@@ -304,7 +304,7 @@ def get_dataset(*,
     if train:
       # First repeat then batch.
       ds = ds.shuffle(
-          dataset_configs.get('shuffle_buffer_size', 1000), seed=shuffle_seed)
+          dataset_configs.get('shuffle_buffer_size', 1000), seed=shuffle_seed)  # pyrefly: ignore[missing-attribute]
       ds = ds.repeat()
       # Augmentation should be done after repeat for true randomness.
       ds = ds.map(
@@ -339,10 +339,10 @@ def get_dataset(*,
   train_iter = map(dataset_utils.tf_to_numpy, train_iter)
   train_iter = map(maybe_pad_batches_train, train_iter)
   train_iter = map(shard_batches, train_iter)
-  if dataset_configs.get('prefetch_to_device'):
+  if dataset_configs.get('prefetch_to_device'):  # pyrefly: ignore[missing-attribute]
     # Async bind batch to device which speeds up training.
     train_iter = jax_utils.prefetch_to_device(
-        train_iter, dataset_configs.get('prefetch_to_device'))
+        train_iter, dataset_configs.get('prefetch_to_device'))  # pyrefly: ignore[missing-attribute]
 
   eval_iter = iter(eval_ds)
   eval_iter = map(dataset_utils.tf_to_numpy, eval_iter)
@@ -350,7 +350,7 @@ def get_dataset(*,
   eval_iter = map(shard_batches, eval_iter)
 
   meta_data = {
-      'task_name': dataset_configs['task_name'],
+      'task_name': dataset_configs['task_name'],  # pyrefly: ignore[unsupported-operation]
       'input_shape': (-1, max_size, max_size, 3),
       'input_dtype': jnp.float32,
       'obj_bbx_shape': (-1, max_num_boxes, 4),
@@ -363,7 +363,7 @@ def get_dataset(*,
       'obj_name_id_dtype': jnp.int32,
       'obj_mask_shape': (-1, max_num_boxes),
       'obj_mask_dtype': jnp.int32,
-      'num_train_examples': dataset_configs.num_train_examples,
-      'num_eval_examples': dataset_configs.num_eval_examples,
+      'num_train_examples': dataset_configs.num_train_examples,  # pyrefly: ignore[missing-attribute]
+      'num_eval_examples': dataset_configs.num_eval_examples,  # pyrefly: ignore[missing-attribute]
   }
   return dataset_utils.Dataset(train_iter, eval_iter, None, meta_data)

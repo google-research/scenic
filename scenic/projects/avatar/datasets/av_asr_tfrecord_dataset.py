@@ -209,7 +209,7 @@ class ASRTFRecordDatasetFactory(video_tfrecord_dataset.TFRecordDatasetFactory):
       ret[split] = dic['len']
     return ret
 
-  def _build(
+  def _build(  # pyrefly: ignore[bad-override]
       self,
       is_training: bool = True,
       # Video related parameters.
@@ -395,7 +395,7 @@ class ASRTFRecordDatasetFactory(video_tfrecord_dataset.TFRecordDatasetFactory):
             max_num_masks=spec_from_wave_max_num_masks,
             add_word_mask=spec_from_wave_add_word_mask,
             add_word_mask_info=spec_from_wave_add_word_mask_info,
-            eval_noise_types=spec_from_wave_eval_noise_types,
+            eval_noise_types=spec_from_wave_eval_noise_types,  # pyrefly: ignore[bad-argument-type]
             environment_noise_path=spec_from_wave_environment_noise_path,
             **spec_from_wave_eval_noise_configs,
             frame_length=spec_frame_length,
@@ -452,7 +452,7 @@ class ASRTFRecordDatasetFactory(video_tfrecord_dataset.TFRecordDatasetFactory):
         parser_builder=self.parser_builder,
         decoder_builder=self.decoder_builder,
         preprocessor_builder=self.preprocessor_builder,
-        tokenizer=tokenizer,
+        tokenizer=tokenizer,  # pyrefly: ignore[bad-argument-type]
         is_training=is_training,
         input_feature_name=caption_string,
         prepend_bos=prepend_bos,
@@ -475,7 +475,7 @@ class ASRTFRecordDatasetFactory(video_tfrecord_dataset.TFRecordDatasetFactory):
 
     def keep_only_short_videos(sample: builders.FeaturesDict) -> tf.Tensor:
       """Filter out the videos that are too long."""
-      duration = sample['clip/end/timestamp'] - sample['clip/start/timestamp']
+      duration = sample['clip/end/timestamp'] - sample['clip/start/timestamp']  # pyrefly: ignore[unsupported-operation]
       duration = tf.cast(duration, tf.float32)
       duration = duration * 1E-6
       max_duration = float(num_spec_frames)
@@ -934,7 +934,7 @@ def get_dataset(
         spec_from_wave_add_gaussian_noise=spec_from_wave_add_gaussian_noise,
         spec_from_wave_add_masking_noise=add_masking_noise,
         spec_from_wave_visualness_threshold=(
-            spec_from_wave_visualness_threshold),
+            spec_from_wave_visualness_threshold),  # pyrefly: ignore[bad-argument-type]
         spec_from_wave_random_mask_noise_rate=(
             spec_from_wave_random_mask_noise_rate),
         spec_from_wave_max_word_len=spec_from_wave_max_word_len,
@@ -1014,11 +1014,11 @@ def get_dataset(
       num_spec_frames, num_waveform_samples, max_num_words,
       add_masking_noise=spec_from_wave_add_train_masking_noise)
   eval_iter, n_eval_examples = create_dataset_iterator(
-      'val', eval_batch_size, num_eval_clips, caption_string, eval_stride,
-      eval_num_spec_frames, eval_num_waveform_samples, eval_max_num_words)
+      'val', eval_batch_size, num_eval_clips, caption_string, eval_stride,  # pyrefly: ignore[bad-argument-type]
+      eval_num_spec_frames, eval_num_waveform_samples, eval_max_num_words)  # pyrefly: ignore[bad-argument-type]
   test_iter, n_test_examples = create_dataset_iterator(
-      'test', eval_batch_size, num_eval_clips, caption_string, eval_stride,
-      eval_num_spec_frames, eval_num_waveform_samples, eval_max_num_words)
+      'test', eval_batch_size, num_eval_clips, caption_string, eval_stride,  # pyrefly: ignore[bad-argument-type]
+      eval_num_spec_frames, eval_num_waveform_samples, eval_max_num_words)  # pyrefly: ignore[bad-argument-type]
   if spec_from_wave_eval_noise_configs:
     test_iter = [test_iter]
     for noise_types, configs in spec_from_wave_eval_noise_configs.items():
@@ -1027,8 +1027,8 @@ def get_dataset(
         test_iter.append(
             create_dataset_iterator(
                 'test', eval_batch_size, num_eval_clips, caption_string,
-                eval_stride, eval_num_spec_frames, eval_num_waveform_samples,
-                eval_max_num_words, eval_noise_types=noise_types,
+                eval_stride, eval_num_spec_frames, eval_num_waveform_samples,  # pyrefly: ignore[bad-argument-type]
+                eval_max_num_words, eval_noise_types=noise_types,  # pyrefly: ignore[bad-argument-type]
                 eval_noise_configs=config)[0]
         )
 
@@ -1075,4 +1075,4 @@ def get_dataset(
                meta_data['num_eval_examples'])
   logging.info('Number of test examples: %d', meta_data['num_test_examples'])
 
-  return dataset_utils.Dataset(train_iter, eval_iter, test_iter, meta_data)
+  return dataset_utils.Dataset(train_iter, eval_iter, test_iter, meta_data)  # pyrefly: ignore[bad-argument-type]

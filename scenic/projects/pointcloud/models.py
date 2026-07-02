@@ -103,13 +103,13 @@ class SelfAttentionLayer(nn.Module):
       input_v = inputs
     else:
       input_q = nn.Conv(
-          key_channels, kernel_size=(self.kernel_size,), use_bias=True
+          key_channels, kernel_size=(self.kernel_size,), use_bias=True  # pyrefly: ignore[bad-argument-type]
       )(inputs)
       input_k = nn.Conv(
-          key_channels, kernel_size=(self.kernel_size,), use_bias=True
+          key_channels, kernel_size=(self.kernel_size,), use_bias=True  # pyrefly: ignore[bad-argument-type]
       )(inputs)
       input_v = nn.Conv(
-          self.out_channels, kernel_size=(self.kernel_size,), use_bias=True
+          self.out_channels, kernel_size=(self.kernel_size,), use_bias=True  # pyrefly: ignore[bad-argument-type]
       )(inputs)
 
     if (
@@ -127,8 +127,8 @@ class SelfAttentionLayer(nn.Module):
           numerical_stabilizer + jnp.sum(attention, axis=1, keepdims=True))
       output = jnp.einsum('...MN,...NC->...NC', attention, input_v)
     else:
-      query = jnp.expand_dims(input_q, axis=-2)
-      key = jnp.expand_dims(input_k, axis=-2)
+      query = jnp.expand_dims(input_q, axis=-2)  # pyrefly: ignore[bad-argument-type]
+      key = jnp.expand_dims(input_k, axis=-2)  # pyrefly: ignore[bad-argument-type]
       value = jnp.expand_dims(input_v, axis=-2)
       # TODO(kchoro): Include point cloud masking in performer attention
       if self.attention_fn_configs['performer']['masking_type'] == 'nomask':
@@ -212,7 +212,7 @@ class SelfAttentionLayer(nn.Module):
     output = (inputs - output) if self.attention_type == 'offset' else output
     output = nn.Conv(
         self.out_channels,
-        kernel_size=(self.kernel_size,),
+        kernel_size=(self.kernel_size,),  # pyrefly: ignore[bad-argument-type]
         use_bias=True,
     )(output)
     output = nn.LayerNorm(reduction_axes=-2)(output)
@@ -255,14 +255,14 @@ class PointCloudTransformerEncoder(nn.Module):
     for _ in range(self.num_pre_conv_layers):
       output = nn.Conv(
           self.feature_dim,
-          kernel_size=(self.kernel_size,),
+          kernel_size=(self.kernel_size,),  # pyrefly: ignore[bad-argument-type]
           use_bias=True,
       )(output)
       output = nn.LayerNorm(reduction_axes=-2)(output, mask=layer_norm_mask)
 
     # Self-attention blocks, input_shape= [B, N, D]
     attention_outputs = []
-    for _ in range(self.num_attention_layers):
+    for _ in range(self.num_attention_layers):  # pyrefly: ignore[bad-argument-type]
       output = SelfAttentionLayer(
           in_channels=self.feature_dim,
           key_channels=self.feature_dim,
@@ -274,8 +274,8 @@ class PointCloudTransformerEncoder(nn.Module):
     output = jnp.concatenate(attention_outputs, axis=-1)
 
     output = nn.Conv(
-        self.encoder_feature_dim,
-        kernel_size=(self.kernel_size,),
+        self.encoder_feature_dim,  # pyrefly: ignore[bad-argument-type]
+        kernel_size=(self.kernel_size,),  # pyrefly: ignore[bad-argument-type]
         use_bias=True)(output)
 
     if self.out_dim is not None:
@@ -283,7 +283,7 @@ class PointCloudTransformerEncoder(nn.Module):
       output = nn.leaky_relu(output, negative_slope=0.2)
       output = nn.Conv(
           self.out_dim,
-          kernel_size=(self.kernel_size,),
+          kernel_size=(self.kernel_size,),  # pyrefly: ignore[bad-argument-type]
           use_bias=True)(output)
     return output
 
@@ -323,14 +323,14 @@ class PointCloudTransformerClassifier(nn.Module):
     output = nn.Dense(4 * self.feature_dim, use_bias=True)(output)
     output = nn.LayerNorm(reduction_axes=-2)(output)
     output = nn.leaky_relu(output, negative_slope=0.2)
-    output = nn.Dropout(rate=self.dropout_rate, deterministic=not train)(output)
+    output = nn.Dropout(rate=self.dropout_rate, deterministic=not train)(output)  # pyrefly: ignore[bad-argument-type]
     # LBR Block 2
     output = nn.Dense(2 * self.feature_dim, use_bias=True)(output)
     output = nn.LayerNorm(reduction_axes=-2)(output)
     output = nn.leaky_relu(output, negative_slope=0.2)
-    output = nn.Dropout(rate=self.dropout_rate, deterministic=not train)(output)
+    output = nn.Dropout(rate=self.dropout_rate, deterministic=not train)(output)  # pyrefly: ignore[bad-argument-type]
     # Classification head
-    output = nn.Dense(self.num_classes, use_bias=True)(output)
+    output = nn.Dense(self.num_classes, use_bias=True)(output)  # pyrefly: ignore[bad-argument-type]
     return output
 
 

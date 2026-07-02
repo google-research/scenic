@@ -57,7 +57,7 @@ def timestampify(start: tf.Tensor,
   """
 
   if time_format == 'cd':
-    timestamp = tf.stack([(start + end) // 2, end - start], axis=1)
+    timestamp = tf.stack([(start + end) // 2, end - start], axis=1)  # pyrefly: ignore[unsupported-operation]
   else:
     timestamp = tf.stack([start, end], axis=1)
   timestamp = tf.minimum(timestamp, duration)
@@ -261,9 +261,9 @@ def add_text_with_timestamps(
 
   # Tokenize the text captions individually.
   preprocessor_builder.add_fn(
-      fn=lambda x: processors.tokenize(  # pylint: disable=g-long-lambda
-          x, tokenizer, output_raw_string_name, output_feature_name,
-          prepend_bos, append_eos, max_num_tokens, keep_raw_string),
+      fn=lambda x: processors.tokenize(  # pylint: disable=g-long-lambda  # pyrefly: ignore[bad-argument-type]
+          x, tokenizer, output_raw_string_name, output_feature_name,  # pyrefly: ignore[bad-argument-type]
+          prepend_bos, append_eos, max_num_tokens, keep_raw_string),  # pyrefly: ignore[bad-argument-type]
       fn_name=f'{output_feature_name}_tokenization')
 
   if asr_input:
@@ -354,7 +354,7 @@ def add_text_with_timestamps(
       del batch['asr_start']
       del batch['asr_end']
 
-    batch[output_feature_name] = seq  # [n_events, max_num_words]
+    batch[output_feature_name] = seq  # [n_events, max_num_words]  # pyrefly: ignore[unbound-name]
 
     # Pad caption, start, end, split to max_events for data collation.
     if keep_raw_string:  # eval
@@ -416,13 +416,13 @@ def add_text_with_timestamps(
     # no BOS in encoder and no EOS anywhere here
     batch[output_feature_name +
           '_corrupt_outputs'] = processors.sample_or_pad_non_sorted_sequence(
-              tf.concat([[0], x['outputs'][:max_num_tokens - 1]], 0),
-              max_num_tokens,
+              tf.concat([[0], x['outputs'][:max_num_tokens - 1]], 0),  # pyrefly: ignore[unsupported-operation]
+              max_num_tokens,  # pyrefly: ignore[bad-argument-type]
               pad_value=0,
               random=False)  # max_num_tokens
     batch[output_feature_name +
           '_corrupt_inputs'] = processors.sample_or_pad_non_sorted_sequence(
-              x['inputs'][:max_num_tokens - 1], max_num_tokens - 1, pad_value=0,
+              x['inputs'][:max_num_tokens - 1], max_num_tokens - 1, pad_value=0,  # pyrefly: ignore[unsupported-operation]
               random=False)  # max_num_tokens - 1
     return batch
 
@@ -433,7 +433,7 @@ def add_text_with_timestamps(
   preprocessor_builder.add_fn(
       fn=lambda x: processors.sample_or_pad_non_sorted_sequence(  # pylint: disable=g-long-lambda
           tf.concat([[0], x, [1]], 0),
-          max_num_tokens,
+          max_num_tokens,  # pyrefly: ignore[bad-argument-type]
           pad_value=0,
           random=False),
       feature_name=output_feature_name,

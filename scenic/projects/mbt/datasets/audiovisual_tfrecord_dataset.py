@@ -139,7 +139,7 @@ class AVTFRecordDatasetFactory(video_tfrecord_dataset.TFRecordDatasetFactory):
         num_groups=num_groups,
         group_index=group_index)
 
-  def _build(
+  def _build(  # pyrefly: ignore[bad-override]
       self,
       is_training: bool = True,
       # Video related parameters.
@@ -381,7 +381,7 @@ def tile_label_key(batch, return_as_dict=False):
   elif 'spectrogram' in batch['inputs']:
     n_repeats = (
         batch['inputs']['spectrogram'].shape[0] // batch['label'].shape[0])
-  batch['label'] = np.repeat(batch['label'], n_repeats, axis=0)
+  batch['label'] = np.repeat(batch['label'], n_repeats, axis=0)  # pyrefly: ignore[unbound-name]
   if 'key' in batch:
     batch['key'] = np.repeat(batch['key'], n_repeats, axis=0)
   return batch

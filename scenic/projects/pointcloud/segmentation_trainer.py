@@ -86,14 +86,14 @@ def train_step(
     Updated state of training, computed metrics, learning rate, and predictions
       for logging.
   """
-  new_rng, rng = jax.random.split(train_state.rng)
+  new_rng, rng = jax.random.split(train_state.rng)  # pyrefly: ignore[bad-argument-type]
   # Bind the rng to the host/device we are on.
   dropout_rng = train_utils.bind_rng_to_host_device(
       rng, axis_name='batch', bind_to='device')
 
   def training_loss_fn(params):
     class_label = batch.get('class_label', None)
-    variables = {'params': params, **train_state.model_state}
+    variables = {'params': params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
     logits, new_model_state = flax_model.apply(
         variables,
         batch['inputs'],
@@ -107,10 +107,10 @@ def train_step(
 
   compute_gradient_fn = jax.value_and_grad(training_loss_fn, has_aux=True)
   step = train_state.global_step
-  lr = learning_rate_fn(step)
+  lr = learning_rate_fn(step)  # pyrefly: ignore[bad-argument-type]
   (train_cost,
    (new_model_state,
-    logits)), grad = compute_gradient_fn(train_state.optimizer.target)
+    logits)), grad = compute_gradient_fn(train_state.optimizer.target)  # pyrefly: ignore[missing-attribute]
 
   del train_cost
   # Re-use same axis_name as in the call to `pmap(...train_step...)` below.
@@ -119,7 +119,7 @@ def train_step(
   if config.get('max_grad_norm', None) is not None:
     grad = clip_grads(grad, config.max_grad_norm)
 
-  new_optimizer = train_state.optimizer.apply_gradient(grad, learning_rate=lr)
+  new_optimizer = train_state.optimizer.apply_gradient(grad, learning_rate=lr)  # pyrefly: ignore[missing-attribute]
 
   # Explicit weight decay, if necessary.
   if config.get('explicit_weight_decay', None) is not None:
@@ -134,7 +134,7 @@ def train_step(
 
   metrics = metrics_fn(logits, batch)
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=step + 1,
+      global_step=step + 1,  # pyrefly: ignore[unsupported-operation]
       optimizer=new_optimizer,
       model_state=new_model_state,
       rng=new_rng)
@@ -180,8 +180,8 @@ def eval_step(
     Batch, predictions and calculated metrics.
   """
   variables = {
-      'params': train_state.optimizer.target,
-      **train_state.model_state
+      'params': train_state.optimizer.target,  # pyrefly: ignore[missing-attribute]
+      **train_state.model_state  # pyrefly: ignore[invalid-argument]
   }
   class_label = batch.get('class_label', None)
   logits = flax_model.apply(
@@ -191,13 +191,13 @@ def eval_step(
       train=False,
       mutable=False,
       debug=debug)
-  metrics = metrics_fn(logits, batch)
+  metrics = metrics_fn(logits, batch)  # pyrefly: ignore[bad-argument-type]
 
   confusion_matrix = get_confusion_matrix(
       labels=batch['label'], logits=logits, batch_mask=batch['batch_mask'])
 
   # Collect predictions and batches from all hosts.
-  predictions = jnp.argmax(logits, axis=-1)
+  predictions = jnp.argmax(logits, axis=-1)  # pyrefly: ignore[bad-argument-type]
   predictions = jax.lax.all_gather(predictions, 'batch')
   batch = jax.lax.all_gather(batch, 'batch')
   confusion_matrix = jax.lax.all_gather(confusion_matrix, 'batch')
@@ -296,7 +296,7 @@ def train(
   (params, model_state, num_trainable_params,
    gflops) = train_utils.initialize_model(
        model_def=model.flax_model,
-       input_spec=input_specs,
+       input_spec=input_specs,  # pyrefly: ignore[bad-argument-type]
        config=config,
        rngs=init_rng)
 
@@ -373,7 +373,7 @@ def train(
       return jax.device_get(dataset_utils.unshard(jax_utils.unreplicate(x)))
 
     for _ in range(steps_per_eval):
-      eval_batch = next(dataset.valid_iter)
+      eval_batch = next(dataset.valid_iter)  # pyrefly: ignore[bad-argument-type]
       _, _, e_metrics, confusion_matrix = eval_step_pmapped(
           train_state, eval_batch)
       eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
@@ -406,7 +406,7 @@ def train(
           np.ceil(dataset.meta_data['num_test_examples'] / eval_batch_size))
 
       for _ in range(total_test_steps):
-        test_batch = next(dataset.test_iter)
+        test_batch = next(dataset.test_iter)  # pyrefly: ignore[bad-argument-type]
         _, _, e_metrics, confusion_matrix = eval_step_pmapped(
             train_state, test_batch)
         test_metrics.append(train_utils.unreplicate_and_get(e_metrics))
@@ -445,13 +445,13 @@ def train(
   global_metrics_fn = model.get_global_metrics_fn()  # pytype: disable=attribute-error
 
   chrono = train_utils.Chrono(
-      first_step=start_step,
+      first_step=start_step,  # pyrefly: ignore[bad-argument-type]
       total_steps=total_steps,
-      steps_per_epoch=steps_per_epoch,
+      steps_per_epoch=steps_per_epoch,  # pyrefly: ignore[bad-argument-type]
       global_bs=config.batch_size,
       accum_train_time=int(jax_utils.unreplicate(train_state.accum_train_time)))
 
-  logging.info('Starting training loop at step %d.', start_step + 1)
+  logging.info('Starting training loop at step %d.', start_step + 1)  # pyrefly: ignore[unsupported-operation]
   report_progress = periodic_actions.ReportProgress(
       num_train_steps=total_steps, writer=writer)
   hooks = []
@@ -463,12 +463,12 @@ def train(
   if start_step == 0:
     step0_log = {'num_trainable_params': num_trainable_params}
     if gflops:
-      step0_log['gflops'] = gflops
+      step0_log['gflops'] = gflops  # pyrefly: ignore[bad-assignment]
     writer.write_scalars(1, step0_log)
 
-  for step in range(start_step + 1, total_steps + 1):
+  for step in range(start_step + 1, total_steps + 1):  # pyrefly: ignore[unsupported-operation]
     with jax.profiler.StepTraceAnnotation('train', sfLtep_num=step):
-      train_batch = next(dataset.train_iter)
+      train_batch = next(dataset.train_iter)  # pyrefly: ignore[bad-argument-type]
       train_state, t_metrics, lr, _ = train_step_pmapped(
           train_state, train_batch)
       # This will accumulate metrics in TPU memory up to the point that we log
@@ -520,4 +520,4 @@ def train(
   # Wait until computations are done before exiting.
   jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()
   # Return the train and eval summary after last step for regresesion testing.
-  return train_state, train_summary, eval_summary
+  return train_state, train_summary, eval_summary  # pyrefly: ignore[bad-return]

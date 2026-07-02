@@ -249,7 +249,7 @@ class TokenFuser(nn.Module):
         inputs, deterministic=deterministic)
 
     if original.ndim == 4:
-      inputs = jnp.reshape(inputs, [n, h, w, -1])
+      inputs = jnp.reshape(inputs, [n, h, w, -1])  # pyrefly: ignore[unbound-name]
 
     return inputs
 

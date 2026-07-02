@@ -47,7 +47,7 @@ def point_count(logits: jnp.ndarray,
   """
   del logits
   if weights is None:
-    return np.prod(one_hot_targets.shape[:3])
+    return np.prod(one_hot_targets.shape[:3])  # pyrefly: ignore[bad-return]
   assert weights.ndim == 2, (
       'For segmentation task, the weights should be a point level mask.')
   return weights.sum()  # pytype: disable=bad-return-type  # jax-ndarray
@@ -67,7 +67,7 @@ def semantic_segmentation_metrics_function(  # pytype: disable=annotation-type-m
     batch: base_model.Batch,
     target_is_onehot: bool = False,
     metrics: base_model
-    .MetricNormalizerFnDict = _POINTCLOUD_SEGMENTATION_METRICS,
+    .MetricNormalizerFnDict = _POINTCLOUD_SEGMENTATION_METRICS,  # pyrefly: ignore[bad-function-definition]
 ) -> Dict[str, Tuple[jnp.ndarray, jnp.ndarray]]:
   """Calculates metrics for the semantic segmentation task.
 
@@ -147,7 +147,7 @@ class PointCloudTransformerSegmentation(nn.Module):
               inputs, train=train, debug=debug)
 
     # Max Pooling
-    max_features = jnp.max(pointwise_features, axis=1, keepdims=True)
+    max_features = jnp.max(pointwise_features, axis=1, keepdims=True)  # pyrefly: ignore[unbound-name]
     max_features = jnp.repeat(max_features, repeats=num_points, axis=1)
     # Mean Pooling
     mean_features = jnp.mean(pointwise_features, axis=1, keepdims=True)
@@ -163,7 +163,7 @@ class PointCloudTransformerSegmentation(nn.Module):
       cls_label_feature = jnp.expand_dims(cls_label, axis=1)
       cls_label_feature = nn.Conv(
           self.feature_dim // 2,
-          kernel_size=(self.kernel_size, self.kernel_size),
+          kernel_size=(self.kernel_size, self.kernel_size),  # pyrefly: ignore[bad-argument-type]
           use_bias=True)(cls_label_feature)
       cls_label_feature = nn.BatchNorm(use_running_average=not train)(
           cls_label_feature)
@@ -175,20 +175,20 @@ class PointCloudTransformerSegmentation(nn.Module):
 
     # LBR Block 1
     output = nn.Conv(4 * self.feature_dim,
-                     kernel_size=(self.kernel_size, self.kernel_size),
+                     kernel_size=(self.kernel_size, self.kernel_size),  # pyrefly: ignore[bad-argument-type]
                      use_bias=True)(global_features)
     output = nn.BatchNorm(use_running_average=not train)(output)
     output = nn.leaky_relu(output, negative_slope=0.2)
     output = nn.Dropout(
-        rate=self.dropout_rate, deterministic=not train)(output)
+        rate=self.dropout_rate, deterministic=not train)(output)  # pyrefly: ignore[bad-argument-type]
     # LBR Block 2 w/o dropout
     output = nn.Conv(2 * self.feature_dim,
-                     kernel_size=(self.kernel_size, self.kernel_size),
+                     kernel_size=(self.kernel_size, self.kernel_size),  # pyrefly: ignore[bad-argument-type]
                      use_bias=True)(output)
     output = nn.BatchNorm(use_running_average=not train)(output)
     output = nn.leaky_relu(output, negative_slope=0.2)
     # Classification head
-    output = nn.Dense(self.num_class, use_bias=True)(output)
+    output = nn.Dense(self.num_class, use_bias=True)(output)  # pyrefly: ignore[bad-argument-type]
     return output
 
 
@@ -223,7 +223,7 @@ class PointCloudTransformerSegmentationModel(SegmentationModel):
       batch)```
     """
     del split  # For all splits, we return the same metric functions.
-    return functools.partial(
+    return functools.partial(  # pyrefly: ignore[bad-return]
         semantic_segmentation_metrics_function,
         target_is_onehot=self.dataset_meta_data.get('target_is_onehot', False),
         metrics=_POINTCLOUD_SEGMENTATION_METRICS)

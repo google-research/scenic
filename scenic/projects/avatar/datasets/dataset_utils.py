@@ -575,7 +575,7 @@ def add_spectrogram_from_audio(
       sampler_builder.add_fn(
           fn=functools.partial(
               add_environment_noise,
-              **environment_noise_configs,
+              **environment_noise_configs,  # pyrefly: ignore[bad-unpacking]
               noise_db=noise_db),
           feature_name=output_feature_name,
           fn_name=f'{output_feature_name}_add_environment_noise'
@@ -583,7 +583,7 @@ def add_spectrogram_from_audio(
     if 'packet_loss_noise' in eval_noise_types:
       sampler_builder.add_fn(
           fn=functools.partial(add_packet_loss_noise,
-                               **packet_loss_noise_configs),
+                               **packet_loss_noise_configs),  # pyrefly: ignore[bad-unpacking]
           feature_name=output_feature_name,
           fn_name=f'{output_feature_name}_add_packet_loss_noise')
 

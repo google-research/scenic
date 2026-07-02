@@ -233,7 +233,7 @@ class TFRecordDatasetFactory(video_dataset.BaseVideoDatasetFactory):
 
     if label_offset:
       self.preprocessor_builder.add_fn(
-          fn=lambda x: x - label_offset,
+          fn=lambda x: x - label_offset,  # pyrefly: ignore[bad-argument-type, unsupported-operation]
           feature_name=builders.LABEL_INDEX_FEATURE_NAME,
           fn_name=f'label_offset_{label_offset}',
           add_before_fn_name=(
@@ -365,9 +365,9 @@ def tile_label_key(batch: Batch) -> Batch:
     mutated by the function.
   """
   n_repeats = batch['inputs'].shape[0] // batch['label'].shape[0]
-  batch['label'] = np.repeat(batch['label'], n_repeats, axis=0)
+  batch['label'] = np.repeat(batch['label'], n_repeats, axis=0)  # pyrefly: ignore[unsupported-operation]
   if 'key' in batch:
-    batch['key'] = np.repeat(batch['key'], n_repeats, axis=0)
+    batch['key'] = np.repeat(batch['key'], n_repeats, axis=0)  # pyrefly: ignore[unsupported-operation]
   return batch
 
 

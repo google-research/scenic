@@ -95,7 +95,7 @@ def train_step(
   Returns:
     Updated state of training, computed metrics, and learning rate for logging.
   """
-  new_rng, rng = jax.random.split(train_state.rng)
+  new_rng, rng = jax.random.split(train_state.rng)  # pyrefly: ignore[bad-argument-type]
 
   if config.get('mixup') and config.mixup.alpha:
     mixup_rng, rng = jax.random.split(rng, 2)
@@ -114,7 +114,7 @@ def train_step(
       rng, axis_name='batch', bind_to='device')
 
   def training_loss_fn(params):
-    variables = {'params': params, **train_state.model_state}
+    variables = {'params': params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
     logits, new_model_state = flax_model.apply(
         variables,
         batch['inputs'],
@@ -127,12 +127,12 @@ def train_step(
 
   compute_gradient_fn = jax.value_and_grad(training_loss_fn, has_aux=True)
   step = train_state.global_step
-  lr = learning_rate_fn(step)
+  lr = learning_rate_fn(step)  # pyrefly: ignore[bad-argument-type]
   if config.get('sam_rho', None) is None:
     # Normal training
     (train_cost,
      (new_model_state,
-      logits)), grad = compute_gradient_fn(train_state.optimizer.target)
+      logits)), grad = compute_gradient_fn(train_state.optimizer.target)  # pyrefly: ignore[missing-attribute]
   else:
     # SAM training, taken from cl/373487774
     def dual_vector(y: jnp.ndarray) -> jnp.ndarray:
@@ -144,11 +144,11 @@ def train_step(
       return normalized_gradient
 
     g_sam, _ = jax.grad(training_loss_fn, has_aux=True)(
-        train_state.optimizer.target)
+        train_state.optimizer.target)  # pyrefly: ignore[missing-attribute]
     g_sam = dual_vector(g_sam)
     target_sam = jax.tree_util.tree_map(
         lambda a, b: a + config.get('sam_rho') * b,
-        train_state.optimizer.target, g_sam)
+        train_state.optimizer.target, g_sam)  # pyrefly: ignore[missing-attribute]
     (train_cost,
      (new_model_state,
       logits)), grad = compute_gradient_fn(target_sam)
@@ -160,7 +160,7 @@ def train_step(
   del train_cost
   # Re-use same axis_name as in the call to `pmap(...train_step...)` below.
   grad = jax.lax.pmean(grad, axis_name='batch')
-  new_optimizer = train_state.optimizer.apply_gradient(grad, learning_rate=lr)
+  new_optimizer = train_state.optimizer.apply_gradient(grad, learning_rate=lr)  # pyrefly: ignore[missing-attribute]
 
   # Explicit weight decay, if necessary.
   if config.get('explicit_weight_decay', None) is not None:
@@ -175,7 +175,7 @@ def train_step(
 
   metrics = metrics_fn(logits, batch)
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=step + 1,
+      global_step=step + 1,  # pyrefly: ignore[unsupported-operation]
       optimizer=new_optimizer,
       model_state=new_model_state,
       rng=new_rng)
@@ -233,16 +233,16 @@ def eval_step(
     Calculated metrics [and optionally logits or confusion matrix].
   """
   variables = {
-      'params': train_state.optimizer.target,
-      **train_state.model_state
+      'params': train_state.optimizer.target,  # pyrefly: ignore[missing-attribute]
+      **train_state.model_state  # pyrefly: ignore[invalid-argument]
   }
   logits = flax_model.apply(
       variables, batch['inputs'], train=False, mutable=False, debug=debug)
-  metrics = metrics_fn(logits, batch)
+  metrics = metrics_fn(logits, batch)  # pyrefly: ignore[bad-argument-type]
 
   if return_confusion_matrix:
     confusion_matrix = get_confusion_matrix(
-        labels=batch['label'], logits=logits, batch_mask=batch['batch_mask'])
+        labels=batch['label'], logits=logits, batch_mask=batch['batch_mask'])  # pyrefly: ignore[bad-argument-type]
     confusion_matrix = jax.lax.all_gather(confusion_matrix, 'batch')
     return metrics, confusion_matrix
 
@@ -309,16 +309,16 @@ def test_step(
   num_crops = batch['inputs'].shape[0]
 
   variables = {
-      'params': train_state.optimizer.target,
-      **train_state.model_state
+      'params': train_state.optimizer.target,  # pyrefly: ignore[missing-attribute]
+      **train_state.model_state  # pyrefly: ignore[invalid-argument]
   }
   for idx in range(0, num_crops, n_clips):
     temp_input = batch['inputs'][idx:idx + n_clips]
     logits = flax_model.apply(
         variables, temp_input, train=False, mutable=False, debug=debug)
     if softmax_logits:
-      logits = nn.softmax(logits, axis=-1)
-    logits = jnp.sum(logits, axis=0)
+      logits = nn.softmax(logits, axis=-1)  # pyrefly: ignore[bad-argument-type]
+    logits = jnp.sum(logits, axis=0)  # pyrefly: ignore[bad-argument-type]
     all_logits = all_logits + logits
 
   all_logits = all_logits / num_crops
@@ -423,6 +423,6 @@ def render_confusion_matrices(confusion_matrices: List[Array],
 
   fig.canvas.draw()
   ncols, nrows = fig.canvas.get_width_height()
-  image = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8)
+  image = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8)  # pyrefly: ignore[no-matching-overload]
   image = image.reshape(nrows, ncols, 3)
   return np.expand_dims(image, axis=0)
