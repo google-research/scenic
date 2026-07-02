@@ -42,7 +42,7 @@ Rng = Union[jnp.ndarray, Dict[str, jnp.ndarray]]
 class ObjectsTFRecordDatasetFactory(TFRecordDatasetFactory):
   """Support bounding boxes."""
 
-  def _build(
+  def _build(  # pyrefly: ignore[bad-override]
       self,
       is_training: bool = True,
       # Video related parameters.
@@ -99,7 +99,7 @@ class ObjectsTFRecordDatasetFactory(TFRecordDatasetFactory):
 
     if label_offset:
       self.preprocessor_builder.add_fn(
-          fn=lambda x: x - label_offset,
+          fn=lambda x: x - label_offset,  # pyrefly: ignore[bad-argument-type, unsupported-operation]
           feature_name=builders.LABEL_INDEX_FEATURE_NAME,
           fn_name=f'label_offset_{label_offset}',
           add_before_fn_name=(f'{builders.LABEL_INDEX_FEATURE_NAME}_one_hot'))
@@ -419,7 +419,7 @@ def custom_tile_label_key(
     mutated by the function.
   """
   n_repeats = batch['inputs'].shape[0] // batch['label'].shape[0]
-  batch['label'] = np.repeat(batch['label'], n_repeats, axis=0)
+  batch['label'] = np.repeat(batch['label'], n_repeats, axis=0)  # pyrefly: ignore[unsupported-operation]
   if 'key' in batch:
-    batch['key'] = np.repeat(batch['key'], n_repeats, axis=0)
+    batch['key'] = np.repeat(batch['key'], n_repeats, axis=0)  # pyrefly: ignore[unsupported-operation]
   return batch

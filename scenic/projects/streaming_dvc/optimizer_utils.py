@@ -118,7 +118,7 @@ def optimizer_with_layerwise_decay(
   logging.info(
       'Layer assignments:\n%s',
       flax.traverse_util.flatten_dict(layer_map, sep='/'))
-  tx = optax.multi_transform(optimizers, layer_map)
+  tx = optax.multi_transform(optimizers, layer_map)  # pyrefly: ignore[bad-argument-type]
   return tx
 
 
@@ -177,5 +177,5 @@ def optimizer_with_backbone_multiplier(
   logging.info(
       'Layer assignments:\n%s',
       flax.traverse_util.flatten_dict(layer_map, sep='/'))
-  tx = optax.multi_transform(optimizers, layer_map)
+  tx = optax.multi_transform(optimizers, layer_map)  # pyrefly: ignore[bad-argument-type]
   return tx

@@ -76,10 +76,10 @@ def get_dataset(
   del rng
   try:
     dataset_base_dir = DATASET_BASE_DIRS[tuple(
-        dataset_configs.chrm_image_shape)]
+        dataset_configs.chrm_image_shape)]  # pyrefly: ignore[missing-attribute]
   except KeyError as key_error:
     raise ValueError('No dataset found matching "%s"; options: %r' %
-                     (dataset_configs.chrm_image_shape,
+                     (dataset_configs.chrm_image_shape,  # pyrefly: ignore[missing-attribute]
                       DATASET_BASE_DIRS.keys())) from key_error
 
   def build_baseline_dataset(split='train', shuffle=False):
@@ -91,7 +91,7 @@ def get_dataset(
         split,
         parallel_reads=parallel_reads)
     ds = ds.map(
-        lambda x: preprocess(x, 'label', dataset_configs.chrm_image_shape))
+        lambda x: preprocess(x, 'label', dataset_configs.chrm_image_shape))  # pyrefly: ignore[missing-attribute]
     return ds
 
   # use different seed for each host
@@ -154,7 +154,7 @@ def get_dataset(
   test_iter = map(shard_batches, test_iter)
   test_iter = jax_utils.prefetch_to_device(test_iter, prefetch_buffer_size)
 
-  input_shape = [-1] + list(dataset_configs.chrm_image_shape) + [NUM_CHANNELS]
+  input_shape = [-1] + list(dataset_configs.chrm_image_shape) + [NUM_CHANNELS]  # pyrefly: ignore[missing-attribute]
   meta_data = {
       'num_classes': NUM_CLASSES,
       'input_shape': input_shape,
@@ -213,7 +213,7 @@ def load_data(base_dir, split, parallel_reads=4):
   # only 1/num_shards of full dataset.
   filenames = tf.io.matching_files(path)
   filenames_host_split = np.array_split(filenames, num_hosts)[host_id]
-  files = tf.data.Dataset.list_files(filenames_host_split)
+  files = tf.data.Dataset.list_files(filenames_host_split)  # pyrefly: ignore[bad-argument-type]
 
   data = files.interleave(
       tf.data.TFRecordDataset,

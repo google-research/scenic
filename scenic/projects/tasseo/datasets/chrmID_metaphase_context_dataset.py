@@ -90,7 +90,7 @@ def load_data(split, parallel_reads=4):
   # only 1/num_shards of full dataset.
   filenames = tf.io.matching_files(path)
   filenames_host_split = np.array_split(filenames, num_hosts)[host_id]
-  files = tf.data.Dataset.list_files(filenames_host_split)
+  files = tf.data.Dataset.list_files(filenames_host_split)  # pyrefly: ignore[bad-argument-type]
 
   data = files.interleave(
       tf.data.TFRecordDataset,

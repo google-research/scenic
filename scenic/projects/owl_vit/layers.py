@@ -232,6 +232,7 @@ class ClassPredictor(nn.Module):
       query_embeddings /= jnp.linalg.norm(
           query_embeddings, axis=-1, keepdims=True) + 1e-6
 
+    # pyrefly: ignore[missing-attribute]
     assert query_embeddings.ndim > 2, ('Expects shape (batch, query, out_dim). '
                                        f'Got {query_embeddings.shape}')
     pred_logits = jnp.einsum(
@@ -305,13 +306,13 @@ class ClipImageTextEmbedder(ImageTextEmbedderBase):
     model_config['vision_native_grid_size'] = self.embed_configs.get(
         'native_image_grid_size'
     )
-    model = clip_layers.CLIP(**model_config, name='clip')
+    model = clip_layers.CLIP(**model_config, name='clip')  # pyrefly: ignore[bad-argument-type]
     # Input images should have range (0.0, 1.0). Shift them to CLIP range:
     if images is not None:
       images = clip_model.normalize_image(images)
     # Don't normalize image and text embeddings.
     img_emb, txt_emb = model(
-        images, texts, normalize=False, deterministic=not train)
+        images, texts, normalize=False, deterministic=not train)  # pyrefly: ignore[bad-argument-type]
     # Drop or merge class embedding token.
     if img_emb is not None:
       merge_class_token = self.embed_configs.get('merge_class_token', 'drop')
@@ -326,8 +327,8 @@ class ClipImageTextEmbedder(ImageTextEmbedderBase):
       else:
         raise ValueError(f'Unknown merge_class_token: {merge_class_token}')
 
-    if txt_emb is not None and len(texts_shape) > 2:
-      txt_emb = txt_emb.reshape(texts_shape[:-1] + (-1,))
+    if txt_emb is not None and len(texts_shape) > 2:  # pyrefly: ignore[bad-argument-type]
+      txt_emb = txt_emb.reshape(texts_shape[:-1] + (-1,))  # pyrefly: ignore[unsupported-operation]
     return img_emb, txt_emb
 
   def load_backbone(self, params: Params,

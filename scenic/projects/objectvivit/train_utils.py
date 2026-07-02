@@ -108,7 +108,7 @@ def _do_cutmix(inputs: jnp.ndarray, rng: Any,
 
   # TODO(unterthiner): we are using the same bounding box for the whole batch
   y_min, y_max, x_min, x_max = get_random_bounding_box(
-      inputs.shape[-3:-1], ratio, rng)
+      inputs.shape[-3:-1], ratio, rng)  # pyrefly: ignore[bad-argument-type]
 
   height, width = inputs.shape[-3], inputs.shape[-2]
   y_idx = jnp.arange(height)

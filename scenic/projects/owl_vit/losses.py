@@ -46,8 +46,8 @@ def sigmoid_cost(
   neg_cost_class = -jax.nn.log_sigmoid(-logit)
   pos_cost_class = -jax.nn.log_sigmoid(logit)
   if focal_loss:
-    neg_cost_class *= (1 - focal_alpha) * jax.nn.sigmoid(logit)**focal_gamma
-    pos_cost_class *= focal_alpha * jax.nn.sigmoid(-logit)**focal_gamma
+    neg_cost_class *= (1 - focal_alpha) * jax.nn.sigmoid(logit)**focal_gamma  # pyrefly: ignore[unsupported-operation]
+    pos_cost_class *= focal_alpha * jax.nn.sigmoid(-logit)**focal_gamma  # pyrefly: ignore[unsupported-operation]
   return pos_cost_class - neg_cost_class  # [B, N, C]
 
 

@@ -94,7 +94,7 @@ def get_dataset(
   """
 
   del rng
-  pattern_pathname = dataset_configs.pattern_pathname
+  pattern_pathname = dataset_configs.pattern_pathname  # pyrefly: ignore[missing-attribute]
   def get_fold_filepath_pattern(fold_num):
     return DATASET_KFOLD_PATTERN % {
         'pattern_pathname': pattern_pathname,
@@ -105,7 +105,7 @@ def get_dataset(
   fold_filepath_patterns = [
       get_fold_filepath_pattern(i) for i in range(NUM_FOLDS)
   ]
-  eval_fold_nums = [dataset_configs.test_fold_num]
+  eval_fold_nums = [dataset_configs.test_fold_num]  # pyrefly: ignore[missing-attribute]
   train_fold_nums = [i for i in range(NUM_FOLDS) if i not in eval_fold_nums]
   kfold_dataset_prefixes = {
       'train': [fold_filepath_patterns[i] for i in train_fold_nums],
@@ -146,7 +146,7 @@ def get_dataset(
     # pylint: disable=g-long-lambda
     ds = ds.map(
         lambda x: ts_dataset_utils.preprocess(
-            x, 'label', dataset_configs.chrm_image_shape,
+            x, 'label', dataset_configs.chrm_image_shape,  # pyrefly: ignore[missing-attribute]
             class_names=CLASS_NAMES))
     # pylint: enable=g-long-lambda
     return ds
@@ -211,10 +211,10 @@ def get_dataset(
   test_iter = map(shard_batches, test_iter)
   test_iter = jax_utils.prefetch_to_device(test_iter, prefetch_buffer_size)
 
-  input_shape = [-1] + list(dataset_configs.chrm_image_shape) + [NUM_CHANNELS]
+  input_shape = [-1] + list(dataset_configs.chrm_image_shape) + [NUM_CHANNELS]  # pyrefly: ignore[missing-attribute]
   fold_metadata = (
-      FOLD_METADATA[dataset_configs.pattern_pathname][
-          dataset_configs.test_fold_num])
+      FOLD_METADATA[dataset_configs.pattern_pathname][  # pyrefly: ignore[missing-attribute]
+          dataset_configs.test_fold_num])  # pyrefly: ignore[missing-attribute]
   num_train_examples = fold_metadata['num_train']
   num_test_examples = fold_metadata['num_test']
   meta_data = {

@@ -23,7 +23,7 @@ from pycocoevalcap.rouge import rouge
 
 import numpy as np
 import six
-from six.moves import zip
+from six.moves import zip  # pyrefly: ignore[missing-source-for-stubs]
 
 
 class CustomMeteor(meteor.Meteor):
@@ -90,7 +90,7 @@ class CustomCOCOEvalCap:
         (bleu.Bleu(), 'BLEU-4'),
     ]
     if self.eval_meteor_spice:
-      scorers.extend([
+      scorers.extend([  # pyrefly: ignore[bad-argument-type]
           (CustomMeteor(), 'Meteor'),
           (spice.Spice(), 'Spice'),
       ])

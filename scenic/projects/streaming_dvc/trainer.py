@@ -77,7 +77,7 @@ def train_and_evaluate(
   (params, model_state, num_trainable_params, gflops) = (
       train_utils.initialize_model(
           model_def=model.flax_model,
-          input_spec=input_spec,
+          input_spec=input_spec,  # pyrefly: ignore[bad-argument-type]
           config=config,
           rngs=init_rng,
       )
@@ -108,7 +108,7 @@ def train_and_evaluate(
   train_state = streaming_dvc_train_utils.re_add_axis_names(
       train_state, params_axes, 'params_axes')
 
-  start_step = int(train_state.global_step)
+  start_step = int(train_state.global_step)  # pyrefly: ignore[bad-argument-type]
   if start_step == 0:
     train_state, start_step = streaming_dvc_train_utils.load_weights(
         train_state, config)
@@ -116,7 +116,7 @@ def train_and_evaluate(
                  'num_learnable_params': num_learnable_params,
                  'num_frozen_params': num_frozen_params}
     if gflops:
-      step0_log['gflops'] = gflops
+      step0_log['gflops'] = gflops  # pyrefly: ignore[bad-assignment]
     writer.write_scalars(1, step0_log)
   train_state = jax_utils.replicate(train_state)
   del params  # Do not keep a copy of the initial params.
@@ -146,7 +146,7 @@ def train_and_evaluate(
   train_summary, eval_summary = None, None
   eval_batch_size = config.get('eval_batch_size', config.batch_size)
   chrono = train_utils.Chrono()
-  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
+  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)  # pyrefly: ignore[bad-argument-type]
 
   def write_note(note):
     if is_host:
@@ -164,7 +164,7 @@ def train_and_evaluate(
 
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
-      train_batch = next(dataset.train_iter)
+      train_batch = next(dataset.train_iter)  # pyrefly: ignore[bad-argument-type]
       train_state, lr, train_predictions, metrics = train_step_pmapped(
           train_state, train_batch)
       train_metrics.append(metrics)

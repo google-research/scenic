@@ -417,7 +417,7 @@ def get_predictions(config: ml_collections.ConfigDict,
       normalize=config.model.normalize,
       box_bias=config.model.box_bias)
   module.tokenize('')  # Warm up the tokenizer.
-  variables = module.load_variables(checkpoint_path=checkpoint_path)
+  variables = module.load_variables(checkpoint_path=checkpoint_path)  # pyrefly: ignore[bad-argument-type]
   embed_queries = get_embed_queries_fn(module, variables)
   predict = get_predict_fn(module, variables)
   pmapped_top_k = jax.pmap(get_top_k, static_broadcasted_argnums=(2, 3))

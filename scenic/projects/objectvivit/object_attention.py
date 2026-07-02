@@ -127,8 +127,8 @@ class ObjectBlock(nn.Module):
     # MLP block.
     y = nn.LayerNorm(dtype=self.dtype)(x)
     y = attention_layers.MlpBlock(  # pytype: disable=wrong-arg-types  # jnp-type
-        mlp_dim=self.mlp_dim,
-        dtype=self.dtype,
+        mlp_dim=self.mlp_dim,  # pyrefly: ignore[bad-argument-type]
+        dtype=self.dtype,  # pyrefly: ignore[bad-argument-type]
         dropout_rate=self.dropout_rate,
         activation_fn=functools.partial(
             nn.gelu, approximate=self.use_approximate_gelu),

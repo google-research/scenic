@@ -139,8 +139,8 @@ class TextZeroShotDetectionModule(nn.Module):
         out_activation=None, name='obj_box_head')
 
     if self.mask_head_configs is not None:
-      self._mask_head = layers.BoxMaskHead(
-          **self.mask_head_configs,  # pylint: disable=not-a-mapping
+      self._mask_head = layers.BoxMaskHead(  # pyrefly: ignore[missing-argument]
+          **self.mask_head_configs,  # pylint: disable=not-a-mapping  # pyrefly: ignore[bad-unpacking]
           name='obj_mask_head')
 
   def objectness_predictor(
@@ -272,7 +272,7 @@ class TextZeroShotDetectionModule(nn.Module):
       A 2D map of image features.
     """
     image_features, _ = self._embedder(images=images, train=train)
-    return utils.seq2img(images, image_features)
+    return utils.seq2img(images, image_features)  # pyrefly: ignore[bad-argument-type]
 
   def text_embedder(self, text_queries: jnp.ndarray,
                     train: bool) -> jnp.ndarray:

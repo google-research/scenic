@@ -217,7 +217,7 @@ def train(*, rng: jnp.ndarray, config: ml_collections.ConfigDict,
   (params, model_state, num_trainable_params,
    gflops) = train_utils.initialize_model(
        model_def=model.flax_model,
-       input_spec=input_spec,
+       input_spec=input_spec,  # pyrefly: ignore[bad-argument-type]
        config=config,
        rngs=init_rng)
 
@@ -262,7 +262,7 @@ def train(*, rng: jnp.ndarray, config: ml_collections.ConfigDict,
   if config.checkpoint:
     train_state, start_step = train_utils.restore_checkpoint(
         workdir, train_state)
-  chrono.load(train_state.metadata['chrono'])
+  chrono.load(train_state.metadata['chrono'])  # pyrefly: ignore[unsupported-operation]
 
   if start_step != 0:
     # Option 1:
@@ -283,8 +283,8 @@ def train(*, rng: jnp.ndarray, config: ml_collections.ConfigDict,
       # Delegate the actual loading to the model. `module.bind()` is needed to
       # initialize submodules, which have their own `load` functions.
       params = model.flax_model.bind({}).load(
-          train_state.params.unfreeze(), init_config)
-      train_state = train_state.replace(params=flax.core.freeze(params))
+          train_state.params.unfreeze(), init_config)  # pyrefly: ignore[missing-attribute]
+      train_state = train_state.replace(params=flax.core.freeze(params))  # pyrefly: ignore[missing-attribute]
 
     # Option 4: Train from scratch.
     else:
@@ -338,7 +338,7 @@ def train(*, rng: jnp.ndarray, config: ml_collections.ConfigDict,
 
     for eval_step in range(num_eval_steps):
       logging.info('Running eval step %d', eval_step)
-      eval_batch = next(dataset.valid_iter)
+      eval_batch = next(dataset.valid_iter)  # pyrefly: ignore[bad-argument-type]
 
       with jax.profiler.TraceAnnotation('eval_step', step_num=step, _r=1):
         eval_metrics.append(
@@ -372,9 +372,9 @@ def train(*, rng: jnp.ndarray, config: ml_collections.ConfigDict,
 
   train_metrics, extra_training_logs, cpu_training_logs = [], [], []
   train_summary, eval_summary = None, None
-  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
+  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)  # pyrefly: ignore[bad-argument-type]
 
-  logging.info('Start training from step %d to %d.', start_step + 1,
+  logging.info('Start training from step %d to %d.', start_step + 1,  # pyrefly: ignore[unsupported-operation]
                total_steps + 1)
   report_progress = periodic_actions.ReportProgress(
       num_train_steps=total_steps,
@@ -396,13 +396,13 @@ def train(*, rng: jnp.ndarray, config: ml_collections.ConfigDict,
   if start_step == 0:
     step0_log = {'num_trainable_params': num_trainable_params}
     if gflops:
-      step0_log['gflops'] = gflops
+      step0_log['gflops'] = gflops  # pyrefly: ignore[bad-assignment]
     writer.write_scalars(1, step0_log)
 
   write_note(f'First step compilations...\n{chrono.note}')
-  for step in range(start_step + 1, total_steps + 1):
+  for step in range(start_step + 1, total_steps + 1):  # pyrefly: ignore[unsupported-operation]
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
-      train_batch = next(dataset.train_iter)
+      train_batch = next(dataset.train_iter)  # pyrefly: ignore[bad-argument-type]
       # Do the train step.
       with jax.profiler.TraceAnnotation('train_step', step_num=step, _r=1):
         train_state, t_metrics = train_step_pmapped(train_state, train_batch)

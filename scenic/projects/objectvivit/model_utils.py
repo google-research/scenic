@@ -182,8 +182,8 @@ class CustomEncoderBlock(nn.Module):
     # MLP block.
     y = nn.LayerNorm(dtype=self.dtype)(x)
     y = attention_layers.MlpBlock(  # pytype: disable=wrong-arg-types  # jnp-type
-        mlp_dim=self.mlp_dim,
-        dtype=self.dtype,
+        mlp_dim=self.mlp_dim,  # pyrefly: ignore[bad-argument-type]
+        dtype=self.dtype,  # pyrefly: ignore[bad-argument-type]
         dropout_rate=self.dropout_rate,
         activation_fn=functools.partial(
             nn.gelu, approximate=self.use_approximate_gelu),
@@ -285,7 +285,7 @@ class CustomEncoder(nn.Module):
             use_approximate_gelu=self.use_approximate_gelu,
             configs=self.attach_configs,
             dtype=dtype)(
-                x, token_scores=token_scores, deterministic=not train)
+                x, token_scores=token_scores, deterministic=not train)  # pyrefly: ignore[bad-argument-type]
         continue
 
       block = CustomEncoderBlock(
@@ -309,7 +309,7 @@ class CustomEncoder(nn.Module):
         # x: batch x num_fg_tokens x hidden_dim
         # token_scores: batch x num_objects x num_fg_tokens
         if add_context_tokens > 0:
-          x = jnp.concatenate([x, context_tokens], axis=1)
+          x = jnp.concatenate([x, context_tokens], axis=1)  # pyrefly: ignore[unbound-name]
           if object_block_idx and token_scores is not None:
             num_objs = token_scores.shape[1]
             num_bg_tokens = context_tokens.shape[1]
@@ -341,7 +341,7 @@ class CustomEncoder(nn.Module):
       context_tokens: batch x num_context_token x hidden_dim
     """
     batch, num_total_tokens, hidden_dim = full_x.shape
-    k = fg_inds.shape[1]
+    k = fg_inds.shape[1]  # pyrefly: ignore[missing-attribute]
     random_score = jax.random.uniform(
         self.make_rng('dropout'), (batch, num_total_tokens))
 
@@ -382,8 +382,8 @@ class CustomEncoder(nn.Module):
     x = x[inds.reshape(-1)].reshape(batch, k, hidden_dim)
     sampled_token_scores = None
     if drop_scores:
-      num_objs = token_scores.shape[1]
-      token_scores = token_scores.reshape(-1)
+      num_objs = token_scores.shape[1]  # pyrefly: ignore[missing-attribute]
+      token_scores = token_scores.reshape(-1)  # pyrefly: ignore[missing-attribute]
       expand_fg_inds = jnp.broadcast_to(fg_inds[:, None], (batch, num_objs, k))
       inds = jnp.arange(
           batch * num_objs * k) // k * num_tokens + expand_fg_inds.reshape(-1)

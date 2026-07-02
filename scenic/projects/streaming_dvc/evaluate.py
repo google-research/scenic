@@ -336,7 +336,7 @@ def inference_on_dataset(
   for eval_step_i in range(total_eval_steps):
     if eval_step_i % 100 == 0:
       logging.info('Running eval step %d', eval_step_i)
-    eval_batch = next(dataset.valid_iter)
+    eval_batch = next(dataset.valid_iter)  # pyrefly: ignore[bad-argument-type]
     eval_batch_all_hosts, predictions_all_hosts, metrics = eval_step_pmapped(
         train_state, eval_batch)
     eval_metrics.append(train_utils.unreplicate_and_get(metrics))
@@ -363,7 +363,7 @@ def inference_on_dataset(
 
   results = None
   if is_host:
-    logging.info('Number of eval examples: %d', len(global_metrics_evaluator))
+    logging.info('Number of eval examples: %d', len(global_metrics_evaluator))  # pyrefly: ignore[bad-argument-type]
     results = global_metrics_evaluator.compute_metrics(  # pytype: disable=attribute-error
         save_dir=save_dir, clear_annotations=False,
         skip_evaluate=config.get('skip_evaluate', False))

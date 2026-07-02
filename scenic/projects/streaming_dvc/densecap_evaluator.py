@@ -66,7 +66,7 @@ class DenseCapEvaluator(caption_evaluator.CaptionEvaluator):
     assert isinstance(tokenizer, TOKENIZER)
     self.vocab_size = BERT_VOCAB_SIZE if isinstance(
         tokenizer, tokenizers.BertTokenizer) else SP_VOCAB_SIZE
-    self.predictions = {}
+    self.predictions = {}  # pyrefly: ignore[bad-assignment]
     self.annotations = {}
     self.pred_image_set = set()
     self.gt_image_set = set()
@@ -93,7 +93,7 @@ class DenseCapEvaluator(caption_evaluator.CaptionEvaluator):
     }
     if media_id not in self.predictions:
       self._num_examples_added += 1
-    self.predictions[media_id] = pred
+    self.predictions[media_id] = pred  # pyrefly: ignore[unsupported-operation]
 
   def compute_metrics(
       self,
@@ -148,7 +148,7 @@ class DenseCapEvaluator(caption_evaluator.CaptionEvaluator):
     return avg_res
 
   def clear(self):
-    self.predictions = {}
+    self.predictions = {}  # pyrefly: ignore[bad-assignment]
     self.annotations = {}
     self._num_examples_added = 0
     self._num_captions_added = 0

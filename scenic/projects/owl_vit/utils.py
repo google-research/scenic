@@ -91,7 +91,7 @@ def normalized_grid_corner_coordinates(
     x = jnp.cumsum(padding_mask, axis=2)
     xy = jnp.stack([x / (x[:, :, -1:] + 1e-6), y / (y[:, -1:] + 1e-6)], axis=-1)
   # Flatten h, w dimensions.
-  return xy.reshape(*(xy.shape[:-3] + (-1, 2)))
+  return xy.reshape(*(xy.shape[:-3] + (-1, 2)))  # pyrefly: ignore[bad-return]
 
 
 def compute_box_bias(

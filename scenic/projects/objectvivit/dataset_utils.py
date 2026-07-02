@@ -263,12 +263,12 @@ def add_image_and_boxes(
       fn_name=f'{output_feature_name}_normalize')
 
   preprocessor_builder.add_fn(
-      fn=lambda x: x - normalization_mean,
+      fn=lambda x: x - normalization_mean,  # pyrefly: ignore[bad-argument-type, unsupported-operation]
       feature_name=output_feature_name,
       fn_name=f'{output_feature_name}_subtract_given_mean')
 
   preprocessor_builder.add_fn(
-      fn=lambda x: x / normalization_std,
+      fn=lambda x: x / normalization_std,  # pyrefly: ignore[bad-argument-type, unsupported-operation]
       feature_name=output_feature_name,
       fn_name=f'{output_feature_name}_divide_by_given_std')
 
@@ -778,7 +778,7 @@ def sample_crop_size(image_h: int, image_w: int,
 
   """
 
-  if len(scales) != 4:
+  if len(scales) != 4:  # pyrefly: ignore[bad-argument-type]
     raise NotImplementedError('Only 4 values are supported for the scale.')
 
   base_size = tf.cast(tf.minimum(image_w, image_h), tf.float32)

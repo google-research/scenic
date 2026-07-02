@@ -279,7 +279,7 @@ class BaseModelWithMatching(base_model.BaseModel, metaclass=abc.ABCMeta):
 
     if not isinstance(matches, (list, tuple)):
       # Ensure matches come as a sequence.
-      matches = [matches]
+      matches = [matches]  # pyrefly: ignore[bad-assignment]
 
     # Pad matches if the matching is not complete (i.e. the number of
     # predicted instances is larger than the number of gt instances).
@@ -305,9 +305,9 @@ class BaseModelWithMatching(base_model.BaseModel, metaclass=abc.ABCMeta):
         return jnp.concatenate([match, padding], axis=-1)
       return match
 
-    matches = [pad_matches(match) for match in matches]
+    matches = [pad_matches(match) for match in matches]  # pyrefly: ignore[bad-assignment, not-iterable]
 
-    indices = matches[0]
+    indices = matches[0]  # pyrefly: ignore[unsupported-operation]
 
     # Compute all the requested losses and metrics.
     loss_dict = {}
@@ -332,7 +332,7 @@ class BaseModelWithMatching(base_model.BaseModel, metaclass=abc.ABCMeta):
 
     # Process metrics dictionary to generate final unnormalized metrics.
     metrics = self.get_metrics(metrics_dict)
-    metrics['total_loss'] = (total_loss, 1)
+    metrics['total_loss'] = (total_loss, 1)  # pyrefly: ignore[unsupported-operation]
     return total_loss, metrics  # pytype: disable=bad-return-type  # jax-ndarray
 
   def get_metrics(self, metrics_dict: MetricsDict) -> MetricsDict:
@@ -463,8 +463,8 @@ class ObjectDetectionModel(BaseModelWithMatching):
         src_boxes_xyxy, tgt_boxes_xyxy, all_pairs=False)
 
     unnormalized_loss_bbox = model_utils.weighted_box_l1_loss(
-        src_boxes_xyxy,
-        tgt_boxes_xyxy,
+        src_boxes_xyxy,  # pyrefly: ignore[bad-argument-type]
+        tgt_boxes_xyxy,  # pyrefly: ignore[bad-argument-type]
         weights=batch_weights,
     ).sum(axis=2)
 
@@ -472,7 +472,7 @@ class ObjectDetectionModel(BaseModelWithMatching):
     if batch_weights is not None:
       denom *= batch_weights
       unnormalized_loss_giou = model_utils.apply_weights(
-          unnormalized_loss_giou, batch_weights)
+          unnormalized_loss_giou, batch_weights)  # pyrefly: ignore[bad-argument-type]
 
     unnormalized_loss_bbox *= tgt_not_padding
     unnormalized_loss_giou *= tgt_not_padding

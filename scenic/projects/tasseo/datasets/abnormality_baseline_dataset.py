@@ -90,7 +90,7 @@ def get_dataset(
 
     if split == 'train':
       dataset_prefix = dataset_prefixes['train'] % (
-          dataset_configs.num_abnormal, dataset_configs.replica)
+          dataset_configs.num_abnormal, dataset_configs.replica)  # pyrefly: ignore[missing-attribute]
     else:
       dataset_prefix = dataset_prefixes[split]
     ds = ts_dataset_utils.load_data(
@@ -99,7 +99,7 @@ def get_dataset(
         parallel_reads=parallel_reads)
     ds = ds.map(
         lambda x: ts_dataset_utils.preprocess(  # pylint:disable=g-long-lambda
-            x, 'label', dataset_configs.chrm_image_shape,
+            x, 'label', dataset_configs.chrm_image_shape,  # pyrefly: ignore[missing-attribute]
             class_names=CLASS_NAMES))
     return ds
 
@@ -151,16 +151,16 @@ def get_dataset(
   valid_iter = map(shard_batches, valid_iter)
   valid_iter = jax_utils.prefetch_to_device(valid_iter, prefetch_buffer_size)
 
-  input_shape = [-1] + list(dataset_configs.chrm_image_shape) + [NUM_CHANNELS]
+  input_shape = [-1] + list(dataset_configs.chrm_image_shape) + [NUM_CHANNELS]  # pyrefly: ignore[missing-attribute]
   meta_data = {
       'num_classes':
           NUM_CLASSES,
       'input_shape':
           input_shape,
       'num_train_examples':
-          int(NUM_TRAIN_EXAMPLES[dataset_configs.abnormality]),
+          int(NUM_TRAIN_EXAMPLES[dataset_configs.abnormality]),  # pyrefly: ignore[missing-attribute]
       'num_eval_examples':
-          NUM_VALIDATION_EXAMPLES[dataset_configs.abnormality],
+          NUM_VALIDATION_EXAMPLES[dataset_configs.abnormality],  # pyrefly: ignore[missing-attribute]
       'input_dtype':
           getattr(jnp, dtype_str),
       'target_is_onehot':

@@ -109,7 +109,7 @@ def train_step_partitioned(
     metrics: Losses and other metrics for visualization.
   """
   def loss_fn(params_to_learn, params_to_freeze):
-    new_rng, rng = jax.random.split(train_state.rng, 2)
+    new_rng, rng = jax.random.split(train_state.rng, 2)  # pyrefly: ignore[bad-argument-type]
 
     model_rng = train_utils.bind_rng_to_host_device(
         rng, axis_name='batch', bind_to='device')
@@ -118,7 +118,7 @@ def train_step_partitioned(
     _tree_merge(params, flax.core.unfreeze(params_to_freeze))
     # Gradients do not get computed with the following:
     # params = {**train_state.params_learned, **train_state.params_frozen}
-    variables = {'params': params, **train_state.model_state}
+    variables = {'params': params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
 
     kwargs = {}
     if 'context_tokens' in batch['label']:
@@ -154,9 +154,9 @@ def train_step_partitioned(
   grad = jax.lax.pmean(grad, axis_name='batch')
   updates, new_opt_state = train_state.tx.update(  # pytype: disable=attribute-error
       grad, train_state.opt_state, train_state.params_learned)
-  new_params_learned = optax.apply_updates(train_state.params_learned, updates)
-  new_train_state = train_state.replace(
-      global_step=step + 1,
+  new_params_learned = optax.apply_updates(train_state.params_learned, updates)  # pyrefly: ignore[bad-argument-type]
+  new_train_state = train_state.replace(  # pyrefly: ignore[missing-attribute]
+      global_step=step + 1,  # pyrefly: ignore[unsupported-operation]
       opt_state=new_opt_state,
       params_learned=new_params_learned,
       model_state=new_model_state,
@@ -167,7 +167,7 @@ def train_step_partitioned(
     return jnp.sqrt(sum([jnp.vdot(g, g) for g in jax.tree_util.tree_leaves(x)]))
 
   metrics['l2_grads'] = (global_l2_norm(grad), 1)
-  metrics['l2_params'] = (global_l2_norm(new_params_learned), 1)
+  metrics['l2_params'] = (global_l2_norm(new_params_learned), 1)  # pyrefly: ignore[bad-argument-type]
   metrics['l2_updates'] = (global_l2_norm(updates), 1)
 
   return new_train_state, lr, predictions, metrics
@@ -287,10 +287,10 @@ def convert_to_train_state(
   """
 
   params_learned_flat = _flatten_params(
-      flax.core.unfreeze(p_train_state.params_learned)
+      flax.core.unfreeze(p_train_state.params_learned)  # pyrefly: ignore[bad-argument-type]
   )
   params_frozen = _flatten_params(
-      flax.core.unfreeze(p_train_state.params_frozen)
+      flax.core.unfreeze(p_train_state.params_frozen)  # pyrefly: ignore[bad-argument-type]
   )
 
   params = params_learned_flat
@@ -375,7 +375,7 @@ def create_frozen_mask_from_regex(
     matches = [bool(pattern.fullmatch(name)) for pattern in compiled_patterns]
 
     matched = sum(map(int, matches))
-    matched_patterns = [patterns_names[i] for i, m in enumerate(matches) if m]
+    matched_patterns = [patterns_names[i] for i, m in enumerate(matches) if m]  # pyrefly: ignore[unsupported-operation]
     if matched > 1:
       raise ValueError(
           f'{name} matched by multiple patterns: {matched_patterns}')
@@ -386,7 +386,7 @@ def create_frozen_mask_from_regex(
     if log:
       if any(matches):
         logging.info('%s - matched by %s', name,
-                     patterns_names[matches.index(True)])
+                     patterns_names[matches.index(True)])  # pyrefly: ignore[unsupported-operation]
       else:
         logging.info('%s - not matched by any patterns', name)
     return np.array(matches)
