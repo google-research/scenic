@@ -228,7 +228,7 @@ def non_max_suppression_padded(scores: jnp.ndarray,
   idx = num_boxes - lax.top_k(  # pytype: disable=wrong-arg-types  # jax-ndarray
       jnp.any(selected_boxes > 0, [2]).astype(jnp.int32) *
       jnp.expand_dims(jnp.arange(num_boxes, 0, -1), 0),
-      max_output_size)[0].astype(jnp.int32)
+      max_output_size)[0].astype(jnp.int32)  # pyrefly: ignore[bad-argument-type]
   idx = jnp.minimum(idx, num_boxes - 1)
   idx_return = idx
   idx = jnp.reshape(

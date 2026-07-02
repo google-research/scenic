@@ -171,7 +171,7 @@ def initialize_model(
       return init_params, init_model_state
 
   if not isinstance(rngs, dict):
-    rngs = {'params': rngs}
+    rngs = {'params': rngs}  # pyrefly: ignore[bad-assignment]
   init_params, init_model_state = _initialize_model(rngs)
   # Pop out params rng:
   rngs.pop('params')
@@ -255,7 +255,7 @@ def initialize_model_with_pytree(
     elif isinstance(spec, collections.Sequence):
       if check_leaf_spec(spec):
         in_st = debug_utils.input_spec_to_jax_shape_dtype_struct(
-            spec, batch_size=batch_size
+            spec, batch_size=batch_size  # pyrefly: ignore[bad-argument-type]
         )
         return jnp.zeros(in_st.shape, in_st.dtype)
       else:
@@ -318,7 +318,7 @@ def initialize_model_with_pytree(
       return init_params, init_model_state
 
   if not isinstance(rngs, dict):
-    rngs = {'params': rngs}
+    rngs = {'params': rngs}  # pyrefly: ignore[bad-assignment]
   init_params, init_model_state = _initialize_model(rngs)
   # Pop out params rng:
   rngs.pop('params')
@@ -506,7 +506,7 @@ def initialize_multitask_model(
       return init_params, init_model_state
 
   if not isinstance(rngs, dict):
-    rngs = {'params': rngs}
+    rngs = {'params': rngs}  # pyrefly: ignore[bad-assignment]
   init_params, init_model_state = _initialize_model(rngs)
   # Pop out params rng:
   rngs.pop('params')
@@ -602,8 +602,8 @@ def sync_model_state_across_replicas(train_state: TrainState) -> TrainState:
   if jax.tree_util.tree_leaves(train_state.model_state):
     # If the model_state is not empty.
     new_model_state = flax.core.copy(
-        train_state.model_state,
-        {'batch_stats': pmap_mean(train_state.model_state['batch_stats'])},
+        train_state.model_state,  # pyrefly: ignore[bad-argument-type]
+        {'batch_stats': pmap_mean(train_state.model_state['batch_stats'])},  # pyrefly: ignore[unsupported-operation]
     )
     return train_state.replace(  # pytype: disable=attribute-error
         model_state=new_model_state
@@ -1061,7 +1061,7 @@ def accumulate_gradients(
       dropout_rng, sub_dropout_rng = jax.random.split(dropout_rng)
       mbatch = get_microbatch(batch, loop_cnt)
       (train_loss, (_, mlogits)), grad = compute_gradient_fn(
-          params, mbatch, sub_dropout_rng
+          params, mbatch, sub_dropout_rng  # pyrefly: ignore[bad-argument-type]
       )
       metrics = metrics_fn(mlogits, mbatch)
       # Accumulate gradients and metrics.
@@ -1074,7 +1074,7 @@ def accumulate_gradients(
     dropout_rng, sub_dropout_rng = jax.random.split(dropout_rng)
     init_mbatch = get_microbatch(batch, 0)
     (init_train_loss, (model_state, init_logits)), grad_init = (
-        compute_gradient_fn(params, init_mbatch, sub_dropout_rng)
+        compute_gradient_fn(params, init_mbatch, sub_dropout_rng)  # pyrefly: ignore[bad-argument-type]
     )
     if jax.tree_util.tree_leaves(model_state):
       # If the model_state is not empty.
@@ -1096,7 +1096,7 @@ def accumulate_gradients(
     return model_state, grad_acc, train_loss, metrics_acc
   else:
     (train_loss, (model_state, logits)), grad = compute_gradient_fn(
-        params, batch, dropout_rng
+        params, batch, dropout_rng  # pyrefly: ignore[bad-argument-type]
     )
     metrics = metrics_fn(logits, batch)
     return model_state, grad, train_loss, metrics
@@ -1177,7 +1177,7 @@ class Chrono:
     summary.update({'uptime': now - self.program_start_time})
     # We always count examples, regardless of the timing-related warmup that
     # happens a few lines below.
-    ds = step - self.prev_step  # Steps between ticks
+    ds = step - self.prev_step  # Steps between ticks  # pyrefly: ignore[unsupported-operation]
     self.prev_step = step
     self.accum_examples_seen += ds * self.global_bs
     summary.update({'examples_seen': self.accum_examples_seen})
@@ -1226,8 +1226,8 @@ class Chrono:
 
     # Progress note with "global" full-program average timings
     # (eg in program-time minus warmup)
-    dt = now - self.train_start_time  # Time elapsed since end of warmup.
-    steps_timed = step - self.train_start_step
+    dt = now - self.train_start_time  # Time elapsed since end of warmup.  # pyrefly: ignore[unsupported-operation]
+    steps_timed = step - self.train_start_step  # pyrefly: ignore[unsupported-operation]
     steps_todo = self.total_steps - step
     self.note = f'Steps:{step}/{self.total_steps} [{step/self.total_steps:.1%}]'
     self.note += f'\nWalltime:{hms(self.accum_program_time)}'

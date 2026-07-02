@@ -232,7 +232,7 @@ def get_model_and_tx_and_train_state(rng: RngType,
   model = model_cls(config, dataset.meta_data)
 
   # Initialize model.
-  rng, init_rng = jax.random.split(rng)
+  rng, init_rng = jax.random.split(rng)  # pyrefly: ignore[bad-argument-type]
   (params, model_state, num_trainable_params,
    gflops) = train_utils.initialize_model(
        model_def=model.flax_model,
@@ -332,7 +332,7 @@ def train_and_evaluate(
                  dataset.meta_data.get('input_dtype', jnp.float32))]
   (model, tx, train_state, num_trainable_params, gflops,
    start_step) = get_model_and_tx_and_train_state(
-       rng, dataset, config, model_cls, workdir, input_spec=input_spec)
+       rng, dataset, config, model_cls, workdir, input_spec=input_spec)  # pyrefly: ignore[bad-argument-type]
 
   # Calculate the total number of training steps.
   total_steps, steps_per_epoch = train_utils.get_num_training_steps(
@@ -420,7 +420,7 @@ def train_and_evaluate(
       train_state = train_utils.sync_model_state_across_replicas(train_state)
       (last_eval_step,
        last_eval_metrics), last_eval_future = ddetr_eval.run_eval(
-           global_metrics_evaluator, dataset, train_state, eval_step_pmapped,
+           global_metrics_evaluator, dataset, train_state, eval_step_pmapped,  # pyrefly: ignore[bad-argument-type]
            pool, 0, steps_per_eval)
     duration = time.time() - start_time
     logging.info('Done with async evaluation: %.4f sec.', duration)
@@ -428,7 +428,7 @@ def train_and_evaluate(
 
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
-      train_batch = next(dataset.train_iter)
+      train_batch = next(dataset.train_iter)  # pyrefly: ignore[bad-argument-type]
       train_state, t_metrics, train_predictions = train_step_pmapped(
           train_state, train_batch)
       # This will accumulate metrics in TPU memory up to the point that we log
@@ -484,8 +484,8 @@ def train_and_evaluate(
       # First wait for the previous eval to finish & write summary.
       if last_eval_future is not None:
         eval_summary = train_utils.log_eval_summary(
-            step=last_eval_step,
-            eval_metrics=last_eval_metrics,
+            step=last_eval_step,  # pyrefly: ignore[bad-argument-type]
+            eval_metrics=last_eval_metrics,  # pyrefly: ignore[bad-argument-type]
             extra_eval_summary=last_eval_future.result(),
             writer=writer,
             metrics_normalizer_fn=metrics_normalizer_fn)
@@ -498,7 +498,7 @@ def train_and_evaluate(
         train_state = train_utils.sync_model_state_across_replicas(train_state)
         (last_eval_step,
          last_eval_metrics), last_eval_future = ddetr_eval.run_eval(
-             global_metrics_evaluator, dataset, train_state, eval_step_pmapped,
+             global_metrics_evaluator, dataset, train_state, eval_step_pmapped,  # pyrefly: ignore[bad-argument-type]
              pool, step, steps_per_eval)
       duration = time.time() - start_time
       logging.info('Done with async evaluation: %.4f sec.', duration)
@@ -518,13 +518,13 @@ def train_and_evaluate(
   pool.shutdown()
   if last_eval_future is not None:
     eval_summary = train_utils.log_eval_summary(
-        step=last_eval_step,
-        eval_metrics=last_eval_metrics,
+        step=last_eval_step,  # pyrefly: ignore[bad-argument-type]
+        eval_metrics=last_eval_metrics,  # pyrefly: ignore[bad-argument-type]
         extra_eval_summary=last_eval_future.result(),
         writer=writer,
         metrics_normalizer_fn=metrics_normalizer_fn)
   train_utils.barrier()
-  return train_state, train_summary, eval_summary
+  return train_state, train_summary, eval_summary  # pyrefly: ignore[bad-return]
 
 
 def evaluate(
@@ -563,7 +563,7 @@ def evaluate(
                  dataset.meta_data.get('input_dtype', jnp.float32))]
   (model, _, train_state, num_trainable_params, gflops,
    _) = get_model_and_tx_and_train_state(
-       rng, dataset, config, model_cls, workdir, input_spec=input_spec)
+       rng, dataset, config, model_cls, workdir, input_spec=input_spec)  # pyrefly: ignore[bad-argument-type]
 
   step0_log = {'num_trainable_params': num_trainable_params}
   if gflops:
@@ -611,7 +611,7 @@ def evaluate(
   with report_progress.timed('eval'):
     train_state = train_utils.sync_model_state_across_replicas(train_state)
     (last_eval_step, last_eval_metrics), last_eval_future = ddetr_eval.run_eval(
-        global_metrics_evaluator=global_metrics_evaluator,
+        global_metrics_evaluator=global_metrics_evaluator,  # pyrefly: ignore[bad-argument-type]
         dataset=dataset,
         train_state=train_state,
         eval_step_pmapped=eval_step_pmapped,

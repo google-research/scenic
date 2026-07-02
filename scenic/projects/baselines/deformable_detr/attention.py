@@ -296,7 +296,7 @@ class MultiScaleDeformableAttention(nn.Module):
       normalized_offsets = sampling_offsets / (2 * self.num_points) * ref_wh
 
     # (bs, len_q, nheads, nlevels, npoints, 2)
-    sampling_locations = ref_xy + normalized_offsets
+    sampling_locations = ref_xy + normalized_offsets  # pyrefly: ignore[unbound-name]
     # (bs, nheads, nlevels, npoints, len_q, 2)
     sampling_locations = sampling_locations.transpose(0, 2, 3, 4, 1, 5)
     # (bs * nheads, nlevels, npoints * len_q, 2)

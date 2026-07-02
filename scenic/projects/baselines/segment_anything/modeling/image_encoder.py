@@ -264,10 +264,10 @@ class MHAttention(nn.Module):
     if self.use_rel_pos:
       rel_pos_h = self.param(
           'rel_pos_h', nn.initializers.zeros,
-          (2 * self.input_size[0] - 1, head_dim))
+          (2 * self.input_size[0] - 1, head_dim))  # pyrefly: ignore[unsupported-operation]
       rel_pos_w = self.param(
           'rel_pos_w', nn.initializers.zeros,
-          (2 * self.input_size[0] - 1, head_dim))
+          (2 * self.input_size[0] - 1, head_dim))  # pyrefly: ignore[unsupported-operation]
       attn = self.add_decomposed_rel_pos(
           attn, q, rel_pos_h, rel_pos_w,
           (height, width), (height, width))

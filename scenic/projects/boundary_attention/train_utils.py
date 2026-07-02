@@ -107,7 +107,7 @@ def restore_pretrained_params(
         fail_if_shapes_mismatch=False)
 
   params = pretrain_utils._replace_dict(train_state.params, restored_params)  # pylint: disable=protected-access
-  train_state = train_state.replace(
+  train_state = train_state.replace(  # pyrefly: ignore[missing-attribute]
       # Inspect and compare the parameters of the model with the init-model.
       params=params,
       # model_state=restored_model_state,
@@ -223,7 +223,7 @@ def initialize_model(
         rngs, *dummy_input, train=False).pop('params')
     # Set bias in the head to low value, such that loss is small initially.
     if config.get('init_head_bias', None) is not None:
-      init_params = flax.core.unfreeze(init_params)
+      init_params = flax.core.unfreeze(init_params)  # pyrefly: ignore[bad-argument-type]
       init_params['output_projection'] = optimizers.tree_map_with_names(
           lambda p: jnp.full_like(p, config.init_head_bias),
           init_params['output_projection'],
@@ -232,7 +232,7 @@ def initialize_model(
     return init_params, init_model_state
 
   if not isinstance(rngs, dict):
-    rngs = {'params': rngs}
+    rngs = {'params': rngs}  # pyrefly: ignore[bad-assignment]
   init_params, init_model_state = _initialize_model(rngs)
   # Pop out params rng:
   rngs.pop('params')

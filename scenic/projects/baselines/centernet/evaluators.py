@@ -38,7 +38,7 @@ class LvisEvaluator(coco_eval_wrapper.DetectionEvaluator):
     """Initializes a LvisEvaluator object."""
     self.annotations = []
     self.annotated_img_ids = []
-    self.coco = lvis.LVIS(json.load(gfile.GFile(annotations_loc, 'r')))
+    self.coco = lvis.LVIS(json.load(gfile.GFile(annotations_loc, 'r')))  # pyrefly: ignore[bad-assignment]
     self.label_to_coco_id = {
         i: cat['id'] for i, cat in enumerate(sorted(
             self.coco.dataset['categories'], key=lambda x: x['id']))}

@@ -44,11 +44,11 @@ def eval_step(
 ) -> Tuple[Dict[str, jnp.ndarray], ArrayDict]:
   """Runs a single step of evaluation."""
 
-  variables = {'params': train_state.params, **train_state.model_state}
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
 
   rng = train_state.rng
 
-  params_rng, codebook_rng, _ = jax.random.split(rng, 3)
+  params_rng, codebook_rng, _ = jax.random.split(rng, 3)  # pyrefly: ignore[bad-argument-type]
   # Bind the rng to the host/device we are on.
   params_rng = scenic_train_utils.bind_rng_to_host_device(
       params_rng, axis_name='batch', bind_to='device'
@@ -58,13 +58,13 @@ def eval_step(
 
   # Run model
   model_outputs = flax_model.apply(
-      variables, batch['image'], train=False, rngs=rngs
+      variables, batch['image'], train=False, rngs=rngs  # pyrefly: ignore[bad-argument-type]
   )
 
   # Metrics
-  metrics = metrics_fn(model_outputs, batch)
+  metrics = metrics_fn(model_outputs, batch)  # pyrefly: ignore[bad-argument-type]
 
-  return metrics, model_outputs
+  return metrics, model_outputs  # pyrefly: ignore[bad-return]
 
 
 _SPARSE_BATCHES_FOR_VISUALIZATION = list(range(4))
@@ -135,7 +135,7 @@ class EvalManager:
       eval_metrics = []
       additional_summary = None
       for i in range(steps_per_eval):
-        eval_batch = next(val_iter)
+        eval_batch = next(val_iter)  # pyrefly: ignore[bad-argument-type]
 
         e_metrics, model_outputs = eval_step_pmapped(
             batch=eval_batch, train_state=train_state
