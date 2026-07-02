@@ -73,7 +73,7 @@ class MAPHead(nn.Module):
 
     y = nn.LayerNorm()(x)
     x = x + attention_layers.MlpBlock(
-        mlp_dim=self.mlp_dim,
+        mlp_dim=self.mlp_dim,  # pyrefly: ignore[bad-argument-type]
         dtype=self.dtype,
         dropout_rate=0.0)(y, deterministic=True)
     return x[:, 0]

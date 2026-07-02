@@ -129,7 +129,7 @@ def sample_crop_size(image_h: int, image_w: int,
 
   """
 
-  if len(scales) != 4:
+  if len(scales) != 4:  # pyrefly: ignore[bad-argument-type]
     raise NotImplementedError('Only 4 values are supported for the scale.')
 
   base_size = tf.cast(tf.minimum(image_w, image_h), tf.float32)
@@ -447,12 +447,12 @@ def add_image(
         fn_name=f'{output_feature_name}_normalize')
 
   preprocessor_builder.add_fn(
-      fn=lambda x: x - normalization_mean,
+      fn=lambda x: x - normalization_mean,  # pyrefly: ignore[bad-argument-type, unsupported-operation]
       feature_name=output_feature_name,
       fn_name=f'{output_feature_name}_subtract_given_mean')
 
   preprocessor_builder.add_fn(
-      fn=lambda x: x / normalization_std,
+      fn=lambda x: x / normalization_std,  # pyrefly: ignore[bad-argument-type, unsupported-operation]
       feature_name=output_feature_name,
       fn_name=f'{output_feature_name}_divide_by_given_std')
 
@@ -576,18 +576,18 @@ def apply_specaugment(spec: tf.Tensor, spec_augment_params=None):
   """
   # pylint: disable=line-too-long
   spec_augment_params_obj = spectrum_augmenter.SpectrumAugmenter.Params()
-  spec_augment_params_obj.freq_mask_max_bins = spec_augment_params.freq_mask_max_bins
-  spec_augment_params_obj.freq_mask_count = spec_augment_params.freq_mask_count
-  spec_augment_params_obj.time_mask_max_frames = spec_augment_params.time_mask_max_frames
-  spec_augment_params_obj.time_mask_count = spec_augment_params.time_mask_count
-  spec_augment_params_obj.time_warp_max_frames = spec_augment_params.time_warp_max_frames
-  spec_augment_params_obj.time_warp_max_ratio = spec_augment_params.time_warp_max_ratio
-  spec_augment_params_obj.time_mask_max_ratio = spec_augment_params.time_mask_max_ratio
-  spec_augment_params_obj.use_dynamic_time_mask_max_frames = spec_augment_params.get(
+  spec_augment_params_obj.freq_mask_max_bins = spec_augment_params.freq_mask_max_bins  # pyrefly: ignore[missing-attribute]
+  spec_augment_params_obj.freq_mask_count = spec_augment_params.freq_mask_count  # pyrefly: ignore[missing-attribute]
+  spec_augment_params_obj.time_mask_max_frames = spec_augment_params.time_mask_max_frames  # pyrefly: ignore[missing-attribute]
+  spec_augment_params_obj.time_mask_count = spec_augment_params.time_mask_count  # pyrefly: ignore[missing-attribute]
+  spec_augment_params_obj.time_warp_max_frames = spec_augment_params.time_warp_max_frames  # pyrefly: ignore[missing-attribute]
+  spec_augment_params_obj.time_warp_max_ratio = spec_augment_params.time_warp_max_ratio  # pyrefly: ignore[missing-attribute]
+  spec_augment_params_obj.time_mask_max_ratio = spec_augment_params.time_mask_max_ratio  # pyrefly: ignore[missing-attribute]
+  spec_augment_params_obj.use_dynamic_time_mask_max_frames = spec_augment_params.get(  # pyrefly: ignore[missing-attribute]
       'use_dynamic_time_mask_max_frames', False)
-  spec_augment_params_obj.time_masks_per_frame = spec_augment_params.get(
+  spec_augment_params_obj.time_masks_per_frame = spec_augment_params.get(  # pyrefly: ignore[missing-attribute]
       'time_masks_per_frame', 0.0)
-  spec_augment_params_obj.time_warp_bound = spec_augment_params.get(
+  spec_augment_params_obj.time_warp_bound = spec_augment_params.get(  # pyrefly: ignore[missing-attribute]
       'time_warp_bound', 'static')
   spec_augment_params_obj.name = 'specaugment'
   spec_augment_layer = spec_augment_params_obj.Instantiate()

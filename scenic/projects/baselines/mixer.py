@@ -73,7 +73,7 @@ class MixerBlock(nn.Module):
             x, deterministic=deterministic)
     x = jnp.swapaxes(x, 1, 2)
     if self.layer_scale is not None:
-      x = nn_layers.Affine(scale_init=layerscale_init, use_bias=False)(x)
+      x = nn_layers.Affine(scale_init=layerscale_init, use_bias=False)(x)  # pyrefly: ignore[unbound-name]
 
     x = nn_layers.StochasticDepth(rate=self.stochastic_depth)(x, deterministic)
     x = self.combine_branches(x, inputs)

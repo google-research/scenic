@@ -74,7 +74,7 @@ def log_train_summary(step: int,
 
   ##### Prepare additional training logs:
   # If None, set to an empty dictionary.
-  extra_training_logs = extra_training_logs or {}
+  extra_training_logs = extra_training_logs or {}  # pyrefly: ignore[bad-assignment]
   train_logs = train_utils.stack_forest(extra_training_logs)
 
   # Metrics:

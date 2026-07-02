@@ -75,7 +75,7 @@ class LinformerEncoderAttention(nn.Module):
   @nn.compact
   def __call__(self,  # pytype: disable=annotation-type-mismatch  # jax-ndarray
                inputs_q: jnp.ndarray,
-               inputs_kv: jnp.ndarray = None,
+               inputs_kv: jnp.ndarray = None,  # pyrefly: ignore[bad-function-definition]
                *,
                deterministic: bool) -> jnp.ndarray:
     """Applies Linformer multi-head dot product self-attention.
@@ -742,7 +742,7 @@ class TopKTokenSelector(nn.Module):
           [selected_tokens, unselected_tokens_rep], axis=1)
 
     if self.exclude_cls:
-      selected_tokens = jnp.concatenate([cls, selected_tokens], axis=1)
+      selected_tokens = jnp.concatenate([cls, selected_tokens], axis=1)  # pyrefly: ignore[unbound-name]
     return selected_tokens
 
 
@@ -1283,20 +1283,20 @@ class FastAttentionviaLowRankDecomposition(FastAttention):
       self.projection_matrix = self.draw_weights(rng)
 
     # batch_dims is  <bs, <non-attention dims>, num_heads>
-    batch_dims = tuple(np.delete(range(n), axis + (n - 1,)))
+    batch_dims = tuple(np.delete(range(n), axis + (n - 1,)))  # pyrefly: ignore[unsupported-operation]
     # q & k -> (bs, <non-attention dims>, num_heads, <attention dims>, channels)
-    qk_perm = batch_dims + axis + (n - 1,)
-    k_extra_perm = axis + batch_dims + (n - 1,)
+    qk_perm = batch_dims + axis + (n - 1,)  # pyrefly: ignore[unsupported-operation]
+    k_extra_perm = axis + batch_dims + (n - 1,)  # pyrefly: ignore[unsupported-operation]
     key_extra = key.transpose(k_extra_perm)
     key = key.transpose(qk_perm)
     query = query.transpose(qk_perm)
     # v -> (bs, <non-attention dims>, num_heads, <attention dims>, channels)
-    v_perm = batch_dims + axis + (n - 1,)
+    v_perm = batch_dims + axis + (n - 1,)  # pyrefly: ignore[unsupported-operation]
     value = value.transpose(v_perm)
     batch_dims_t = tuple(range(len(batch_dims)))
     attention_dims_t = tuple(
         range(len(batch_dims),
-              len(batch_dims) + len(axis)))
+              len(batch_dims) + len(axis)))  # pyrefly: ignore[bad-argument-type]
 
     # Constructing tensors Q^{'} and K^{'}.
     query_prime = self.kernel_feature_creator(query, self.projection_matrix,
@@ -1343,8 +1343,8 @@ class FastAttentionviaLowRankDecomposition(FastAttention):
         r = jnp.moveaxis(r, 0, index)
     else:
       contract_query = tuple(
-          range(len(batch_dims) + len(axis),
-                len(batch_dims) + len(axis) + 1))
+          range(len(batch_dims) + len(axis),  # pyrefly: ignore[bad-argument-type]
+                len(batch_dims) + len(axis) + 1))  # pyrefly: ignore[bad-argument-type]
       contract_z = tuple(range(len(batch_dims), len(batch_dims) + 1))
       # Constructing  z = (K^{'})^{T}V
       #  z (bs, <non-attention dims>, num_heads, channels_m, channels_v)
@@ -1373,9 +1373,9 @@ class FastAttentionviaLowRankDecomposition(FastAttention):
         thick_all_ones = thick_all_ones.astype(dtype)
         contract_key = tuple(
             range(len(batch_dims),
-                  len(batch_dims) + len(axis)))
+                  len(batch_dims) + len(axis)))  # pyrefly: ignore[bad-argument-type]
         contract_thick_all_ones = tuple(
-            range(thick_all_ones.ndim - len(axis), thick_all_ones.ndim))
+            range(thick_all_ones.ndim - len(axis), thick_all_ones.ndim))  # pyrefly: ignore[bad-argument-type]
         # Construct t = (K^{'})^{T} 1_L
         # k (bs, <non-attention dims>, num_heads, <attention dims>, channels)
         t = lax.dot_general(

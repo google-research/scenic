@@ -267,7 +267,7 @@ class DeformableDETRTransformerTest(parameterized.TestCase):
 
     masks = np.stack([create_mask(h, w) for w, h in shapes], 0)
 
-    out = get_mask_valid_ratio(masks)
+    out = get_mask_valid_ratio(masks)  # pyrefly: ignore[bad-argument-type]
     exp_ratios = np.array(shapes, dtype=float) / max_d
     self.assertSequenceAlmostEqual(exp_ratios.flatten(), out.flatten())
 

@@ -69,7 +69,7 @@ def maybe_pad_batch(batch: Batch, train: bool, batch_size: int,
   # Most batches will not need padding, so we quickly return to avoid slowdown.
   if train or batch_pad == 0:
     if 'batch_mask' not in batch:
-      batch['batch_mask'] = np.ones(unpadded_mask_shape, dtype=np.float32)
+      batch['batch_mask'] = np.ones(unpadded_mask_shape, dtype=np.float32)  # pyrefly: ignore[unsupported-operation]
     return batch
 
   def zero_pad(array):
@@ -161,7 +161,7 @@ class DatasetFactory(video_tfrecord_dataset.TFRecordDatasetFactory):
         num_groups=num_groups,
         group_index=group_index)
 
-  def _build(
+  def _build(  # pyrefly: ignore[bad-override]
       self,
       is_training: bool = True,
       # Video related parameters.
@@ -352,7 +352,7 @@ class DatasetFactory(video_tfrecord_dataset.TFRecordDatasetFactory):
 
     if label_offset:
       self.preprocessor_builder.add_fn(
-          fn=lambda x: x - label_offset,
+          fn=lambda x: x - label_offset,  # pyrefly: ignore[bad-argument-type, unsupported-operation]
           feature_name=builders.LABEL_INDEX_FEATURE_NAME,
           fn_name=f'label_offset_{label_offset}',
           add_before_fn_name=(f'{builders.LABEL_INDEX_FEATURE_NAME}_one_hot'))
@@ -645,9 +645,9 @@ def tile_label_key(batch: Batch,
   else:
     n_repeats = batch['inputs'].shape[0] // batch['label'].shape[0]
 
-  batch['label'] = np.repeat(batch['label'], n_repeats, axis=0)
+  batch['label'] = np.repeat(batch['label'], n_repeats, axis=0)  # pyrefly: ignore[unbound-name, unsupported-operation]
   if 'key' in batch:
-    batch['key'] = np.repeat(batch['key'], n_repeats, axis=0)
+    batch['key'] = np.repeat(batch['key'], n_repeats, axis=0)  # pyrefly: ignore[unsupported-operation]
   return batch
 
 

@@ -551,7 +551,7 @@ def mixup(batch: Dict['str', jnp.ndarray],
   weight *= np_backend.ones(label_weight_shape.astype(np_backend.int32))
 
   # Mixup labels.
-  batch[label_key] = weight * labels + (1.0 - weight) * labels[::-1]
+  batch[label_key] = weight * labels + (1.0 - weight) * labels[::-1]  # pyrefly: ignore[unsupported-operation]
 
   # Mixup inputs.
   # Shape calculations use np to avoid device memory fragmentation:
@@ -562,7 +562,7 @@ def mixup(batch: Dict['str', jnp.ndarray],
   reverse = tuple(
       slice(images.shape[i]) if d != 'N' else slice(-1, None, -1)
       for i, d in enumerate(image_format))
-  batch[input_key] = weight * images + (1.0 - weight) * images[reverse]
+  batch[input_key] = weight * images + (1.0 - weight) * images[reverse]  # pyrefly: ignore[unsupported-operation]
 
   return batch
 
@@ -616,7 +616,7 @@ def get_dataset_tfds(
 ):
   """Data provider."""
   builder = get_builder(dataset, data_dir)
-  split = tfds.even_splits(split, jax.process_count(), drop_remainder=True)[
+  split = tfds.even_splits(split, jax.process_count(), drop_remainder=True)[  # pyrefly: ignore[bad-assignment]
       jax.process_index()
   ]
   skip_decoders = make_skip_decoders(skip_decode, builder.info.features)

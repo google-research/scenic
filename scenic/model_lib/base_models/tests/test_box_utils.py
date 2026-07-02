@@ -103,7 +103,7 @@ class RBoxUtilsTest(parameterized.TestCase):
     self.assertEqual(cxcywha.shape, (3, 2, 5))
 
     corners = box_utils.cxcywha_to_corners(cxcywha)
-    cxcywha2 = box_utils.corners_to_cxcywha(corners)
+    cxcywha2 = box_utils.corners_to_cxcywha(corners)  # pyrefly: ignore[bad-argument-type]
     np.testing.assert_allclose(cxcywha2, cxcywha, atol=1e-6)
 
   def test_convert_cxcywha_to_corners_single_rotated(self):
@@ -141,7 +141,7 @@ class RBoxUtilsTest(parameterized.TestCase):
     rbox2 = rbox1
     corners1 = box_utils.cxcywha_to_corners(rbox1)
     corners2 = box_utils.cxcywha_to_corners(rbox2)
-    it_points = box_utils.intersect_rbox_edges(corners1, corners2)
+    it_points = box_utils.intersect_rbox_edges(corners1, corners2)  # pyrefly: ignore[bad-argument-type]
     self.assertEqual(it_points.shape, (4, 4, 2))
     it_points = it_points[~jnp.any(jnp.isnan(it_points), -1)]
     it_points = sorted([(x, y) for x, y in np.array(it_points)])
@@ -154,7 +154,7 @@ class RBoxUtilsTest(parameterized.TestCase):
     rbox2 = jnp.array([1.0, 1.0, jnp.sqrt(2), jnp.sqrt(2), 45. * np.pi / 180.])
     corners1 = box_utils.cxcywha_to_corners(rbox1)
     corners2 = box_utils.cxcywha_to_corners(rbox2)
-    it_points = box_utils.intersect_rbox_edges(corners1, corners2)
+    it_points = box_utils.intersect_rbox_edges(corners1, corners2)  # pyrefly: ignore[bad-argument-type]
     it_points = jnp.round(
         it_points[~jnp.any(jnp.isnan(it_points), -1)], decimals=4)
     it_points = sorted([(x, y) for x, y in np.array(it_points)])

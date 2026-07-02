@@ -54,7 +54,7 @@ class MixerTest(parameterized.TestCase):
     mixer_block_vars = mixer_block().init(rng, x, deterministic=True)
     y = mixer_block().apply(mixer_block_vars, x, deterministic=True)
     # Test outputs shape.
-    self.assertEqual(y.shape, x.shape)
+    self.assertEqual(y.shape, x.shape)  # pyrefly: ignore[missing-attribute]
 
   def test_mixer_models(self):
     """Test forward pass of the mixer classification model."""
@@ -95,7 +95,7 @@ class MixerTest(parameterized.TestCase):
     # Test batch_norm in inference mode.
     outputs = model.flax_model.apply(
         variables, xs, mutable=False, train=False, debug=False)
-    self.assertEqual(outputs.shape, (INPUT_SHAPE[0], NUM_OUTPUTS))
+    self.assertEqual(outputs.shape, (INPUT_SHAPE[0], NUM_OUTPUTS))  # pyrefly: ignore[missing-attribute]
 
 
 if __name__ == '__main__':

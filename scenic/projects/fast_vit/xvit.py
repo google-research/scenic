@@ -79,13 +79,13 @@ class Encoder1D(nn.Module):
       x = model_utils.Encoder1DBlock(  # pytype: disable=wrong-arg-types  # jax-ndarray
           mlp_dim=self.mlp_dim,
           attention_fn=self.attention_fn,
-          attention_configs=self.attention_configs,
+          attention_configs=self.attention_configs,  # pyrefly: ignore[bad-argument-type]
           dropout_rate=self.dropout_rate,
           attention_dropout_rate=self.attention_dropout_rate,
           num_kernel_features=self.num_kernel_features,
           redraw=self.redraw,
           name=f'encoder_block_{lyr}')(
-              x, inputs_kv=None, deterministic=not train)
+              x, inputs_kv=None, deterministic=not train)  # pyrefly: ignore[bad-argument-type]
 
     return nn.LayerNorm(name='encoder_norm')(x)
 
@@ -235,11 +235,11 @@ class Encoder1DPyramid(nn.Module):
       x = model_utils.Encoder1DBlock(  # pytype: disable=wrong-arg-types  # jax-ndarray
           mlp_dim=self.mlp_dim,
           attention_fn=layer_attn_func,
-          attention_configs=self.attention_configs,
+          attention_configs=self.attention_configs,  # pyrefly: ignore[bad-argument-type]
           dropout_rate=self.dropout_rate,
           attention_dropout_rate=self.attention_dropout_rate,
           name=f'encoder_block_{lyr}')(
-              x, inputs_kv=None, deterministic=not train)
+              x, inputs_kv=None, deterministic=not train)  # pyrefly: ignore[bad-argument-type]
 
     return nn.LayerNorm(name='encoder_norm')(x)
 
@@ -299,7 +299,7 @@ class EncoderAxial(nn.Module):
             dropout_rate=self.dropout_rate,
             attention_dropout_rate=self.attention_dropout_rate,
             name=f'encoder_block_row_{lyr}')(
-                x, inputs_kv=None, deterministic=not train)
+                x, inputs_kv=None, deterministic=not train)  # pyrefly: ignore[bad-argument-type]
         x = model_utils.get_axial_2d_input(x, axis=1, two_d_shape=two_d_shape)
 
         # Column attention.
@@ -311,7 +311,7 @@ class EncoderAxial(nn.Module):
             dropout_rate=self.dropout_rate,
             attention_dropout_rate=self.attention_dropout_rate,
             name=f'encoder_block_col_{lyr}')(
-                x, inputs_kv=None, deterministic=not train)
+                x, inputs_kv=None, deterministic=not train)  # pyrefly: ignore[bad-argument-type]
         x = model_utils.get_axial_2d_input(x, axis=2, two_d_shape=two_d_shape)
 
       elif self.transformer_encoder_type == 'axial_attention':
@@ -405,7 +405,7 @@ class XViT(nn.Module):
           mlp_dim=self.mlp_dim,
           num_layers=self.num_layers,
           attention_configs=self.attention_configs,
-          attention_fn=self.attention_fn,
+          attention_fn=self.attention_fn,  # pyrefly: ignore[bad-argument-type]
           dropout_rate=self.dropout_rate,
           attention_dropout_rate=self.attention_dropout_rate,
           name='Transformer')(
@@ -421,7 +421,7 @@ class XViT(nn.Module):
           mlp_dim=self.mlp_dim,
           num_layers=self.fnum_layers,
           attention_configs=self.attention_configs,
-          attention_fn=self.attention_fn,
+          attention_fn=self.attention_fn,  # pyrefly: ignore[bad-argument-type]
           transformer_encoder_configs=self.transformer_encoder_configs,
           dropout_rate=self.dropout_rate,
           attention_dropout_rate=self.attention_dropout_rate,
@@ -453,9 +453,9 @@ class XViT(nn.Module):
       x = EncoderAxial(
           mlp_dim=self.mlp_dim,
           num_layers=self.num_layers,
-          transformer_encoder_type=transformer_encoder_type,
+          transformer_encoder_type=transformer_encoder_type,  # pyrefly: ignore[bad-argument-type]
           attention_configs=self.attention_configs,
-          attention_fn=self.attention_fn,
+          attention_fn=self.attention_fn,  # pyrefly: ignore[bad-argument-type]
           dropout_rate=self.dropout_rate,
           attention_dropout_rate=self.attention_dropout_rate,
           name='Transformer')(

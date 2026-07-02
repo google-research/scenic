@@ -53,7 +53,7 @@ def get_posemb(self, typ, seqshape, width, name, dtype=jnp.float32):
     return self.param(name, nn.initializers.normal(stddev=1 / np.sqrt(width)),
                       (1, np.prod(seqshape), width), dtype)
   elif typ == 'sincos2d':
-    return posemb_sincos_2d(*seqshape, width, dtype=dtype)
+    return posemb_sincos_2d(*seqshape, width, dtype=dtype)  # pyrefly: ignore[bad-keyword-argument]
   else:
     raise ValueError(f'Unknown posemb type: {typ}')
 

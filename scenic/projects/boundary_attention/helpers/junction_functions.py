@@ -124,13 +124,13 @@ class JunctionFunctions(render_junctions.JunctionRenderer):
     dilation = (1, 1)
 
     if isinstance(stride, int):
-      stride = (stride, stride)
+      stride = (stride, stride)  # pyrefly: ignore[bad-assignment]
 
     # Calculate indices for each spatial location
     idx_h = jnp.arange(0, output_shape[2] - kernel_size[0] * dilation[0] + 1,
-                       stride[0])
+                       stride[0])  # pyrefly: ignore[bad-index]
     idx_w = jnp.arange(0, output_shape[3] - kernel_size[1] * dilation[1] + 1,
-                       stride[1])
+                       stride[1])  # pyrefly: ignore[bad-index]
 
     # Create a meshgrid for height and width indices
     grid_h, grid_w = jnp.meshgrid(idx_h, idx_w, indexing='ij')

@@ -228,51 +228,51 @@ class LossTest(parameterized.TestCase):
     # Without specifying axis, this will be over the last two dimensions.
     loss = model_utils.weighted_mean_squared_error(predictions, targets)
     expected_loss = jnp.mean(jnp.array([38.0, 70.0]))
-    self.assertAlmostEqual(loss, expected_loss, places=5)
+    self.assertAlmostEqual(loss, expected_loss, places=5)  # pyrefly: ignore[no-matching-overload]
 
     # Test by specifying axes as a tuple. The following are all equivalent to
     # the previous test.
     loss = model_utils.weighted_mean_squared_error(predictions, targets,
                                                    axis=(1, 2))
-    self.assertAlmostEqual(loss, expected_loss, places=5)
+    self.assertAlmostEqual(loss, expected_loss, places=5)  # pyrefly: ignore[no-matching-overload]
 
     loss = model_utils.weighted_mean_squared_error(predictions, targets,
                                                    axis=(-1, -2))
-    self.assertAlmostEqual(loss, expected_loss, places=5)
+    self.assertAlmostEqual(loss, expected_loss, places=5)  # pyrefly: ignore[no-matching-overload]
 
     loss = model_utils.weighted_mean_squared_error(predictions, targets,
                                                    axis=(2, 1))
-    self.assertAlmostEqual(loss, expected_loss, places=5)
+    self.assertAlmostEqual(loss, expected_loss, places=5)  # pyrefly: ignore[no-matching-overload]
 
     # Test by computing loss over a single axis only.
     loss = model_utils.weighted_mean_squared_error(predictions, targets,
                                                    axis=-1)
     expected_loss = jnp.mean(jnp.array([[9, 25, 0, 4],
                                         [8, 12, 38, 12]]))
-    self.assertAlmostEqual(loss, expected_loss, places=5)
+    self.assertAlmostEqual(loss, expected_loss, places=5)  # pyrefly: ignore[no-matching-overload]
 
     loss = model_utils.weighted_mean_squared_error(predictions, targets,
                                                    axis=2)
-    self.assertAlmostEqual(loss, expected_loss, places=5)
+    self.assertAlmostEqual(loss, expected_loss, places=5)  # pyrefly: ignore[no-matching-overload]
 
     loss = model_utils.weighted_mean_squared_error(predictions, targets,
                                                    axis=1)
     expected_loss = jnp.mean(jnp.array([[5, 3, 21, 9],
                                         [9, 22, 18, 21]]))
-    self.assertAlmostEqual(loss, expected_loss, places=5)
+    self.assertAlmostEqual(loss, expected_loss, places=5)  # pyrefly: ignore[no-matching-overload]
 
     # Test with loss weights.
     weights = jnp.array([[1, 1, 1, 0], [0, 1, 1, 0]])
     loss = model_utils.weighted_mean_squared_error(predictions, targets,
                                                    weights, axis=-1)
     expected_loss = jnp.mean(jnp.array([9, 25, 12, 38, 0]))
-    self.assertAlmostEqual(loss, expected_loss, places=5)
+    self.assertAlmostEqual(loss, expected_loss, places=5)  # pyrefly: ignore[no-matching-overload]
 
     weights = jnp.array([1, 0])
     loss = model_utils.weighted_mean_squared_error(predictions, targets,
                                                    weights, axis=-1)
     expected_loss = jnp.mean(jnp.array([9, 25, 0, 4]))
-    self.assertAlmostEqual(loss, expected_loss, places=5)
+    self.assertAlmostEqual(loss, expected_loss, places=5)  # pyrefly: ignore[no-matching-overload]
 
 
 class MetricTest(parameterized.TestCase):

@@ -75,7 +75,7 @@ class Params2Maps(junction_functions.JunctionFunctions):
         global_maps, [self.channels, self.channels + 1], axis=1
     )
 
-    return dict(jparams=jparams,
+    return dict(jparams=jparams,  # pyrefly: ignore[bad-return]
                 patchsize_distribution=patchsize_distribution,
                 global_features=global_features,
                 global_distances=global_distances,

@@ -85,12 +85,12 @@ class ViTTest(parameterized.TestCase):
         train=True,
         rngs={'dropout': dropout_rng},
         debug=False)
-    self.assertEqual(outputs.shape, (INPUT_SHAPE[0], NUM_OUTPUTS))
+    self.assertEqual(outputs.shape, (INPUT_SHAPE[0], NUM_OUTPUTS))  # pyrefly: ignore[missing-attribute]
 
     # Test model in inference mode.
     outputs = model.flax_model.apply(
         variables, xs, mutable=False, train=False, debug=False)
-    self.assertEqual(outputs.shape, (INPUT_SHAPE[0], NUM_OUTPUTS))
+    self.assertEqual(outputs.shape, (INPUT_SHAPE[0], NUM_OUTPUTS))  # pyrefly: ignore[missing-attribute]
 
 
 if __name__ == '__main__':

@@ -201,7 +201,7 @@ class GERFlaxModel(nn.Module):
   dropout_prob: float = 0.1
 
   def setup(self):
-    self.image_encoder = git_vit.ViT(**self.backbone_args, name='image_encoder')
+    self.image_encoder = git_vit.ViT(**self.backbone_args, name='image_encoder')  # pyrefly: ignore[bad-unpacking]
     self.decoder = TransformerDecoder(
         ger_vocab_size=self.ger_vocab_size,
         ger_max_code_length=self.ger_max_code_length,
@@ -335,5 +335,5 @@ class GERModel(base_model.BaseModel):
   def build_flax_model(self):
     return GERFlaxModel(**self.get_dict_from_config())
 
-  def loss_function(self, outputs, batch):
+  def loss_function(self, outputs, batch):  # pyrefly: ignore[bad-override]
     return self.flax_model.loss_function(outputs, batch)

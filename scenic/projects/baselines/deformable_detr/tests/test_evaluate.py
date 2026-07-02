@@ -76,7 +76,7 @@ class DETRTrainerTest(parameterized.TestCase):
         config=self.config,
         model_cls=self.model_cls,
         workdir='',
-        input_spec=[(self.dataset.meta_data['input_shape'],
+        input_spec=[(self.dataset.meta_data['input_shape'],  # pyrefly: ignore[bad-argument-type]
                      self.dataset.meta_data.get('input_dtype', jnp.float32))])
 
     eval_step = ddetr_eval.get_eval_step(
@@ -90,7 +90,7 @@ class DETRTrainerTest(parameterized.TestCase):
     with tfds.testing.mock_data(
         num_examples=50,
         as_dataset_fn=test_util.generate_fake_dataset(num_examples=50)):
-      eval_batch = next(self.dataset.valid_iter)
+      eval_batch = next(self.dataset.valid_iter)  # pyrefly: ignore[bad-argument-type]
 
     init_params, _ = flatten_util.ravel_pytree(train_state.params)
     _, predictions, metrics = eval_step_pmapped(train_state, eval_batch)

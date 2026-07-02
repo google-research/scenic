@@ -178,10 +178,10 @@ def preprocess_for_train(image_bytes,
     image = tf.reshape(image, [image_size, image_size, 3])
 
   if dtype not in [tf.int32, tf.int64, tf.uint32, tf.uint64]:
-    image = normalize_image(image)
+    image = normalize_image(image)  # pyrefly: ignore[unbound-name]
     image = tf.image.convert_image_dtype(image, dtype=dtype)
   else:
-    image = tf.cast(image, dtype=dtype)
+    image = tf.cast(image, dtype=dtype)  # pyrefly: ignore[unbound-name]
   return image
 
 

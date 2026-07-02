@@ -80,7 +80,7 @@ class LearningRateScchedulesTest(absltest.TestCase):
         end_learning_rate=config['end_factor'] * config['base_learning_rate'],
         power=config['power'])
     for step in range(400):
-      expected_learning_rate = tf_polynomial_decay(step=step).numpy()
+      expected_learning_rate = tf_polynomial_decay(step=step).numpy()  # pyrefly: ignore[not-callable]
       self.assertAlmostEqual(lr_fn(step), expected_learning_rate)
 
   def test_exponential_decay(self):
@@ -110,7 +110,7 @@ class LearningRateScchedulesTest(absltest.TestCase):
           staircase=config['staircase'],
       )
       for step in range(400):
-        expected_learning_rate = tf_exponential_decay(step=step).numpy()
+        expected_learning_rate = tf_exponential_decay(step=step).numpy()  # pyrefly: ignore[not-callable]
         self.assertAlmostEqual(lr_fn(step), expected_learning_rate)
 
   def test_cosine_decay(self):
@@ -136,7 +136,7 @@ class LearningRateScchedulesTest(absltest.TestCase):
         alpha=config['alpha'],
     )
     for step in range(400):
-      expected_learning_rate = tf_cosine_decay(step=step).numpy()
+      expected_learning_rate = tf_cosine_decay(step=step).numpy()  # pyrefly: ignore[not-callable]
       self.assertAlmostEqual(lr_fn(step), expected_learning_rate)
 
 
