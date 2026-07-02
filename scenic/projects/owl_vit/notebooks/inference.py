@@ -208,12 +208,12 @@ class Model:
         images=image,
         train=False,
         method=self.module.image_embedder)
-    b, _, _, c = feature_map.shape
-    features = jnp.reshape(feature_map, (b, -1, c))
-    pred_boxes = self.module.apply(
+    b, _, _, c = feature_map.shape  # pyrefly: ignore[missing-attribute]
+    features = jnp.reshape(feature_map, (b, -1, c))  # pyrefly: ignore[bad-argument-type]
+    pred_boxes = self.module.apply(  # pyrefly: ignore[bad-index]
         self.variables, image_features=features, feature_map=feature_map,
         method=self.module.box_predictor)['pred_boxes']
-    class_embeddings = self.module.apply(
+    class_embeddings = self.module.apply(  # pyrefly: ignore[bad-index]
         self.variables,
         image_features=features,
         query_embeddings=None,
@@ -226,7 +226,7 @@ class Model:
       image_features: jnp.ndarray,
       query_embeddings: jnp.ndarray,
   ) -> Dict[str, jnp.ndarray]:
-    return self.module.apply(
+    return self.module.apply(  # pyrefly: ignore[bad-return]
         self.variables,
         image_features=image_features,
         query_embeddings=query_embeddings,
@@ -234,7 +234,7 @@ class Model:
 
   @functools.partial(jax.jit, static_argnums=(0,))
   def _embed_texts_jitted(self, queries: jnp.ndarray) -> jnp.ndarray:
-    return self.module.apply(self.variables,
+    return self.module.apply(self.variables,  # pyrefly: ignore[bad-return]
                              text_queries=queries,
                              train=False,
                              method=self.module.text_embedder)

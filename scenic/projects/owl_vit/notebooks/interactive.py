@@ -151,7 +151,7 @@ def get_text_input_js_callback(data_source: models.ColumnDataSource,
   Returns:
     Bokeh CustomJS callback object.
   """
-  return callbacks.CustomJS(
+  return callbacks.CustomJS(  # pyrefly: ignore[bad-return]
       args=dict(data_source=data_source, legend=legend),
       code="""
           (async function() {
@@ -267,7 +267,7 @@ def get_image_conditioning_js_callback(
   Returns:
     Bokeh CustomJS callback object.
   """
-  return callbacks.CustomJS(
+  return callbacks.CustomJS(  # pyrefly: ignore[bad-return]
       args=dict(
           user_query_box_data_source=user_query_box_data_source,
           model_query_box_data_source=model_query_box_data_source,

@@ -47,7 +47,7 @@ class InitPaddingMask:
   """Create a `padding_mask` of `ones` to match the current unpadded image."""
 
   def __call__(self, features):
-    with tf.name_scope(type(self).__name__):
+    with tf.name_scope(type(self).__name__):  # pyrefly: ignore[bad-instantiation]
       h, w = transforms.get_hw(features, dtype=tf.int32)
       # padding_mask is initialized as ones. It will later be padded with zeros.
       features_new = features.copy()
@@ -64,7 +64,7 @@ class FixedSizeCrop:
   crop_size: int
 
   def __call__(self, features):
-    with tf.name_scope(type(self).__name__):
+    with tf.name_scope(type(self).__name__):  # pyrefly: ignore[bad-instantiation]
       h, w = transforms.get_hw(features, dtype=tf.int32)
       wcrop = tf.cast(tf.minimum(w, self.crop_size), tf.int32)
       hcrop = tf.cast(tf.minimum(h, self.crop_size), tf.int32)
@@ -82,7 +82,7 @@ class CenterCrop:
   crop_size: int
 
   def __call__(self, features):
-    with tf.name_scope(type(self).__name__):
+    with tf.name_scope(type(self).__name__):  # pyrefly: ignore[bad-instantiation]
       h, w = transforms.get_hw(features, dtype=tf.int32)
       wcrop = tf.cast(tf.minimum(w, self.crop_size), tf.int32)
       hcrop = tf.cast(tf.minimum(h, self.crop_size), tf.int32)
@@ -102,7 +102,7 @@ class RandomRatioResize:
   target_size: int
 
   def __call__(self, features):
-    with tf.name_scope(type(self).__name__):
+    with tf.name_scope(type(self).__name__):  # pyrefly: ignore[bad-instantiation]
       ratio = tf.random.uniform(
           [], self.min_scale, self.max_scale, dtype=tf.float32)
       size = tf.cast(tf.cast(self.target_size, tf.float32) * ratio, tf.int32)
@@ -117,7 +117,7 @@ class ResizeShorter:
   target_size: int
 
   def __call__(self, features):
-    with tf.name_scope(type(self).__name__):
+    with tf.name_scope(type(self).__name__):  # pyrefly: ignore[bad-instantiation]
       features_new = features.copy()
       return transforms.resize(features_new, self.target_size, max_size=None)
 
@@ -153,14 +153,14 @@ class DecodeActivityNetParagraphCaptionAnnotations:
       assert self.num_captions_per_sample == 2, 'eval setting has 2 paragraphs.'
       split_features = features[self.split_field]
       text_features_para1 = tf.strings.reduce_join(
-          text_features[split_features == 1])[None]
+          text_features[split_features == 1])[None]  # pyrefly: ignore[bad-index]
       # handle cases where the second paragraph split is missing (~1% of videos)
       text_features = tf.cond(
           tf.reduce_any(split_features == 2),
           lambda: tf.concat([   # pylint: disable=g-long-lambda
               text_features_para1,
               tf.strings.reduce_join(
-                  text_features[split_features == 2])[None]
+                  text_features[split_features == 2])[None]  # pyrefly: ignore[bad-index]
               ], axis=0),
           lambda: text_features_para1)
     else:
@@ -230,7 +230,7 @@ class DecodeCocoCaptionAnnotations:
       text_features = tf.strings.reduce_join(text_features)
       text_features = text_features[None]
     text_tokens = self._tokenizer.string_tensor_to_indices(
-        text_features,
+        text_features,  # pyrefly: ignore[bad-argument-type]
         prepend_bos=True,
         append_eos=True,
         max_num_tokens=self.max_text_tokens,
@@ -258,7 +258,7 @@ class DecodeCocoCaptionAnnotations:
         context = context + tf.constant(
             self.context_suffix, dtype=tf.string)[None]
       context_tokens = self._tokenizer.string_tensor_to_indices(
-          context,
+          context,  # pyrefly: ignore[bad-argument-type]
           prepend_bos=False,
           append_eos=self.append_context_eos,
           max_num_tokens=max_context_tokens,
@@ -307,7 +307,7 @@ class ParseCustomExample:
 
   def __call__(
       self, features: preprocess_spec.Features) -> preprocess_spec.Features:
-    with tf.name_scope(type(self).__name__):
+    with tf.name_scope(type(self).__name__):  # pyrefly: ignore[bad-instantiation]
       features_new = {
           'captions': {'text': tf.sparse.to_dense(features[self.caption_key])},
           'image': tf.image.decode_jpeg(features[self.image_key], channels=3),

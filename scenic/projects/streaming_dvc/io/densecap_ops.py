@@ -223,7 +223,7 @@ class DecodeAndSubsampleDensecapVideo:
 
     if 'video/duration' not in features_new:  # This is only needed for YTT
       features_new['video/duration'] = (
-          features['image/timestamp'][-1] - features['image/timestamp'][0]
+          features['image/timestamp'][-1] - features['image/timestamp'][0]  # pyrefly: ignore[bad-index, unsupported-operation]
           )[None]
     features_new['video/original_duration'] = features_new['video/duration']
 
@@ -386,9 +386,9 @@ class DecodeActivityNetDenseCaptionAnnotationsDenseOutputsAugContext:
     end = features['video/timestamps/end']
     duration = features['video/duration']
     timestamp_token = vid2seq_data_utils.timestampify(
-        start=start,
-        end=end,
-        duration=duration,
+        start=start,  # pyrefly: ignore[bad-argument-type]
+        end=end,  # pyrefly: ignore[bad-argument-type]
+        duration=duration,  # pyrefly: ignore[bad-argument-type]
         abs_time_token=False,
         num_bins=self.num_bins,
         vocabulary_size=self._original_vocab_size,
@@ -396,7 +396,7 @@ class DecodeActivityNetDenseCaptionAnnotationsDenseOutputsAugContext:
     # (num_captions, 2). Value in [0, num_bins] with respect to the whole video.
 
     caption_token = self._tokenizer.string_tensor_to_indices(
-        text_features,
+        text_features,  # pyrefly: ignore[bad-argument-type]
         prepend_bos=True,
         append_eos=False,
         max_num_tokens=self.max_single_text_tokens,

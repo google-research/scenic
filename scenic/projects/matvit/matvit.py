@@ -261,7 +261,7 @@ class MatViT(nn.Module):
         stochastic_depth=self.stochastic_depth,
         dtype=self.dtype,
         name='Transformer')(
-            x, train=train, matvit_mask_dims=matvit_mask_dims)
+            x, train=train, matvit_mask_dims=matvit_mask_dims)  # pyrefly: ignore[bad-argument-type]
 
     if self.classifier in ('token', '0'):
       x = x[:, 0]

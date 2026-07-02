@@ -55,16 +55,16 @@ def get_dataset(*,
   """
   del eval_batch_size, rng
   logging.info('Loading train split of the %s for LOCA training.',
-               dataset_configs.dataset)
+               dataset_configs.dataset)  # pyrefly: ignore[missing-attribute]
 
   train_ds = dataset_utils.get_data(
-      dataset=dataset_configs.dataset,
-      split=dataset_configs.train_split,
-      data_dir=dataset_configs.get('dataset_dir'),
+      dataset=dataset_configs.dataset,  # pyrefly: ignore[missing-attribute]
+      split=dataset_configs.train_split,  # pyrefly: ignore[missing-attribute]
+      data_dir=dataset_configs.get('dataset_dir'),  # pyrefly: ignore[missing-attribute]
       batch_size=batch_size,
-      preprocess_fn=builder.get_preprocess_fn(dataset_configs.pp_train),
-      shuffle_buffer_size=dataset_configs.shuffle_buffer_size,
-      prefetch=dataset_configs.get('prefetch_to_host', 2),
+      preprocess_fn=builder.get_preprocess_fn(dataset_configs.pp_train),  # pyrefly: ignore[missing-attribute]
+      shuffle_buffer_size=dataset_configs.shuffle_buffer_size,  # pyrefly: ignore[missing-attribute]
+      prefetch=dataset_configs.get('prefetch_to_host', 2),  # pyrefly: ignore[missing-attribute]
       drop_remainder=True,
       cache=False,
       ignore_errors=True)
@@ -76,11 +76,11 @@ def get_dataset(*,
                        'config.shuffle_seed = None to your config if you '
                        'want to run with dataset service.')
     logging.info('Using the tf.data service at %s', dataset_service_address)
-    assert dataset_configs.shuffle_buffer_size is not None
+    assert dataset_configs.shuffle_buffer_size is not None  # pyrefly: ignore[missing-attribute]
     train_ds = dataset_utils.distribute(train_ds, dataset_service_address)
 
-  n_train_ex = dataset_utils.get_num_examples(dataset_configs.dataset,
-                                              dataset_configs.train_split)
+  n_train_ex = dataset_utils.get_num_examples(dataset_configs.dataset,  # pyrefly: ignore[missing-attribute]
+                                              dataset_configs.train_split)  # pyrefly: ignore[missing-attribute]
   shard_batches = functools.partial(dataset_utils.shard, n_devices=num_shards)
   train_iter = iter(train_ds)
   train_iter = map(dataset_utils.tf_to_numpy, train_iter)

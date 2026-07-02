@@ -150,7 +150,7 @@ class ViT4LOCA(nn.Module):
         posembs=self.posembs)
     x, idx_kept_tokens = to_token_fn(
         x, seqlen=seqlen if drop_moment == 'early' else -1,
-        positional_embedding=None if use_pe else 'pe_not_in_use',
+        positional_embedding=None if use_pe else 'pe_not_in_use',  # pyrefly: ignore[bad-argument-type]
         seqlen_selection=seqlen_selection)
 
     # ViT Encoder.

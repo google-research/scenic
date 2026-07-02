@@ -72,13 +72,13 @@ def loca_train_step(
     The updated state of training.
   """
   # Some preparations.
-  new_rng, dropout_rng, droptok_rng = jax.random.split(train_state.rng, num=3)
+  new_rng, dropout_rng, droptok_rng = jax.random.split(train_state.rng, num=3)  # pyrefly: ignore[bad-argument-type]
   dropout_rng = train_utils.bind_rng_to_host_device(
       dropout_rng, axis_name='batch', bind_to='device')
   droptok_rng = train_utils.bind_rng_to_host_device(
       droptok_rng, axis_name='batch', bind_to='device')
   step = train_state.global_step
-  momentum_parameter = momentum_parameter_scheduler(step)
+  momentum_parameter = momentum_parameter_scheduler(step)  # pyrefly: ignore[bad-argument-type]
   n_pos = config.n_ref_positions  # Number of reference positions.
   bs = batch['reference'].shape[0]  # Per-device batch size.
   n_q_foc = config.dataset_configs.number_of_focal_queries
@@ -88,8 +88,8 @@ def loca_train_step(
     # Step 1): Forward pass on the REFERENCE view.
     use_ema = config.apply_cluster_loss
     drop_moment = 'late' if config.apply_cluster_loss else 'early'
-    _, r_feat_targets, r_patch_features, _ = flax_model.apply(
-        {'params': train_state.ema_params if use_ema else params},
+    _, r_feat_targets, r_patch_features, _ = flax_model.apply(  # pyrefly: ignore[bad-unpacking]
+        {'params': train_state.ema_params if use_ema else params},  # pyrefly: ignore[bad-argument-type]
         batch['reference'],
         seqlen=config.reference_seqlen,
         seqlen_selection=config.reference_seqlen_selection,
@@ -100,7 +100,7 @@ def loca_train_step(
     # Step 2): Forward pass on the QUERY views.
     use_pe = True if config.apply_cluster_loss else False
     #      2) a) Query with `random`-style.
-    q_rand_loc_pred, q_rand_feat_pred, _, q_rand_idx_kept = flax_model.apply(
+    q_rand_loc_pred, q_rand_feat_pred, _, q_rand_idx_kept = flax_model.apply(  # pyrefly: ignore[bad-unpacking]
         {'params': params},
         batch['query0'],
         inputs_kv=r_patch_features,
@@ -109,7 +109,7 @@ def loca_train_step(
         train=True,
         rngs={'dropout': dropout_rng, 'droptok': droptok_rng})
     #      2) b) Queries with `focal`-style.
-    q_foc_loc_pred, q_foc_feat_pred, _, _ = flax_model.apply(
+    q_foc_loc_pred, q_foc_feat_pred, _, _ = flax_model.apply(  # pyrefly: ignore[bad-unpacking]
         {'params': params},
         batch['queries'],
         inputs_kv=jnp.tile(r_patch_features, (n_q_foc, 1, 1)),
@@ -144,7 +144,7 @@ def loca_train_step(
     feature_loss = 0
     if config.apply_cluster_loss:
       k = r_feat_targets.shape[-1]  # Output dimension for feature pred loss.
-      q_feat_pred = jnp.concatenate([
+      q_feat_pred = jnp.concatenate([  # pyrefly: ignore[bad-argument-type]
           q_rand_feat_pred, q_foc_feat_pred], axis=0) / config.model.temperature
       # Feature targets.
       r_feat_targets = nn.softmax(r_feat_targets / config.sharpening, axis=-1)
@@ -189,8 +189,8 @@ def loca_train_step(
   new_train_state = train_state
   if train_state.tx is not None:
     updates, new_opt_state = train_state.tx.update(
-        grad, train_state.opt_state, train_state.params)
-    new_params = optax.apply_updates(train_state.params, updates)
+        grad, train_state.opt_state, train_state.params)  # pyrefly: ignore[bad-argument-type]
+    new_params = optax.apply_updates(train_state.params, updates)  # pyrefly: ignore[bad-argument-type]
 
     # update the teacher weights
     new_ema_params = jax.tree_util.tree_map(
@@ -200,7 +200,7 @@ def loca_train_step(
     )
 
     new_train_state = train_state.replace(  # pytype: disable=attribute-error
-        global_step=step + 1,
+        global_step=step + 1,  # pyrefly: ignore[unsupported-operation]
         opt_state=new_opt_state,
         params=new_params,
         ema_params=new_ema_params,
@@ -241,7 +241,7 @@ def train(
   (params, _, num_trainable_params,
    gflops) = train_utils.initialize_model(
        model_def=model.flax_model,
-       input_spec=[(dataset.meta_data['input_shape'],
+       input_spec=[(dataset.meta_data['input_shape'],  # pyrefly: ignore[bad-argument-type]
                     dataset.meta_data.get('input_dtype', jnp.float32))],
        config=config, rngs=init_rng)
   # Only one model function but two sets of parameters.
@@ -270,8 +270,8 @@ def train(
   start_step = train_state.global_step
   if config.checkpoint:
     train_state, start_step = utils.restore_checkpoint(workdir, train_state)
-  chrono.load(train_state.metadata['chrono'])
-  train_state = train_state.replace(metadata={})
+  chrono.load(train_state.metadata['chrono'])  # pyrefly: ignore[unsupported-operation]
+  train_state = train_state.replace(metadata={})  # pyrefly: ignore[missing-attribute]
   # Replicate the training state: optimizer, params and rng.
   train_state = jax_utils.replicate(train_state)
   del params, ema_params
@@ -293,7 +293,7 @@ def train(
   )
 
   train_metrics, train_summary = [], None
-  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
+  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)  # pyrefly: ignore[bad-argument-type]
   report_progress = periodic_actions.ReportProgress(num_train_steps=total_steps,
                                                     writer=writer)
   def write_note(note):
@@ -307,12 +307,12 @@ def train(
   if start_step == 0:
     step0_log = {'num_trainable_params': num_trainable_params}
     if gflops:
-      step0_log['gflops'] = gflops
+      step0_log['gflops'] = gflops  # pyrefly: ignore[bad-assignment]
     writer.write_scalars(1, step0_log)
-  logging.info('Starting training loop at step %d.', start_step + 1)
-  for step in range(start_step + 1, total_steps + 1):
+  logging.info('Starting training loop at step %d.', start_step + 1)  # pyrefly: ignore[unsupported-operation]
+  for step in range(start_step + 1, total_steps + 1):  # pyrefly: ignore[unsupported-operation]
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
-      train_batch = next(dataset.train_iter)
+      train_batch = next(dataset.train_iter)  # pyrefly: ignore[bad-argument-type]
       train_state, tm = loca_train_step_pmapped(train_state, train_batch)
       train_metrics.append(tm)
     for h in hooks:

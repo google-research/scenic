@@ -42,19 +42,19 @@ def create_text_conditional_figure(image: np.ndarray,
   plot_width = plot.width if bokeh.__version__ >= '3.0.3' else plot.plot_width
 
   # Create div that will display the query legend:
-  legend = widgets.Div(text='', height=30, width=plot_width - 35)
+  legend = widgets.Div(text='', height=30, width=plot_width - 35)  # pyrefly: ignore[unsupported-operation]
 
   # Create text input and register callback:
   text_input = widgets.TextInput(
       value='',
       title='Enter comma-separated queries:',
-      width=plot_width - 35)
+      width=plot_width - 35)  # pyrefly: ignore[unsupported-operation]
   text_input.js_on_change(
       'value_input',
-      interactive.get_text_input_js_callback(box_data_source, legend))
+      interactive.get_text_input_js_callback(box_data_source, legend))  # pyrefly: ignore[bad-argument-type]
 
   # Assemble and show figure:
-  layout = layouts.column(text_input, legend, plot)
+  layout = layouts.column(text_input, legend, plot)  # pyrefly: ignore[bad-argument-type]
   plotting.show(layout)
 
   return layout
@@ -94,8 +94,8 @@ def create_image_conditional_figure(query_image: np.ndarray,
   user_query_box_data_source = models.ColumnDataSource(
       data=dict(x=(-1,), y=(-1,), width=(0,), height=(0,)))
   source_plot.add_glyph(
-      user_query_box_data_source,
-      user_query_rect,
+      user_query_box_data_source,  # pyrefly: ignore[bad-argument-type]
+      user_query_rect,  # pyrefly: ignore[bad-argument-type]
       selection_glyph=user_query_rect,
       nonselection_glyph=user_query_rect)
   model_query_rect = models.Rect(
@@ -110,15 +110,15 @@ def create_image_conditional_figure(query_image: np.ndarray,
   model_query_box_data_source = models.ColumnDataSource(
       data=dict(x=(-1,), y=(-1,), width=(0,), height=(0,)))
   source_plot.add_glyph(
-      model_query_box_data_source,
-      model_query_rect,
+      model_query_box_data_source,  # pyrefly: ignore[bad-argument-type]
+      model_query_rect,  # pyrefly: ignore[bad-argument-type]
       selection_glyph=model_query_rect,
       nonselection_glyph=model_query_rect)
 
   # Register box selection callback:
   callback = interactive.get_image_conditioning_js_callback(
-      user_query_box_data_source=user_query_box_data_source,
-      model_query_box_data_source=model_query_box_data_source,
+      user_query_box_data_source=user_query_box_data_source,  # pyrefly: ignore[bad-argument-type]
+      model_query_box_data_source=model_query_box_data_source,  # pyrefly: ignore[bad-argument-type]
       pred_box_data_source=pred_box_data_source)
   source_plot.js_on_event(events.SelectionGeometry, callback)
 
@@ -148,7 +148,7 @@ def _create_image_figure(image: np.ndarray,
       x_range=[0., width],
       y_range=[height, 0.],
       tools=tools,
-      **plot_size_kws)
+      **plot_size_kws)  # pyrefly: ignore[bad-argument-type]
   plot.axis.visible = False
   plot.toolbar.logo = None
   image = _bokeh_format_image(image)
@@ -156,7 +156,7 @@ def _create_image_figure(image: np.ndarray,
     plot.image_rgba(image=[image], x=0., y=0., dw=1., dh=1.)
   else:
     plot.image_rgba(image=[image], x=0., y=1., dw=1., dh=1.)
-  return plot
+  return plot  # pyrefly: ignore[bad-return]
 
 
 def _plot_boxes(plot: plotting.figure,
@@ -167,7 +167,7 @@ def _plot_boxes(plot: plotting.figure,
   xs = []
   ys = []
   colors = []
-  boxes = box_utils.box_cxcywh_to_yxyx(boxes, np)
+  boxes = box_utils.box_cxcywh_to_yxyx(boxes, np)  # pyrefly: ignore[bad-assignment]
   for box in boxes:
     y0, x0, y1, x1 = box
     xs.append([x0, x1, x1, x0, x0])
@@ -181,7 +181,7 @@ def _plot_boxes(plot: plotting.figure,
       ys='ys',
       line_color='colors',
       line_width=line_width)
-  return box_data_source
+  return box_data_source  # pyrefly: ignore[bad-return]
 
 
 def _bokeh_format_image(image):

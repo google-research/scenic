@@ -189,9 +189,9 @@ def get_logits_fn(
   Returns:
     Logits for this batch.
   """
-  variables = {'params': train_state.params, **train_state.model_state}
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
   logits = flax_model.apply(
-      variables,
+      variables,  # pyrefly: ignore[bad-argument-type]
       batch['inputs'],
       train=False,
       debug=False,
@@ -200,7 +200,7 @@ def get_logits_fn(
   if gather_to_host:
     logits = jax.lax.all_gather(logits, 'batch')
     batch = jax.lax.all_gather(batch, 'batch')
-  return logits, batch['label'], batch['batch_mask']
+  return logits, batch['label'], batch['batch_mask']  # pyrefly: ignore[bad-return]
 
 
 def create_train_state(ckpt_path, config):
@@ -227,7 +227,7 @@ def create_train_state(ckpt_path, config):
   init_rng, _ = jax.random.split(rng)
   (params, model_state, _, _) = train_utils.initialize_model(
       model_def=model.flax_model,
-      input_spec=[(
+      input_spec=[(  # pyrefly: ignore[bad-argument-type]
           dataset.meta_data['input_shape'],
           dataset.meta_data.get('input_dtype', jnp.float32),
       )],
@@ -271,7 +271,7 @@ def main(_):
   top1_correct_list = []
   for step in range(total_eval_steps):
     logging.info('Eval inference step: %d', step)
-    batch = next(dataset.valid_iter)
+    batch = next(dataset.valid_iter)  # pyrefly: ignore[bad-argument-type]
     logits, labels, mask = p_logits_fn(train_state, batch)
     mask = np.array(jax_utils.unreplicate(mask)).astype(bool)
     logits = np.array(jax_utils.unreplicate(logits))[mask]
