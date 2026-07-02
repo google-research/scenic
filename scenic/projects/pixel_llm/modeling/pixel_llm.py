@@ -1159,7 +1159,7 @@ class PixelLlmFlaxModel(nn.Module):
         loss = metrics[loss_name]
         if loss_masks[loss_name] is not None:
           # we assume loss_mask should be the same in one batch
-          loss_weight *= loss_masks[loss_name].mean()
+          loss_weight *= loss_masks[loss_name].mean()  # pyrefly: ignore[missing-attribute]
         metrics[loss_name + '_scaled'] = loss_weight * loss
         total_loss = metrics[loss_name + '_scaled'] + total_loss
 
@@ -1358,8 +1358,8 @@ class PixelLlmModel(base_model.BaseModel):
         **kwargs,
     )
     if with_gt_prompt:
-      predictions['detection_boxes'] = batch['label']['boxes']
-      predictions['detection_scores'] = jnp.ones(
+      predictions['detection_boxes'] = batch['label']['boxes']  # pyrefly: ignore[unsupported-operation]
+      predictions['detection_scores'] = jnp.ones(  # pyrefly: ignore[unsupported-operation]
           batch['label']['boxes'].shape[:-1])
 
     return predictions
@@ -1494,12 +1494,12 @@ class PixelLlmModel(base_model.BaseModel):
         return_feat=True,
         method=self.flax_model.decode_text,
     )
-    text_feats = text_feats.reshape(
+    text_feats = text_feats.reshape(  # pyrefly: ignore[missing-attribute]
         (
             batch_size,
             num_caps_per_image,
         )
-        + text_feats.shape[1:]
+        + text_feats.shape[1:]  # pyrefly: ignore[missing-attribute]
     )
     predictions['text_feats'] = text_feats
 
@@ -1519,7 +1519,7 @@ class PixelLlmModel(base_model.BaseModel):
         image_shape=image_shape,
         method=self.flax_model.decode_point,
     )
-    point_predictions['point_valid_mask'] = (
+    point_predictions['point_valid_mask'] = (  # pyrefly: ignore[unsupported-operation]
         utils.get_token_valid_mask(
             predictions['text_tokens'],
             self.flax_model.point_output_ignore,
@@ -1539,7 +1539,7 @@ class PixelLlmModel(base_model.BaseModel):
         method=self.flax_model.decode_boxes_from_points,
     )
 
-    point_boxes = box_outputs['point_detection_boxes']
+    point_boxes = box_outputs['point_detection_boxes']  # pyrefly: ignore[bad-index]
 
     if 'detection_boxes' in predictions:
       predictions['point_detection_boxes'] = point_boxes
@@ -1572,5 +1572,5 @@ class PixelLlmModel(base_model.BaseModel):
 
     return predictions
 
-  def loss_function(self, outputs, batch):
+  def loss_function(self, outputs, batch):  # pyrefly: ignore[bad-override]
     return self.flax_model.loss_function(outputs, batch)

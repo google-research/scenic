@@ -32,7 +32,7 @@ _REGRESSION_METRICS = immutabledict({
 def regression_metrics_function(  # pytype: disable=annotation-type-mismatch
     predictions: jnp.ndarray,
     batch: base_model.Batch,
-    metrics: base_model.MetricNormalizerFnDict = _REGRESSION_METRICS,
+    metrics: base_model.MetricNormalizerFnDict = _REGRESSION_METRICS,  # pyrefly: ignore[bad-function-definition]
     axis_name: Union[str, Tuple[str, ...]] = 'batch',
 ) -> Dict[str, Tuple[float, int]]:
   """Calculate metrics for the regression task.

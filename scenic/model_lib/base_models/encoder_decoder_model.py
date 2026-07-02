@@ -44,7 +44,7 @@ def num_tokens(logits: jnp.ndarray,
   del logits
 
   if weights is None:
-    return np.prod(one_hot_targets.shape[:2])
+    return np.prod(one_hot_targets.shape[:2])  # pyrefly: ignore[bad-return]
   assert weights.ndim == 2, (
       'Weights should be a token level mask of shape [bs, len].')
   return weights.sum()  # pytype: disable=bad-return-type  # jax-ndarray
@@ -65,7 +65,7 @@ def encoder_decoder_metrics_function(  # pytype: disable=annotation-type-mismatc
     logits: jnp.ndarray,
     batch: base_model.Batch,
     target_is_onehot: bool = False,
-    metrics: base_model.MetricNormalizerFnDict = _ENCODER_DECODER_METRICS,
+    metrics: base_model.MetricNormalizerFnDict = _ENCODER_DECODER_METRICS,  # pyrefly: ignore[bad-function-definition]
     axis_name: Union[str, Tuple[str, ...]] = 'batch',
 ) -> Dict[str, Tuple[float, int]]:
   """Calculates metrics for the encoder-decoder models.
@@ -112,7 +112,7 @@ def encoder_decoder_metrics_function(  # pytype: disable=annotation-type-mismatc
   for key, val in metrics.items():
     evaluated_metrics[key] = model_utils.psum_metric_normalizer(  # pytype: disable=wrong-arg-types  # jax-ndarray
         (val[0](logits, one_hot_targets, weights), val[1](  # pytype: disable=wrong-arg-types  # jax-types
-            logits, one_hot_targets, weights)),
+            logits, one_hot_targets, weights)),  # pyrefly: ignore[bad-argument-type]
         axis_name=axis_name)
     if key == 'loss':
       # TODO(dehghani): Move this to the training loop.

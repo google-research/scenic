@@ -130,7 +130,7 @@ class FpnCenterNet2(centernet2.CenterNet2Detector):
   use_roi_box_in_training: bool = False
 
   def setup(self):
-    self.fpn = SimpleFeaturePyramid(**self.fpn_args, name='fpn')
+    self.fpn = SimpleFeaturePyramid(**self.fpn_args, name='fpn')  # pyrefly: ignore[bad-unpacking]
     self.proposal_generator = centernet_head.CenterNetHead(
         num_classes=self.num_classes,
         dtype=self.dtype,
@@ -229,8 +229,8 @@ class FpnCenterNet2(centernet2.CenterNet2Detector):
     detections, metrics = self.roi_heads(
         rpn_features,
         image_shape,
-        gt_boxes,
-        gt_classes,
+        gt_boxes,  # pyrefly: ignore[bad-argument-type]
+        gt_classes,  # pyrefly: ignore[bad-argument-type]
         proposal_boxes,
         proposal_scores,
         training=train,
@@ -271,7 +271,7 @@ class FpnCenterNet2(centernet2.CenterNet2Detector):
     )
     return matched_idxs, matched_classes
 
-  def loss_function(
+  def loss_function(  # pyrefly: ignore[bad-override]
       self,
       detections: Dict[str, jnp.ndarray],
       metrics: Dict[str, jnp.ndarray],

@@ -223,7 +223,7 @@ class CaptionEvaluator(object):
     evaluator_class = (
         COCOEvalCap if (self.eval_meteor_spice) else SimpleCOCOEvalCap
     )
-    coco_eval = evaluator_class(self.coco, coco_res)
+    coco_eval = evaluator_class(self.coco, coco_res)  # pyrefly: ignore[not-callable]
     coco_eval.params['image_id'] = coco_res.getImgIds()
     coco_eval.evaluate()
     results = coco_eval.eval
@@ -942,14 +942,14 @@ class LocaEvaluator(object):
       else:
         gts[anno['id']] = [anno]
 
-    res = tokenize(res)
-    gts = tokenize(gts)
+    res = tokenize(res)  # pyrefly: ignore[not-callable]
+    gts = tokenize(gts)  # pyrefly: ignore[not-callable]
 
     scorers = [
-        (Rouge(), 'ROUGE_L'),
-        (Cider(), 'CIDEr'),
-        (Bleu(), 'BLEU-4'),
-        (Meteor(), 'Meteor'),
+        (Rouge(), 'ROUGE_L'),  # pyrefly: ignore[not-callable]
+        (Cider(), 'CIDEr'),  # pyrefly: ignore[not-callable]
+        (Bleu(), 'BLEU-4'),  # pyrefly: ignore[not-callable]
+        (Meteor(), 'Meteor'),  # pyrefly: ignore[not-callable]
     ]
     results = {}
     for scorer, method in scorers:

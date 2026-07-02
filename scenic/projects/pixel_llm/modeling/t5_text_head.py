@@ -667,7 +667,7 @@ class CustomTransformer(t5.Transformer):
         encoder_input_embeddings,
         encoder_input_tokens,
         encoder_mask,
-        deterministic=not enable_dropout), valid_mask
+        deterministic=not enable_dropout), valid_mask  # pyrefly: ignore[bad-keyword-argument]
 
   def decode(
       self,
@@ -712,7 +712,7 @@ class CustomTransformer(t5.Transformer):
       encoder_decoder_mask = t5_layers.combine_masks(
           encoder_decoder_mask,
           t5_layers.make_attention_mask(
-              decoder_segment_ids,
+              decoder_segment_ids,  # pyrefly: ignore[bad-argument-type]
               encoder_segment_ids,
               jnp.equal,
               dtype=cfg.dtype))
@@ -726,7 +726,7 @@ class CustomTransformer(t5.Transformer):
         deterministic=not enable_dropout,
         decode=decode,
         max_decode_length=max_decode_length,
-        return_logit_and_feat=return_logit_and_feat)
+        return_logit_and_feat=return_logit_and_feat)  # pyrefly: ignore[unexpected-keyword]
     return ret
 
   @nn.compact

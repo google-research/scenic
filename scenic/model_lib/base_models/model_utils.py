@@ -281,7 +281,7 @@ def weighted_recall(logits: Array, multi_hot_target: Array,
       jnp.sum(multi_hot_target, axis=-1) + 1E-12)
 
   if weights is not None:
-    recall = apply_weights(recall, weights)
+    recall = apply_weights(recall, weights)  # pyrefly: ignore[bad-argument-type]
 
   return recall
 
@@ -311,9 +311,9 @@ def apply_label_smoothing(one_hot_targets: jnp.ndarray,
     A float array of the same shape as `one_hot_targets` with smoothed label
     values.
   """
-  on_value = 1.0 - label_smoothing
+  on_value = 1.0 - label_smoothing  # pyrefly: ignore[unsupported-operation]
   num_classes = one_hot_targets.shape[-1]
-  off_value = label_smoothing / num_classes
+  off_value = label_smoothing / num_classes  # pyrefly: ignore[unsupported-operation]
   one_hot_targets = one_hot_targets * on_value + off_value
   return one_hot_targets
 
@@ -510,7 +510,7 @@ def l2_regularization(params: PyTree):
 def weighted_l1_loss(x: jnp.ndarray,
                      y: jnp.ndarray,
                      weights: Optional[jnp.ndarray] = None,
-                     reduction: Optional[str] = None) -> jnp.ndarray:
+                     reduction: Optional[str] = None) -> jnp.ndarray:  # pyrefly: ignore[bad-return]
   """L1 loss with optional reduction specified.
 
   Args:
@@ -794,7 +794,7 @@ def focal_softmax_cross_entropy(
       keep_label_dimension=True)
   prob = jnp.exp(logits) if logits_normalized else jax.nn.softmax(logits)
   prob = (prob * one_hot_targets).sum(axis=-1, keepdims=True)
-  loss *= (1. - prob)**gamma
+  loss *= (1. - prob)**gamma  # pyrefly: ignore[unsupported-operation]
   if weights is not None:
     loss = apply_weights(loss, weights)
 
@@ -861,8 +861,8 @@ def focal_sigmoid_cross_entropy(
   loss = -(multi_hot_targets * log_p + (1. - multi_hot_targets) * log_not_p)
 
   p_t = jnp.exp(-loss)
-  loss *= (1 - p_t)**gamma
-  loss *= alpha * multi_hot_targets + (1 - alpha) * (1 - multi_hot_targets)
+  loss *= (1 - p_t)**gamma  # pyrefly: ignore[unsupported-operation]
+  loss *= alpha * multi_hot_targets + (1 - alpha) * (1 - multi_hot_targets)  # pyrefly: ignore[unsupported-operation]
 
   if label_weights is not None:
     loss = loss * label_weights

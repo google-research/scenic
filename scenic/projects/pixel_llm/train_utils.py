@@ -50,9 +50,9 @@ def pop_axes_names(
     was removed (so it can be re-added).
   """
   model_state = train_state.model_state
-  if axes_name in train_state.model_state:
-    model_state, param_axes = frozen_dict.freeze(model_state).pop(axes_name)
-    return train_state.replace(model_state=model_state), param_axes
+  if axes_name in train_state.model_state:  # pyrefly: ignore[not-iterable]
+    model_state, param_axes = frozen_dict.freeze(model_state).pop(axes_name)  # pyrefly: ignore[bad-argument-type]
+    return train_state.replace(model_state=model_state), param_axes  # pyrefly: ignore[missing-attribute]
   else:
     return train_state, None
 
@@ -72,9 +72,9 @@ def re_add_axis_names(train_state: TrainState,
     was removed (so it can be re-added).
   """
   if param_axes:
-    model_state = frozen_dict.unfreeze(train_state.model_state)
+    model_state = frozen_dict.unfreeze(train_state.model_state)  # pyrefly: ignore[bad-argument-type]
     model_state[axes_name] = param_axes
-    return train_state.replace(model_state=frozen_dict.freeze(model_state))
+    return train_state.replace(model_state=frozen_dict.freeze(model_state))  # pyrefly: ignore[missing-attribute]
   else:
     return train_state
 
@@ -190,10 +190,10 @@ def load_pretrained_t5_weights(
   """Load T5 text decoder from pretrained."""
   logging.info('Loading T5 weights %s', t5_name)
   t5_params = t5_model.load_pretrained_weights(t5_name)['params']
-  expected_params = train_state.params.unfreeze()
+  expected_params = train_state.params.unfreeze()  # pyrefly: ignore[missing-attribute]
   new_params = copy_matched_params(
       expected_params, t5_params, load_prefix='textual/')
-  train_state = train_state.replace(params=FrozenDict(new_params))
+  train_state = train_state.replace(params=FrozenDict(new_params))  # pyrefly: ignore[missing-attribute]
   debug_utils.log_param_shapes(train_state.params)
   logging.info('Finish loading T5 weights from %s', t5_name)
   return train_state

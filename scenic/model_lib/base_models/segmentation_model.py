@@ -46,7 +46,7 @@ def num_pixels(logits: jnp.ndarray,
   """
   del logits
   if weights is None:
-    return np.prod(one_hot_targets.shape[:3])
+    return np.prod(one_hot_targets.shape[:3])  # pyrefly: ignore[bad-return]
   assert weights.ndim == 3, (
       'For segmentation task, the weights should be a pixel level mask.')
   return weights.sum()  # pytype: disable=bad-return-type  # jax-ndarray
@@ -65,7 +65,7 @@ def semantic_segmentation_metrics_function(  # pytype: disable=annotation-type-m
     logits: jnp.ndarray,
     batch: base_model.Batch,
     target_is_onehot: bool = False,
-    metrics: base_model.MetricNormalizerFnDict = _SEMANTIC_SEGMENTATION_METRICS,
+    metrics: base_model.MetricNormalizerFnDict = _SEMANTIC_SEGMENTATION_METRICS,  # pyrefly: ignore[bad-function-definition]
     axis_name: Union[str, Tuple[str, ...]] = 'batch',
 ) -> Dict[str, Tuple[jnp.ndarray, jnp.ndarray]]:
   """Calculates metrics for the semantic segmentation task.
@@ -106,7 +106,7 @@ def semantic_segmentation_metrics_function(  # pytype: disable=annotation-type-m
   for key, val in metrics.items():
     evaluated_metrics[key] = model_utils.psum_metric_normalizer(  # pytype: disable=wrong-arg-types  # jax-ndarray
         (val[0](logits, one_hot_targets, weights), val[1](  # pytype: disable=wrong-arg-types  # jax-types
-            logits, one_hot_targets, weights)),
+            logits, one_hot_targets, weights)),  # pyrefly: ignore[bad-argument-type]
         axis_name=axis_name)
   return evaluated_metrics
 
@@ -157,7 +157,7 @@ class SegmentationModel(base_model.BaseModel):
       batch)```
     """
     del split  # For all splits, we return the same metric functions.
-    return functools.partial(
+    return functools.partial(  # pyrefly: ignore[bad-return]
         semantic_segmentation_metrics_function,
         target_is_onehot=self.dataset_meta_data.get('target_is_onehot', False),
         metrics=_SEMANTIC_SEGMENTATION_METRICS)

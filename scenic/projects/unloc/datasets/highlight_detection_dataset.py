@@ -111,12 +111,12 @@ def get_dataset(*,
   for modality_name, modality_config in dataset_configs.modality_configs.items(
   ):
     if modality_config.type == 'rgb':
-      meta_data['input_shape']['rgb'] = (-1, dataset_configs.num_frames,
+      meta_data['input_shape']['rgb'] = (-1, dataset_configs.num_frames,  # pyrefly: ignore[bad-assignment]
                                          modality_config.crop_size,
                                          modality_config.crop_size, 3)
       meta_data['input_dtype']['rgb'] = getattr(jnp, dtype_str)
     if modality_config.type == 'flow':
-      meta_data['input_shape']['flow'] = (
+      meta_data['input_shape']['flow'] = (  # pyrefly: ignore[bad-assignment]
           -1,
           dataset_configs.num_frames,
           modality_config.crop_size,
@@ -125,7 +125,7 @@ def get_dataset(*,
       )
       meta_data['input_dtype']['flow'] = getattr(jnp, dtype_str)
     elif modality_config.type == 'text':
-      meta_data['input_shape'][modality_name] = {
+      meta_data['input_shape'][modality_name] = {  # pyrefly: ignore[bad-assignment]
           'input_word_ids': (-1, modality_config.max_num_tokens),
           'input_type_ids': (-1, modality_config.max_num_tokens),
           'input_mask': (-1, modality_config.max_num_tokens),
@@ -136,7 +136,7 @@ def get_dataset(*,
           'input_mask': jnp.int32,
       }
     elif modality_config.type == 'embedding':
-      meta_data['input_shape'][modality_name] = (
+      meta_data['input_shape'][modality_name] = (  # pyrefly: ignore[bad-assignment]
           -1, dataset_configs.num_frames, modality_config.feature_dimension)
       meta_data['input_dtype'][modality_name] = getattr(jnp, dtype_str)
 

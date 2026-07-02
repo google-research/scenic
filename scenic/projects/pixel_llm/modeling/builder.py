@@ -39,11 +39,11 @@ def get_image_encoder(
 ):
   """Returns an image encoder."""
   if encoder_type == 'eva02_vit':
-    return eva02_vit.ViT(**encoder_args, name=param_name)
+    return eva02_vit.ViT(**encoder_args, name=param_name)  # pyrefly: ignore[bad-unpacking]
   elif encoder_type == 'sam_vit':
-    return sam_vit.ImageEncoderViT(**encoder_args, name=param_name)
+    return sam_vit.ImageEncoderViT(**encoder_args, name=param_name)  # pyrefly: ignore[bad-unpacking]
   elif encoder_type == 'centernet_vit':
-    return centernet_vit.ViT(**encoder_args, name=param_name)
+    return centernet_vit.ViT(**encoder_args, name=param_name)  # pyrefly: ignore[bad-unpacking]
   elif encoder_type == 'none':
     return None
   else:
@@ -57,7 +57,7 @@ def get_mask_decoder(
 ):
   """Returns a mask decoder."""
   if decoder_type == 'sam_mask_decoder':
-    return mask_decoder.MaskDecoder(**decoder_args, name=param_name)
+    return mask_decoder.MaskDecoder(**decoder_args, name=param_name)  # pyrefly: ignore[bad-unpacking]
   elif decoder_type == 'none':
     return None
   else:
@@ -71,7 +71,7 @@ def get_prompt_encoder(
 ):
   """Returns an prompt encoder."""
   if encoder_type == 'sam_prompt_encoder':
-    return prompt_encoder.PromptEncoder(**encoder_args, name=param_name)
+    return prompt_encoder.PromptEncoder(**encoder_args, name=param_name)  # pyrefly: ignore[bad-unpacking]
   elif encoder_type == 'none':
     return None
   else:
@@ -85,7 +85,7 @@ def get_prompt_adapter(
 ):
   """Returns an prompt adapter."""
   if adapter_type == 'sam_prompt_adapter':
-    return prompt_adapter.PromptAdaptor(**adapter_args, name=param_name)
+    return prompt_adapter.PromptAdaptor(**adapter_args, name=param_name)  # pyrefly: ignore[bad-unpacking]
   elif adapter_type == 'none':
     return None
   else:
@@ -100,7 +100,7 @@ def get_point_predictor(
   """Returns an point predictor."""
   if predictor_type == 'mlp_point_predictor':
     return point_predictor.MlpPointPredictor(
-        **predictor_args, name=param_name
+        **predictor_args, name=param_name  # pyrefly: ignore[bad-unpacking]
     )
   elif predictor_type == 'none':
     return None
@@ -118,11 +118,11 @@ def get_text_decoder(
   if decoder_type == 'git':
     return text_decoder.TransformerDecoderTextualHead(
         vocab_size=vocab_size,
-        **decoder_args, name=param_name)
+        **decoder_args, name=param_name)  # pyrefly: ignore[bad-unpacking]
   elif 't5' in decoder_type:
     return t5_text_head.T5TextualHead(
         t5_model=decoder_type,
-        **decoder_args,
+        **decoder_args,  # pyrefly: ignore[bad-unpacking]
         name=param_name)
   elif decoder_type == 'none':
     return None
@@ -137,7 +137,7 @@ def get_box_decoder(
 ):
   """Returns a box decoder."""
   if decoder_type == 'centernet2_det_decoder':
-    return box_decoder.FpnCenterNet2(**decoder_args, name=param_name)
+    return box_decoder.FpnCenterNet2(**decoder_args, name=param_name)  # pyrefly: ignore[bad-unpacking, missing-argument]
   elif decoder_type == 'none':
     return None
   else:
@@ -151,7 +151,7 @@ def get_project_layers(
 ):
   """Returns a project layers."""
   if project_layers_type == 'linear':
-    return layers.LinearProjectLayers(**project_layers_args, name=param_name)
+    return layers.LinearProjectLayers(**project_layers_args, name=param_name)  # pyrefly: ignore[bad-unpacking]
   elif project_layers_type == 'none':
     return None
   else:
@@ -165,7 +165,7 @@ def get_mask_adapter(
 ):
   """Returns a mask adapter."""
   if mask_adapter_type == 'sam_mask_adapter':
-    return mask_adapter.SamMaskAdaptor(**mask_adapter_args, name=param_name)
+    return mask_adapter.SamMaskAdaptor(**mask_adapter_args, name=param_name)  # pyrefly: ignore[bad-unpacking]
   elif mask_adapter_type == 'none':
     return None
   else:

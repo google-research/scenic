@@ -37,7 +37,7 @@ def classification_metrics_function(  # pytype: disable=annotation-type-mismatch
     logits: jnp.ndarray,
     batch: base_model.Batch,
     target_is_onehot: bool = False,
-    metrics: base_model.MetricNormalizerFnDict = _CLASSIFICATION_METRICS,
+    metrics: base_model.MetricNormalizerFnDict = _CLASSIFICATION_METRICS,  # pyrefly: ignore[bad-function-definition]
     axis_name: Union[str, Tuple[str, ...]] = 'batch',
 ) -> Dict[str, Tuple[float, int]]:
   """Calculates metrics for the classification task.
@@ -79,7 +79,7 @@ def classification_metrics_function(  # pytype: disable=annotation-type-mismatch
   for key, val in metrics.items():
     evaluated_metrics[key] = model_utils.psum_metric_normalizer(  # pytype: disable=wrong-arg-types  # jax-ndarray
         (val[0](logits, one_hot_targets, weights), val[1](  # pytype: disable=wrong-arg-types  # jax-types
-            logits, one_hot_targets, weights)),
+            logits, one_hot_targets, weights)),  # pyrefly: ignore[bad-argument-type]
         axis_name=axis_name)
   return evaluated_metrics  # pytype: disable=bad-return-type  # jax-types
 

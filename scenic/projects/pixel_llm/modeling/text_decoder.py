@@ -243,7 +243,7 @@ class BertEncoderAsDecoder(nn.Module):
     top_right = jnp.full((feat_len, cap_len), NEG_INF, dtype=jnp.float32)
     bottom_left = jnp.zeros((cap_len, feat_len), dtype=jnp.float32)
     left = jnp.concatenate([top_left, bottom_left], axis=0)
-    right = jnp.concatenate([top_right, tgt_mask], axis=0)
+    right = jnp.concatenate([top_right, tgt_mask], axis=0)  # pyrefly: ignore[bad-argument-type]
 
     full_attention_mask = jnp.concatenate(
         [left, right],

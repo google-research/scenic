@@ -99,10 +99,10 @@ def get_dataset(*,
           num_shards,
           dataset_factory.ActionSegmentationDatasetFactory,
           map_key_fn=map_keys,
-          class_name_ids=class_name_ids,
+          class_name_ids=class_name_ids,  # pyrefly: ignore[bad-argument-type]
           tokenizer=tokenizer,
           num_prompts=num_prompts,
-          class_name_embeddings=class_name_embeddings,
+          class_name_embeddings=class_name_embeddings,  # pyrefly: ignore[bad-argument-type]
       )
   )
   (eval_iter, num_eval_examples) = (
@@ -113,10 +113,10 @@ def get_dataset(*,
           num_shards,
           dataset_factory.ActionSegmentationDatasetFactory,
           map_key_fn=map_keys,
-          class_name_ids=class_name_ids,
+          class_name_ids=class_name_ids,  # pyrefly: ignore[bad-argument-type]
           tokenizer=tokenizer,
           num_prompts=num_prompts,
-          class_name_embeddings=class_name_embeddings,
+          class_name_embeddings=class_name_embeddings,  # pyrefly: ignore[bad-argument-type]
       )
   )
   test_batch_size = dataset_configs.get('test_batch_size', eval_batch_size)
@@ -128,10 +128,10 @@ def get_dataset(*,
           num_shards,
           dataset_factory.ActionSegmentationDatasetFactory,
           map_key_fn=map_keys,
-          class_name_ids=class_name_ids,
+          class_name_ids=class_name_ids,  # pyrefly: ignore[bad-argument-type]
           tokenizer=tokenizer,
           num_prompts=num_prompts,
-          class_name_embeddings=class_name_embeddings,
+          class_name_embeddings=class_name_embeddings,  # pyrefly: ignore[bad-argument-type]
       )
   )
   meta_data = {
@@ -150,17 +150,17 @@ def get_dataset(*,
   for modality_name, modality_config in dataset_configs.modality_configs.items(
   ):
     if modality_config.type == 'rgb':
-      meta_data['input_shape']['rgb'] = (-1, dataset_configs.num_frames,
+      meta_data['input_shape']['rgb'] = (-1, dataset_configs.num_frames,  # pyrefly: ignore[bad-assignment]
                                          modality_config.crop_size,
                                          modality_config.crop_size, 3)
       meta_data['input_dtype']['rgb'] = getattr(jnp, dtype_str)
     if modality_config.type == 'embedding':
-      meta_data['input_shape'][modality_name] = (
+      meta_data['input_shape'][modality_name] = (  # pyrefly: ignore[bad-assignment]
           -1, dataset_configs.num_frames, modality_config.feature_dimension)
       meta_data['input_dtype'][modality_name] = getattr(jnp, dtype_str)
 
   if dataset_configs.get('class_name_csv') is not None:
-    meta_data['input_shape']['class_names'] = {
+    meta_data['input_shape']['class_names'] = {  # pyrefly: ignore[bad-assignment]
         'input_word_ids': (-1, dataset_configs.num_classes,
                            dataset_configs.tokenizer_config.max_num_tokens),
         'input_type_ids': (-1, dataset_configs.num_classes,
@@ -174,7 +174,7 @@ def get_dataset(*,
         'input_mask': jnp.int32,
     }
   if dataset_configs.get('class_name_embedding_npy') is not None:
-    meta_data['input_shape']['class_names'] = (-1, dataset_configs.num_classes,
+    meta_data['input_shape']['class_names'] = (-1, dataset_configs.num_classes,  # pyrefly: ignore[bad-assignment]
                                                class_name_embeddings.shape[-1])  # pytype: disable=attribute-error
     meta_data['input_dtype']['class_names'] = getattr(jnp, dtype_str)
 

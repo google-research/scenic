@@ -308,7 +308,7 @@ def add_input_mask(
       feature_dict: builders.FeaturesDict) -> tf.Tensor:
     del feature_dict
     total_frames = 0
-    for level in range(len(feature_pyramid_levels)):
+    for level in range(len(feature_pyramid_levels)):  # pyrefly: ignore[bad-argument-type]
       cur_downsample_stride = feature_pyramid_downsample_stride**level
       cur_num_frames = num_frames // cur_downsample_stride
       total_frames += cur_num_frames
@@ -325,7 +325,7 @@ def add_input_mask(
     mask = []
     total_length = tf.cast(feature_dict[total_length_name], tf.int32)
 
-    for level in range(len(feature_pyramid_levels)):
+    for level in range(len(feature_pyramid_levels)):  # pyrefly: ignore[bad-argument-type]
       cur_downsample_stride = feature_pyramid_downsample_stride**level
       cur_num_frames = num_frames // cur_downsample_stride
       cur_stride = stride * cur_downsample_stride
@@ -388,7 +388,7 @@ def _get_random_offset(state: Dict[str, Any], total_length: tf.Tensor,
 
   if not is_training:
     return tf.maximum(
-        0, tf.cast((total_length - num_frames * stride) // 2, tf.int32))
+        0, tf.cast((total_length - num_frames * stride) // 2, tf.int32))  # pyrefly: ignore[unsupported-operation]
   if state and 'sample_offset_proportion' in state:
     # 'sample_offset_proportion' is the same key used in add_images.
     offset = state['sample_offset_proportion'] * total_length
@@ -574,11 +574,11 @@ def _add_labels_from_one_pyramid_level_tal(
   # The first row will NOT be used and serves as a placeholder when
   # segment_label = -1.
   displacements_to_start = tf.fill([num_classes + 1, num_frames],
-                                   total_length + 1.0)
+                                   total_length + 1.0)  # pyrefly: ignore[unsupported-operation]
   # The first row will NOT be used and serves as a placeholder when
   # segment_label = -1.
   displacements_to_end = tf.fill([num_classes + 1, num_frames],
-                                 total_length + 1.0)
+                                 total_length + 1.0)  # pyrefly: ignore[unsupported-operation]
 
   for i in range(max_num_segments):
     frame_label_indices = tf.fill([num_frames], -1)
@@ -597,7 +597,7 @@ def _add_labels_from_one_pyramid_level_tal(
     # The distances to the start should only be considered for the frames
     # after the start.
     cur_displacements_to_start = tf.where(
-        frame_indices - segment_start_index < 0, total_length + 1,
+        frame_indices - segment_start_index < 0, total_length + 1,  # pyrefly: ignore[unsupported-operation]
         frame_indices - segment_start_index)
     displacements_to_start = tf.tensor_scatter_nd_min(
         displacements_to_start, [[cur_segment_label_index]],
@@ -605,7 +605,7 @@ def _add_labels_from_one_pyramid_level_tal(
     # The distances to the end should only be considered for the frames
     # before the end.
     cur_displacements_to_end = tf.where(segment_end_index - frame_indices < 0,
-                                        total_length + 1,
+                                        total_length + 1,  # pyrefly: ignore[unsupported-operation]
                                         segment_end_index - frame_indices)
     displacements_to_end = tf.tensor_scatter_nd_min(
         displacements_to_end, [[cur_segment_label_index]],
@@ -923,7 +923,7 @@ def interpolate_embeddings(
     embeddings_floor = feature_dict[f'{output_feature_name}_floor']
     embeddings_ceil = feature_dict[f'{output_feature_name}_ceil']
     indices = tf.linspace(
-        0.0, tf.cast(feature_dict[total_length_feature_name] - 1, tf.float32),
+        0.0, tf.cast(feature_dict[total_length_feature_name] - 1, tf.float32),  # pyrefly: ignore[unsupported-operation]
         num_frames)
     weights_ceil = tf.cast(indices - tf.math.floor(indices), tf.float32)
     weights_floor = tf.cast(1.0 - weights_ceil, tf.float32)
@@ -1377,13 +1377,13 @@ def add_image(
     )
 
   preprocessor_builder.add_fn(
-      fn=lambda x: x - normalization_mean,
+      fn=lambda x: x - normalization_mean,  # pyrefly: ignore[bad-argument-type, unsupported-operation]
       feature_name=output_feature_name,
       fn_name=f'{output_feature_name}_subtract_given_mean',
   )
 
   preprocessor_builder.add_fn(
-      fn=lambda x: x / normalization_std,
+      fn=lambda x: x / normalization_std,  # pyrefly: ignore[bad-argument-type, unsupported-operation]
       feature_name=output_feature_name,
       fn_name=f'{output_feature_name}_divide_by_given_std',
   )
