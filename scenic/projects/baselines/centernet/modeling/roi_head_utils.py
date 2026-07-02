@@ -271,7 +271,7 @@ def generate_detections(
       nmsed_scores_i, nmsed_boxes_i = nms.non_max_suppression_padded(  # pytype: disable=wrong-arg-types  # jax-ndarray
           scores=scores_i[None, ...],
           boxes=boxes_i[None, ...],
-          max_output_size=post_nms_num_detections,
+          max_output_size=post_nms_num_detections,  # pyrefly: ignore[bad-argument-type]
           iou_threshold=nms_threshold,
       )
 
@@ -383,7 +383,7 @@ def generate_detections_vmap(
     nmsed_scores, nmsed_boxes = nms.non_max_suppression_padded(  # pytype: disable=wrong-arg-types  # jax-ndarray
         scores=per_class_scores,
         boxes=per_class_boxes,
-        max_output_size=post_nms_num_detections,
+        max_output_size=post_nms_num_detections,  # pyrefly: ignore[bad-argument-type]
         iou_threshold=nms_threshold,
     )
 

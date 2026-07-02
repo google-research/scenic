@@ -58,7 +58,7 @@ def label_assignment(
     raise ValueError('Invalid length of assignments & thresholds!')
   if thresholds != sorted(thresholds):
     raise ValueError('Thresholds must be sorted!')
-  thresholds = jnp.array(thresholds)
+  thresholds = jnp.array(thresholds)  # pyrefly: ignore[bad-assignment]
   matches = jnp.argmax(iou_matrix, axis=0)
   matched_max = jnp.max(iou_matrix, axis=0)  # Best IoU for each DT.
   # For each IoU, find its position inside "thresholds"
@@ -71,7 +71,7 @@ def label_assignment(
         jnp.where(matched_max < thresholds[1], assignments[1], assignments[2]))
   else:
     # Handle the generic case, but much slower.
-    indices = jnp.searchsorted(thresholds, matched_max, side='right')
+    indices = jnp.searchsorted(thresholds, matched_max, side='right')  # pyrefly: ignore[bad-argument-type]
     assignments_per_box = jnp.array(assignments, dtype=jnp.int32)[indices]
 
   return matches, assignments_per_box

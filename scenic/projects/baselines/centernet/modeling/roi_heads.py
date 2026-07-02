@@ -170,7 +170,7 @@ class CascadeROIHeads(nn.Module):
       `flax/ops/generate_detections.py:process_and_generate_detections()`
     """
     strides = sorted(self.input_strides.items(), key=lambda x: x[1])
-    features = [features[s[0]] for s in strides]  # Sorted features
+    features = [features[s[0]] for s in strides]  # Sorted features  # pyrefly: ignore[bad-assignment]
     proposals = proposal_boxes
 
     if training:
@@ -188,7 +188,7 @@ class CascadeROIHeads(nn.Module):
           mode="promise_in_bounds")
 
       detections, losses = self._forward_box(  # pytype: disable=wrong-arg-types  # jax-ndarray
-          features,
+          features,  # pyrefly: ignore[bad-argument-type]
           proposals,
           image_shape,
           matched_boxes=matched_boxes,
@@ -201,7 +201,7 @@ class CascadeROIHeads(nn.Module):
       return detections, losses
     else:
       detections, _ = self._forward_box(
-          features, proposals, image_shape,
+          features, proposals, image_shape,  # pyrefly: ignore[bad-argument-type]
           proposal_scores=proposal_scores, training=training,
           postprocess=postprocess, debug=debug)
       return detections, {}
@@ -342,12 +342,12 @@ class CascadeROIHeads(nn.Module):
             [jax.nn.softmax(x[2], axis=-1) for x in head_outputs]
             ) / len(head_outputs)  # B x N x (C + 1)
       if self.mult_proposal_score:
-        class_outputs = (class_outputs * proposal_scores[..., None]) ** 0.5
+        class_outputs = (class_outputs * proposal_scores[..., None]) ** 0.5  # pyrefly: ignore[unsupported-operation]
       if self.one_class_per_proposal:
         class_outputs = class_outputs * (
-            class_outputs == class_outputs[..., 1:].max(axis=-1)[..., None])
+            class_outputs == class_outputs[..., 1:].max(axis=-1)[..., None])  # pyrefly: ignore[bad-index]
       detection_results = roi_head_utils.process_and_generate_detections(
-          box_outputs, class_outputs, proposals_yxyx, image_shape,
+          box_outputs, class_outputs, proposals_yxyx, image_shape,  # pyrefly: ignore[bad-argument-type]
           nms_threshold=self.nms_threshold,
           score_threshold=self.score_threshold,
           post_nms_num_detections=self.post_nms_num_detections,
@@ -428,7 +428,7 @@ class CascadeROIHeads(nn.Module):
               [jax.nn.softmax(x[2], axis=-1) for x in head_outputs]
               ) / len(head_outputs)  # B x N x (C + 1)
         detection_results = roi_head_utils.process_and_generate_detections(
-            box_outputs, class_outputs, proposals_yxyx, image_shape,
+            box_outputs, class_outputs, proposals_yxyx, image_shape,  # pyrefly: ignore[bad-argument-type]
             nms_threshold=self.nms_threshold,
             score_threshold=self.score_threshold,
             post_nms_num_detections=self.post_nms_num_detections,

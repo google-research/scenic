@@ -111,7 +111,7 @@ class FPN(nn.Module):
 
     bottom_up_class = BOTTOM_UP_CLASS[self.backbone_name]
     bottom_up_features = bottom_up_class(
-        num_outputs=None, **self.backbone_args, name='bottom_up')(
+        num_outputs=None, **self.backbone_args, name='bottom_up')(  # pyrefly: ignore[bad-unpacking]
             x, train=train)
     results = {}
     mid_idx = self.start_idx + len(self.in_features) - 1

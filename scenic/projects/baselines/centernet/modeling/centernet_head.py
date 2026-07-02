@@ -162,9 +162,9 @@ class CenterNetHead(nn.Module):
       reg = nn.relu(reg)
       box_regs.append(reg)
       if self.num_classes > 0:
-        cls_feat = cls_tower(feature, train=train)
-        heatmaps.append(cls_logits(cls_feat))
+        cls_feat = cls_tower(feature, train=train)  # pyrefly: ignore[unbound-name]
+        heatmaps.append(cls_logits(cls_feat))  # pyrefly: ignore[unbound-name]
       else:
-        heatmaps.append(agn_hm(bbox_feat))
+        heatmaps.append(agn_hm(bbox_feat))  # pyrefly: ignore[unbound-name]
     return {'heatmaps': heatmaps, 'box_regs': box_regs}
 

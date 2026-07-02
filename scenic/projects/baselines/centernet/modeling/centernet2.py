@@ -177,7 +177,7 @@ class CenterNet2Detector(centernet.CenterNetDetector):
     ], axis=1)  # B x 2, in order (height, width)
     detections, metrics = self.roi_heads(
         rpn_features, image_shape,
-        gt_boxes, gt_classes,
+        gt_boxes, gt_classes,  # pyrefly: ignore[bad-argument-type]
         proposal_boxes, proposal_scores,
         training=train, postprocess=postprocess, debug=debug)
     if not train:

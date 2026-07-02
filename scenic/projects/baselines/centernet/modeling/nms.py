@@ -230,7 +230,7 @@ def non_max_suppression_padded(scores: jnp.ndarray,
   idx = num_boxes - jax.lax.top_k(  # pytype: disable=wrong-arg-types  # jax-ndarray
       jnp.any(selected_boxes > 0, [2]).astype(jnp.int32) *
       jnp.expand_dims(jnp.arange(num_boxes, 0, -1), 0),
-      max_output_size)[0].astype(jnp.int32)
+      max_output_size)[0].astype(jnp.int32)  # pyrefly: ignore[bad-argument-type]
   idx = jnp.minimum(idx, num_boxes - 1)
   idx_return = idx
   idx = jnp.reshape(
@@ -280,7 +280,7 @@ def batched_nms_jax(
   boxes_for_nms = boxes + offsets[:, None]
   # non_max_suppression_padded uses an additional batch dimension.
   nms_scores, _, keep = non_max_suppression_padded(  # pytype: disable=wrong-arg-types  # jax-ndarray
-      scores[None], boxes_for_nms[None], output_size, iou_threshold,
+      scores[None], boxes_for_nms[None], output_size, iou_threshold,  # pyrefly: ignore[bad-argument-type]
       return_idx=True)
   vmap_index = jax.vmap(lambda x, i: x[i])
   nms_boxes = vmap_index(boxes[None], keep)

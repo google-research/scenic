@@ -148,10 +148,10 @@ class Attention(nn.Module):
     if self.use_rel_pos:
       rel_pos_h = self.param(
           'rel_pos_h', nn.initializers.zeros,
-          (2 * self.input_size[0] - 1, head_dim))
+          (2 * self.input_size[0] - 1, head_dim))  # pyrefly: ignore[unsupported-operation]
       rel_pos_w = self.param(
           'rel_pos_w', nn.initializers.zeros,
-          (2 * self.input_size[0] - 1, head_dim))
+          (2 * self.input_size[0] - 1, head_dim))  # pyrefly: ignore[unsupported-operation]
       attn = self.add_decomposed_rel_pos(
           attn, q, rel_pos_h, rel_pos_w,
           (height, width), (height, width))
@@ -308,7 +308,7 @@ class Block(nn.Module):
 
     # Reverse window partition
     if self.window_size > 0:
-      x = self.window_unpartition(x, pad_hw, (h, w))
+      x = self.window_unpartition(x, pad_hw, (h, w))  # pyrefly: ignore[unbound-name]
 
     if self.layer_scale_init_value > 0:
       gamma_1 = self.param(
@@ -517,7 +517,7 @@ class SimpleFeaturePyramid(nn.Module):
     backbone_args['window_block_indexes'] = backbone_args.get(
         'window_block_indexes', window_block_indexes)
     backbone_args.lock()
-    backbone_net = ViT(**backbone_args, dtype=self.dtype, name='net')
+    backbone_net = ViT(**backbone_args, dtype=self.dtype, name='net')  # pyrefly: ignore[bad-unpacking]
 
     if freeze_backbone:
       features = jax.lax.stop_gradient(backbone_net(x, train=False))

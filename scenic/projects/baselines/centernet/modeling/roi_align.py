@@ -134,7 +134,7 @@ def _multilevel_roi_align_loop(features: list[jnp.ndarray],
     cropped = batch_roi_align(feature, boxes, output_size, sampling_ratio)
     mask = (feature_ids == idx)[:, :, None, None, None]
     results.append(cropped * mask)
-  return sum(results)
+  return sum(results)  # pyrefly: ignore[bad-return]
 
 
 def multilevel_roi_align(features: list[jnp.ndarray],
