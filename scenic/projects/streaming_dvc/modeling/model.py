@@ -35,7 +35,7 @@ def get_image_encoder(encoder_type: str,
                       param_name: str = 'image_encoder') -> nn.Module:
   """Returns an image encoder."""
   if encoder_type == 'git_vit':
-    return git_vit.ViT(**encoder_args, name=param_name)
+    return git_vit.ViT(**encoder_args, name=param_name)  # pyrefly: ignore[bad-unpacking]
   else:
     raise ValueError(f'Unknown encoder type {encoder_type}.')
 
@@ -104,18 +104,18 @@ class CaptioningFlaxModel(nn.Module):
     if self.text_decoder_name == 'git':
       self.textual = bert_text_decoder.TransformerDecoderTextualHead(
           vocab_size=self.vocab_size,
-          **self.text_decoder_args, name='textual')
+          **self.text_decoder_args, name='textual')  # pyrefly: ignore[bad-unpacking]
     else:
       raise NotImplementedError(self.text_decoder_name)
 
     if self.project_layers_name == 'linear':
       self.project_layers = LinearProjectLayers(
-          **self.project_layers_args,
+          **self.project_layers_args,  # pyrefly: ignore[bad-unpacking]
           name=self.project_param_name)
     elif self.project_layers_name == 'bert':
       self.bert_project_layers = (
           bert_text_decoder.TransformerDecoderTextualHead(
-              **self.project_layers_args,
+              **self.project_layers_args,  # pyrefly: ignore[bad-unpacking]
               name=self.project_param_name))
     elif self.project_layers_name != 'none':
       raise NotImplementedError(self.project_layers_name)
@@ -473,5 +473,5 @@ class CaptioningModel(base_model.BaseModel):
   def build_flax_model(self):
     return CaptioningFlaxModel(**self.get_dict_from_config())
 
-  def loss_function(self, outputs, batch):
+  def loss_function(self, outputs, batch):  # pyrefly: ignore[bad-override]
     return self.flax_model.loss_function(outputs, batch)

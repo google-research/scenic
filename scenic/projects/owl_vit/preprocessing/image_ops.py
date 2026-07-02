@@ -71,8 +71,8 @@ class ImagePreprocessOp(abc.ABC):
     # Apply to images:
     image_size = None
     if self.image_key in features:
-      image_size = transforms.get_dynamic_size(features[self.image_key])
-      features[self.image_key] = self.apply(features[self.image_key])
+      image_size = transforms.get_dynamic_size(features[self.image_key])  # pyrefly: ignore[bad-argument-type]
+      features[self.image_key] = self.apply(features[self.image_key])  # pyrefly: ignore[bad-argument-type]
 
     # Apply to boxes:
     if self.boxes_key in features:
@@ -80,7 +80,7 @@ class ImagePreprocessOp(abc.ABC):
         raise ValueError(
             "When providing box features, image features are also required, so "
             "that the image size can be computed.")
-      features[self.boxes_key] = self.apply_boxes(features[self.boxes_key],
+      features[self.boxes_key] = self.apply_boxes(features[self.boxes_key],  # pyrefly: ignore[bad-argument-type]
                                                   image_size)
 
     return features
@@ -119,14 +119,14 @@ class RandomImagePreprocessOp(ImagePreprocessOp):
     if SEED_KEY not in features:
       raise ValueError(
           f"Random image preprocess op {type(self)} requires a random seed.")
-    image_size = transforms.get_dynamic_size(features[self.image_key])
+    image_size = transforms.get_dynamic_size(features[self.image_key])  # pyrefly: ignore[bad-argument-type]
     rngs = tf.random.experimental.stateless_split(features[SEED_KEY])
     features[SEED_KEY] = rngs[0]
     op_seed = rngs[1]
-    features[self.image_key] = self.apply(features[self.image_key], op_seed)
+    features[self.image_key] = self.apply(features[self.image_key], op_seed)  # pyrefly: ignore[bad-argument-type]
     if self.boxes_key in features:
       features[self.boxes_key] = self.apply_boxes(
-          features[self.boxes_key], image_size=image_size, seed=op_seed)
+          features[self.boxes_key], image_size=image_size, seed=op_seed)  # pyrefly: ignore[bad-argument-type]
     return features
 
   @abc.abstractmethod
@@ -219,18 +219,18 @@ class RandomCropBase(RandomImagePreprocessOp):
     keep = []
     if self.boxes_key in features:
       # Keep boxes whose area is greater than 0:
-      rel_area = transforms.get_box_area(features[self.boxes_key])
-      keep.append(rel_area > 0.0)
+      rel_area = transforms.get_box_area(features[self.boxes_key])  # pyrefly: ignore[bad-argument-type]
+      keep.append(rel_area > 0.0)  # pyrefly: ignore[unsupported-operation]
 
       if (hasattr(self, "min_area_fraction") and orig_features is not None):
         area = transforms.get_box_area(
-            features[self.boxes_key],
-            transforms.get_dynamic_size(features[self.image_key]))
+            features[self.boxes_key],  # pyrefly: ignore[bad-argument-type]
+            transforms.get_dynamic_size(features[self.image_key]))  # pyrefly: ignore[bad-argument-type]
         orig_area = transforms.get_box_area(
-            orig_features[self.boxes_key],
-            transforms.get_dynamic_size(orig_features[self.image_key]))
+            orig_features[self.boxes_key],  # pyrefly: ignore[bad-argument-type]
+            transforms.get_dynamic_size(orig_features[self.image_key]))  # pyrefly: ignore[bad-argument-type]
 
-        area_left = area / (orig_area + 1e-8)
+        area_left = area / (orig_area + 1e-8)  # pyrefly: ignore[unsupported-operation]
         keep.append(area_left >= self.min_area_fraction)
 
     # If there are no boxes there are no degenerate objects to filter out.
@@ -368,7 +368,7 @@ class ResizeWithPad(ImagePreprocessOp):
 
     # Resize the image to fit into target size, while keeping aspect ratio:
     in_height, in_width = transforms.get_dynamic_size(image, tf.float32)
-    ratio = tf.maximum(in_height / float(size[0]), in_width / float(size[1]))
+    ratio = tf.maximum(in_height / float(size[0]), in_width / float(size[1]))  # pyrefly: ignore[unsupported-operation]
     fit_height = tf.cast(tf.minimum(in_height / ratio, size[0]), tf.int32)
     fit_width = tf.cast(tf.minimum(in_width / ratio, size[1]), tf.int32)
     image = tf.image.resize(
@@ -679,7 +679,7 @@ class DecodeCocoExample(DecodeImage):
 
   def __call__(self, features: Features) -> Features:
     features = super().__call__(features)
-    image_size = transforms.get_dynamic_size(features[self.image_key])
+    image_size = transforms.get_dynamic_size(features[self.image_key])  # pyrefly: ignore[bad-argument-type]
     boxes = features["objects"]["bbox"]  # float32, in range [0, 1].
     instance_labels = tf.cast(features["objects"]["label"], tf.int32)
 

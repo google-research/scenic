@@ -154,8 +154,8 @@ def _get_pre_mosaic_process_fn(
 
     # Adjust resizing ops to mosaic tile size:
     if isinstance(op, resize_ops):
-      assert op.size % mosaic_size == 0, 'Size is not evenly divisible!'
-      op = dataclasses.replace(op, size=op.size // mosaic_size)
+      assert op.size % mosaic_size == 0, 'Size is not evenly divisible!'  # pyrefly: ignore[unsupported-operation]
+      op = dataclasses.replace(op, size=op.size // mosaic_size)  # pyrefly: ignore[unsupported-operation]
     pre_mosaic_ops.append(op)
   pre_mosaic_fn.ops = pre_mosaic_ops
 
@@ -218,7 +218,7 @@ def _get_single_tfds_dataset(
   ds = deterministic_data.create_dataset(
       builder,
       split=host_split,
-      preprocess_fn=preprocess_fn,
+      preprocess_fn=preprocess_fn,  # pyrefly: ignore[bad-argument-type]
       cache=cache,
       batch_dims=[batch_size],
       rng=rng,
@@ -279,7 +279,7 @@ def _get_merged_dataset(builders: Sequence[tfds.core.DatasetBuilder],
 
   try:
     return tf.data.Dataset.sample_from_datasets(
-        datasets_to_merge, weights=dataset_probs,
+        datasets_to_merge, weights=dataset_probs,  # pyrefly: ignore[bad-argument-type]
         seed=None if rng is None else rng[0])
   except TypeError as e:
     # There is a mismatch between the datasets to be merged. If it's a simple
@@ -366,7 +366,7 @@ def _build_pipeline(config: ml_collections.ConfigDict,
 
   # Merge mosaic sizes:
   final_dataset = tf.data.Dataset.sample_from_datasets(
-      mosaic_datasets, weights=mosaic_probs, seed=rng[0])
+      mosaic_datasets, weights=mosaic_probs, seed=rng[0])  # pyrefly: ignore[bad-argument-type]
 
   # Apply post-mosaic processing:
   post_mosaic_processing = _get_post_mosaic_process_fn(config.preproc_spec)
@@ -409,7 +409,7 @@ def _validate_and_normalize_config(
   """
   # Create a merged config for this mode (i.e. train or test):
   mode_config = dataset_configs.train if train else dataset_configs.eval
-  config = ml_collections.ConfigDict({**dataset_configs, **mode_config})
+  config = ml_collections.ConfigDict({**dataset_configs, **mode_config})  # pyrefly: ignore[invalid-argument]
 
   # Validate config structure:
   decoder_kwarg_list = config.get('decoder_kwarg_list',

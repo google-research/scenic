@@ -385,7 +385,7 @@ class NamedPreprocessOp(abc.ABC, preprocess_spec.PreprocessOp):
     features = dict(features)
 
     # Add name score so that runtime errors are easier to locate:
-    with tf.name_scope(type(self).__name__):
+    with tf.name_scope(type(self).__name__):  # pyrefly: ignore[bad-instantiation]
       return self.apply(features)
 
 
@@ -510,7 +510,7 @@ class CanonicalizeTextLabels(NamedPreprocessOp):
   def apply(self, features: Features) -> Features:
     for text_key in self.text_keys:
       if text_key in features:
-        features[text_key] = _canonicalize_string_tf(features[text_key])
+        features[text_key] = _canonicalize_string_tf(features[text_key])  # pyrefly: ignore[bad-argument-type]
     return features
 
 
@@ -561,10 +561,10 @@ class IntegerToTextLabels(NamedPreprocessOp):
     # Label maps start at 1.
     for label_key, text_key in self.label_text_keys:
       if label_key in features:
-        features[text_key] = table.lookup(features[label_key] + 1)
-        features[text_key] = remove_promptability_marker(features[text_key])
+        features[text_key] = table.lookup(features[label_key] + 1)  # pyrefly: ignore[bad-argument-type, unsupported-operation]
+        features[text_key] = remove_promptability_marker(features[text_key])  # pyrefly: ignore[bad-argument-type]
       if not self.is_promptable:
-        features[text_key] = mark_not_promptable(features[text_key])
+        features[text_key] = mark_not_promptable(features[text_key])  # pyrefly: ignore[bad-argument-type]
 
     return features
 
@@ -610,14 +610,14 @@ class RemoveForbiddenLabels(NamedPreprocessOp):
   def apply(self, features: Features) -> Features:
     if self.instance_text_labels_key in features:
       keep = tf.logical_not(
-          _is_forbidden_label(features[self.instance_text_labels_key]))
+          _is_forbidden_label(features[self.instance_text_labels_key]))  # pyrefly: ignore[bad-argument-type]
       for feature in image_ops.FEATURES_WITH_FIRST_INSTANCE_AXIS:
         if feature in features:
           features[feature] = features[feature][keep]
 
     if self.negative_text_labels_key in features:
       keep = tf.logical_not(
-          _is_forbidden_label(features[self.negative_text_labels_key]))
+          _is_forbidden_label(features[self.negative_text_labels_key]))  # pyrefly: ignore[bad-argument-type]
       features[self.negative_text_labels_key] = features[
           self.negative_text_labels_key][keep]
       if self.negative_labels_key in features:
@@ -673,7 +673,7 @@ class AddRandomNegativeLabels(NamedPreprocessOp):
 
   def apply(self, features: image_ops.Features) -> image_ops.Features:
     # Draw candidate negative labels:
-    candidate_labels = self.queue.dequeue_many(self.total_num_negatives * 2)
+    candidate_labels = self.queue.dequeue_many(self.total_num_negatives * 2)  # pyrefly: ignore[missing-attribute]
 
     # Fill queue back up:
     labels_to_enqueue = tf.concat([
@@ -686,8 +686,8 @@ class AddRandomNegativeLabels(NamedPreprocessOp):
         name='labels_to_enqueue')
     target_size = self.queue_capacity // 2
     needed_elements = tf.clip_by_value(
-        target_size - self.queue.size(), 0, tf.size(labels_to_enqueue))
-    enqueue_op = self.queue.enqueue_many(
+        target_size - self.queue.size(), 0, tf.size(labels_to_enqueue))  # pyrefly: ignore[missing-attribute]
+    enqueue_op = self.queue.enqueue_many(  # pyrefly: ignore[missing-attribute]
         tf.slice(labels_to_enqueue, begin=[0], size=[needed_elements]))
 
     # Get negatives that are not in positives:
@@ -695,7 +695,7 @@ class AddRandomNegativeLabels(NamedPreprocessOp):
       candidate_negatives = tf.sparse.to_dense(
           tf.sets.difference(
               candidate_labels[None, ...],
-              features[modalities.INSTANCE_TEXT_LABELS][None, ...]))[0]
+              features[modalities.INSTANCE_TEXT_LABELS][None, ...]))[0]  # pyrefly: ignore[bad-index]
 
     # Set operations sort the labels alphabetically, so we shuffle again:
     candidate_negatives = tf.random.shuffle(candidate_negatives)
@@ -792,7 +792,7 @@ class RemovePromptabilityMarker(NamedPreprocessOp):
 
     # Remove non-promptable marker, if present:
     for key in self.promptable_modalities:
-      features[key] = remove_promptability_marker(features[key])
+      features[key] = remove_promptability_marker(features[key])  # pyrefly: ignore[bad-argument-type]
 
     return features
 
@@ -977,7 +977,7 @@ def _multilabel_to_multihot(labels: tf.Tensor, num_classes: int) -> tf.Tensor:
 
   # Labels are zero-indexed, with -1 for padding (TFDS convention). Add 1 such
   # that multi-hot index 0 means padding:
-  labels = tf.one_hot(labels + 1, num_classes)
+  labels = tf.one_hot(labels + 1, num_classes)  # pyrefly: ignore[unsupported-operation]
   labels = tf.reduce_max(labels, axis=-2)  # Combine up multi-labels.
 
   # Update padding label such that it is 1 iff there are no real labels. This
@@ -1011,10 +1011,10 @@ class ConvertToScenic(NamedPreprocessOp):
 
     target = {
         'boxes':
-            _convert_tf_boxes_to_xyxy(features[modalities.BOXES], image_size),
+            _convert_tf_boxes_to_xyxy(features[modalities.BOXES], image_size),  # pyrefly: ignore[bad-argument-type]
         'labels':
             _multilabel_to_multihot(
-                labels=features[PER_EXAMPLE_INSTANCE_MULTI_LABELS],
+                labels=features[PER_EXAMPLE_INSTANCE_MULTI_LABELS],  # pyrefly: ignore[bad-argument-type]
                 num_classes=tf.shape(features[modalities.TEXT_QUERIES])[0]),
     }
 
