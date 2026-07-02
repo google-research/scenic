@@ -104,7 +104,7 @@ class DetrGlobalEvaluator():
       clear_annotations: Optional[bool] = True) -> Dict[str, Any]:
     """Computes the metrics for all added predictions."""
     if included_image_ids is not None:
-      self.coco_evaluator.coco.reload_ground_truth(included_image_ids)
+      self.coco_evaluator.coco.reload_ground_truth(included_image_ids)  # pyrefly: ignore[bad-argument-type]
     return self.coco_evaluator.compute_coco_metrics(
         clear_annotations=clear_annotations)
 

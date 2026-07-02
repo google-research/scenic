@@ -92,22 +92,22 @@ def compute_cost(
 
   if out_bbox is not None:
     # [B, N, M, 4]
-    diff = jnp.abs(out_bbox[:, :, None] - tgt_bbox[:, None, :])
+    diff = jnp.abs(out_bbox[:, :, None] - tgt_bbox[:, None, :])  # pyrefly: ignore[unsupported-operation]
     cost_bbox = jnp.sum(diff, axis=-1)  # [B, N, M]
-    cost = cost + bbox_loss_coef * cost_bbox
+    cost = cost + bbox_loss_coef * cost_bbox  # pyrefly: ignore[unsupported-operation]
 
     # Cost_upper_bound is the approximate maximal possible total cost:
-    cost_upper_bound = cost_upper_bound + bbox_loss_coef * 4.0  # cost_bbox <= 4
+    cost_upper_bound = cost_upper_bound + bbox_loss_coef * 4.0  # cost_bbox <= 4  # pyrefly: ignore[unsupported-operation]
 
     # [B, N, M]
     cost_giou = -box_utils.generalized_box_iou(
         box_utils.box_cxcywh_to_xyxy(out_bbox),
-        box_utils.box_cxcywh_to_xyxy(tgt_bbox),
+        box_utils.box_cxcywh_to_xyxy(tgt_bbox),  # pyrefly: ignore[bad-argument-type]
         all_pairs=True)
-    cost = cost + giou_loss_coef * cost_giou
+    cost = cost + giou_loss_coef * cost_giou  # pyrefly: ignore[unsupported-operation]
 
     # cost_giou < 0, but can be a bit higher in the beginning of training:
-    cost_upper_bound = cost_upper_bound + giou_loss_coef * 1.0
+    cost_upper_bound = cost_upper_bound + giou_loss_coef * 1.0  # pyrefly: ignore[unsupported-operation]
 
   # Don't make costs too large w.r.t. the rest to avoid numerical instability.
   mask = mask[:, None]
@@ -464,7 +464,7 @@ class BaseModelWithMatching(base_model.BaseModel):  # pytype: disable=ignored-ab
         cost, n_cols = outputs['cost'], outputs.get('cost_n_cols')
       matches = self.matcher(cost, n_cols)
       if 'aux_outputs' in outputs:
-        matches = [matches]
+        matches = [matches]  # pyrefly: ignore[bad-assignment]
         for aux_pred in outputs['aux_outputs']:
           if 'cost' not in outputs:
             cost, n_cols = self.compute_cost_matrix(aux_pred, batch['label'])  # pytype: disable=wrong-arg-types  # jax-ndarray
@@ -474,7 +474,7 @@ class BaseModelWithMatching(base_model.BaseModel):  # pytype: disable=ignored-ab
 
     if not isinstance(matches, (list, tuple)):
       # Ensure matches come as a sequence.
-      matches = [matches]
+      matches = [matches]  # pyrefly: ignore[bad-assignment]
 
     # If the matching is not complete (i.e. the number of tokens is larger than
     # the number of labels) we will pad the matches.
@@ -498,10 +498,10 @@ class BaseModelWithMatching(base_model.BaseModel):  # pytype: disable=ignored-ab
         return jnp.concatenate([match, padding], axis=-1)
       return match
 
-    matches = [pad_matches(match) for match in matches]
+    matches = [pad_matches(match) for match in matches]  # pyrefly: ignore[bad-assignment, not-iterable]
 
-    aux_matches = matches[1:]
-    indices = matches[0]
+    aux_matches = matches[1:]  # pyrefly: ignore[unsupported-operation]
+    indices = matches[0]  # pyrefly: ignore[unsupported-operation]
 
     # Computes all the requested losses
     loss_dict = {}
@@ -542,7 +542,7 @@ class BaseModelWithMatching(base_model.BaseModel):  # pytype: disable=ignored-ab
 
     # Process metrics dictionary to generate final unnormalized metrics.
     metrics = self.get_metrics(metrics_dict)
-    metrics['total_loss'] = (total_loss, 1)
+    metrics['total_loss'] = (total_loss, 1)  # pyrefly: ignore[unsupported-operation]
     return total_loss, metrics  # pytype: disable=bad-return-type  # jax-ndarray
 
   def get_metrics(self, metrics_dict: MetricsDict) -> MetricsDict:
@@ -688,14 +688,14 @@ class ObjectDetectionWithMatchingModel(BaseModelWithMatching):
     else:
       is_loose = False
     loose_bbox_loss = model_utils.weighted_box_l1_loss(
-        src_boxes_xyxy,
-        tgt_boxes_xyxy,
+        src_boxes_xyxy,  # pyrefly: ignore[bad-argument-type]
+        tgt_boxes_xyxy,  # pyrefly: ignore[bad-argument-type]
         weights=batch_weights,
         tight=False,
     ).sum(axis=2)
     tight_bbox_loss = model_utils.weighted_box_l1_loss(
-        src_boxes_xyxy,
-        tgt_boxes_xyxy,
+        src_boxes_xyxy,  # pyrefly: ignore[bad-argument-type]
+        tgt_boxes_xyxy,  # pyrefly: ignore[bad-argument-type]
         weights=batch_weights,
     ).sum(axis=2)
     unnormalized_loss_bbox = (
@@ -705,7 +705,7 @@ class ObjectDetectionWithMatchingModel(BaseModelWithMatching):
     if batch_weights is not None:
       denom *= batch_weights
       unnormalized_loss_giou = model_utils.apply_weights(
-          unnormalized_loss_giou, batch_weights)
+          unnormalized_loss_giou, batch_weights)  # pyrefly: ignore[bad-argument-type]
 
     unnormalized_loss_bbox *= tgt_not_padding
     unnormalized_loss_giou *= tgt_not_padding

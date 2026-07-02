@@ -248,7 +248,7 @@ class Encoder1DBlock(nn.Module):
 
     # pre-attention-layer-normalization
     x = nn.LayerNorm(dtype=self.dtype)(inputs) if self.pre_norm else inputs
-    attention_mask = input_mask[:, None, None, :] * jnp.ones(
+    attention_mask = input_mask[:, None, None, :] * jnp.ones(  # pyrefly: ignore[unsupported-operation]
         [1, 1, x.shape[1], 1])
     x = nn.MultiHeadDotProductAttention(
         num_heads=self.num_heads,
@@ -273,7 +273,7 @@ class Encoder1DBlock(nn.Module):
         dropout_rate=self.dropout_rate,
         kernel_init=nn.initializers.xavier_uniform(),
         bias_init=nn.initializers.normal(stddev=1e-6))(
-            y if self.pre_norm else x, train=not deterministic)
+            y if self.pre_norm else x, train=not deterministic)  # pyrefly: ignore[unbound-name]
     y = y + x
     # post-mlp-layer-normalization
     if not self.pre_norm:

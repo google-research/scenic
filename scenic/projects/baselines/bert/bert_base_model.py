@@ -181,7 +181,7 @@ def bert_metrics_function(outputs: Dict[str, jnp.ndarray],
           per_ex_mlm_accuracy, per_ex_nsp_loss + per_ex_mlm_loss
       ]):
     evaluated_metrics[name] = model_utils.psum_metric_normalizer(
-        (value, normalizer))
+        (value, normalizer))  # pyrefly: ignore[bad-argument-type]
   return evaluated_metrics  # pytype: disable=bad-return-type  # jax-ndarray
 
 

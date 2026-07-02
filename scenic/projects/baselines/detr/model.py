@@ -400,7 +400,7 @@ class EncoderBlock(nn.Module):
     mlp = MlpBlock(  # pytype: disable=wrong-arg-types  # jnp-type
         mlp_dim=self.mlp_dim,
         activation_fn=nn.relu,
-        dtype=self.dtype,
+        dtype=self.dtype,  # pyrefly: ignore[bad-argument-type]
         dropout_rate=self.dropout_rate)
 
     assert inputs.ndim == 3
@@ -512,7 +512,7 @@ class DecoderBlock(nn.Module):
     mlp = MlpBlock(  # pytype: disable=wrong-arg-types  # jnp-type
         mlp_dim=self.mlp_dim,
         activation_fn=nn.relu,
-        dtype=self.dtype,
+        dtype=self.dtype,  # pyrefly: ignore[bad-argument-type]
         dropout_rate=self.dropout_rate)
 
     assert obj_queries.ndim == 3

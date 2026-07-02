@@ -182,22 +182,22 @@ class BERTGlobalEvaluator():
     metrics = {}
     if 'f1' in self.global_metrics:
       # Used for QQP and MRPC tasks.
-      prediction = np.argmax(self.batches[1], axis=-1)
+      prediction = np.argmax(self.batches[1], axis=-1)  # pyrefly: ignore[unsupported-operation]
       metrics.update(
-          f1_score_with_invalid(target=self.batches[0], prediction=prediction))
+          f1_score_with_invalid(target=self.batches[0], prediction=prediction))  # pyrefly: ignore[unsupported-operation]
 
     if 'matthews_corrcoef' in self.global_metrics:
       # Used for COLA task.
-      prediction = np.argmax(self.batches[1], axis=-1)
+      prediction = np.argmax(self.batches[1], axis=-1)  # pyrefly: ignore[unsupported-operation]
       metrics.update(
-          matthews_corrcoef(target=self.batches[0], prediction=prediction))
+          matthews_corrcoef(target=self.batches[0], prediction=prediction))  # pyrefly: ignore[unsupported-operation]
 
     if 'pearson_corrcoef' in self.global_metrics:
       # Used for STS-B task (which is a regression task).
       metrics.update(
           pearson_corrcoef(
-              target=np.squeeze(self.batches[0]),
-              prediction=np.squeeze(self.batches[1])))
+              target=np.squeeze(self.batches[0]),  # pyrefly: ignore[unsupported-operation]
+              prediction=np.squeeze(self.batches[1])))  # pyrefly: ignore[unsupported-operation]
 
     if clear_annotations:
       self.clear()
@@ -253,7 +253,7 @@ def initialize_bert_model(
         rngs, dummy_input, train=False, debug=False).pop('params')
     # Set bias in the head to low value, such that loss is small initially.
     if config.get('init_head_bias', None) is not None:
-      init_params = flax.core.unfreeze(init_params)
+      init_params = flax.core.unfreeze(init_params)  # pyrefly: ignore[bad-argument-type]
       potential_keys = {'classification_head',
                         'regression_head', 'next_sentence_prediction_head'}
       head_key = potential_keys & set(init_params.keys())
@@ -268,7 +268,7 @@ def initialize_bert_model(
     return init_params, init_model_state
 
   if not isinstance(rngs, dict):
-    rngs = {'params': rngs}
+    rngs = {'params': rngs}  # pyrefly: ignore[bad-assignment]
   init_params, init_model_state = _initialize_model(rngs)
   # Pop out params rng:
   rngs.pop('params')
@@ -284,7 +284,7 @@ def initialize_bert_model(
     flax_model_apply_fn = functools.partial(
         model_def.apply, variables, train=False, debug=False, rngs=rngs)
     analysis = jax.jit(flax_model_apply_fn).lower(dummy_input).cost_analysis()
-    flops = analysis['flops']
+    flops = analysis['flops']  # pyrefly: ignore[unsupported-operation]
     if count_flops.get('fuse_multiply_add', True):
       flops = flops / 2
     gflops = flops / (10**9)

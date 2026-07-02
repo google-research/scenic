@@ -72,7 +72,7 @@ def generate_fake_dataset(num_examples: int):
             identifier=FAKE_ID[i % n_annotations])
 
     return tf.data.Dataset.from_generator(
-        gen,
+        gen,  # pyrefly: ignore[bad-argument-type]
         output_types=self.info.features.dtype,
         output_shapes=self.info.features.shape,
     )
