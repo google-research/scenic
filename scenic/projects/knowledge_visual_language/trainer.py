@@ -110,8 +110,8 @@ def init_state(
         train_state, params_axes, axes_name='params_axes'
     )
 
-  start_step = int(train_state.global_step)
-  chrono.load(train_state.metadata['chrono'])
+  start_step = int(train_state.global_step)  # pyrefly: ignore[bad-argument-type]
+  chrono.load(train_state.metadata['chrono'])  # pyrefly: ignore[unsupported-operation]
 
   if start_step == 0:
     if config.get('init_from', False):
@@ -126,8 +126,8 @@ def init_state(
         train_state = trainer_utils.re_add_axis_names(
             train_state, params_axes, axes_name='params_axes'
         )
-        start_step = int(train_state.global_step)
-        chrono.load(train_state.metadata['chrono'])
+        start_step = int(train_state.global_step)  # pyrefly: ignore[bad-argument-type]
+        chrono.load(train_state.metadata['chrono'])  # pyrefly: ignore[unsupported-operation]
 
       elif config.init_from.get('xm', False):
         if config.init_from.load_key_encoder:
@@ -144,7 +144,7 @@ def init_state(
         )
     step0_log = {'num_trainable_params': num_params}
     if gflops:
-      step0_log['gflops'] = gflops
+      step0_log['gflops'] = gflops  # pyrefly: ignore[bad-assignment]
     writer.write_scalars(1, step0_log)
 
   return train_state, start_step, chrono, lr_fn
@@ -190,7 +190,7 @@ def train_step(
     Updated state of training, loss, computed metrics, and learning rate for
     logging.
   """
-  new_rng, rng = jax.random.split(train_state.rng)
+  new_rng, rng = jax.random.split(train_state.rng)  # pyrefly: ignore[bad-argument-type]
 
   # Bind the rng to the host/device we are on for dropout.
   dropout_rng = train_utils.bind_rng_to_host_device(
@@ -198,10 +198,10 @@ def train_step(
   )
 
   def training_loss_fn(params):
-    variables = {'params': params, **train_state.model_state}
+    variables = {'params': params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
     output_dict, new_model_state = flax_model.apply(
         variables,
-        **batch,
+        **batch,  # pyrefly: ignore[bad-argument-type]
         mutable=['batch_stats'],
         train=True,
         fuse_retrieval=model_config.fuse_retrieval,
@@ -227,17 +227,17 @@ def train_step(
   )
   grad = jax.lax.pmean(grad, axis_name='batch')
   grad_norm = jax_optimizers.l2_norm(grad).astype(float)
-  updates, new_opt_state = train_state.tx.update(
+  updates, new_opt_state = train_state.tx.update(  # pyrefly: ignore[missing-attribute]
       grad, train_state.opt_state, train_state.params
   )
   update_norm = jax_optimizers.l2_norm(updates).astype(float)
-  new_params = optax.apply_updates(train_state.params, updates)
+  new_params = optax.apply_updates(train_state.params, updates)  # pyrefly: ignore[bad-argument-type]
   param_norm = jax_optimizers.l2_norm(train_state.params).astype(float)
 
   metrics = metrics_fn(output_dict['predicted_logits'], batch)
 
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=train_state.global_step + 1,
+      global_step=train_state.global_step + 1,  # pyrefly: ignore[unsupported-operation]
       opt_state=new_opt_state,
       params=new_params,
       model_state=new_model_state,
@@ -254,8 +254,8 @@ def train_step(
       'grad_norm': grad_norm,
       'update_norm': update_norm,
       'param_norm': param_norm,
-      'bias': train_state.params['att_transform']['bias'][0],
-      'scale': train_state.params['att_transform']['scale'][0],
+      'bias': train_state.params['att_transform']['bias'][0],  # pyrefly: ignore[unsupported-operation]
+      'scale': train_state.params['att_transform']['scale'][0],  # pyrefly: ignore[unsupported-operation]
   }
 
   if 'retr_scores' in output_dict:
@@ -300,20 +300,20 @@ def eval_step(
     Updated state of training, loss, computed metrics, and learning rate for
     logging.
   """
-  variables = {'params': train_state.params, **train_state.model_state}
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
   output_dict = flax_model.apply(
-      variables,
-      **batch,
+      variables,  # pyrefly: ignore[bad-argument-type]
+      **batch,  # pyrefly: ignore[bad-argument-type]
       train=False,
       fuse_retrieval=model_config.fuse_retrieval,
       in_batch_neg=model_config.in_batch_neg,
       debug=debug,
   )
-  metrics = metrics_fn(output_dict['predicted_logits'], batch)
+  metrics = metrics_fn(output_dict['predicted_logits'], batch)  # pyrefly: ignore[bad-index]
 
   retr_loss, (retr_acc, _, _) = losses.contrastive_loss(
-      query_emb=output_dict['base_query'],
-      key_emb=output_dict['retr_keys'],
+      query_emb=output_dict['base_query'],  # pyrefly: ignore[bad-index]
+      key_emb=output_dict['retr_keys'],  # pyrefly: ignore[bad-index]
       temperature=model_config.get('temperature'),
   )
   logs = {'eval/retr_loss': retr_loss, 'eval/retr_acc': retr_acc}
@@ -414,7 +414,7 @@ def train_and_eval(
       int(start_step),
       int(total_steps),
       int(config.batch_size),
-      int(steps_per_epoch),
+      int(steps_per_epoch),  # pyrefly: ignore[bad-argument-type]
   )
 
   summary_builder = trainer_utils.SummaryBuilder([], [])
@@ -428,7 +428,7 @@ def train_and_eval(
       logging.info('training for step %d', step)
     ###################### Training ########################
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
-      train_batch = next(dataset.train_iter)
+      train_batch = next(dataset.train_iter)  # pyrefly: ignore[bad-argument-type]
       train_state, t_metrics, logs = train_step_pmapped(
           train_state=train_state, batch=train_batch
       )
@@ -453,7 +453,7 @@ def train_and_eval(
       chrono.pause(wait_for=(train_state.params))
       # Sync model state across replicas.
       train_state = train_utils.sync_model_state_across_replicas(train_state)
-      for ds_name in dataset.valid_iter:
+      for ds_name in dataset.valid_iter:  # pyrefly: ignore[not-iterable]
         logging.info('Validate on %s', ds_name)
         # Compute the number of evaluation steps per dataset.
         num_eval_examples = dataset.meta_data['num_eval_examples'][ds_name]
@@ -463,7 +463,7 @@ def train_and_eval(
         steps_per_eval = config.get('steps_per_eval', total_eval_steps)
         eval_metrics_all = []
         for _ in range(steps_per_eval):
-          eval_batch = next(dataset.valid_iter[ds_name])
+          eval_batch = next(dataset.valid_iter[ds_name])  # pyrefly: ignore[bad-index, unsupported-operation]
           e_metrics, logs = eval_step_pmapped(
               train_state=train_state, batch=eval_batch
           )

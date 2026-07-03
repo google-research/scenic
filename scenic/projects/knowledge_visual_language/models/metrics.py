@@ -42,6 +42,6 @@ def token_accuracy(logits, batch: JTensorDict) -> Dict[str, Tuple[float, int]]:
   n_valids = base_model_utils.num_examples(logits, onehot_targets, masks)
   return {  # pytype: disable=bad-return-type  # jax-ndarray
       'token_accuracy':
-          base_model_utils.psum_metric_normalizer((n_corrects, n_valids))
+          base_model_utils.psum_metric_normalizer((n_corrects, n_valids))  # pyrefly: ignore[bad-argument-type]
   }
 

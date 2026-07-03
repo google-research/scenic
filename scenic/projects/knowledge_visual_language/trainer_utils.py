@@ -286,9 +286,9 @@ def pop_axes_names(
     was removed (so it can be re-added).
   """
   model_state = train_state.model_state
-  if axes_name in train_state.model_state:
-    model_state, params_axes = frozen_dict.freeze(model_state).pop(axes_name)
-    return train_state.replace(model_state=model_state), params_axes
+  if axes_name in train_state.model_state:  # pyrefly: ignore[not-iterable]
+    model_state, params_axes = frozen_dict.freeze(model_state).pop(axes_name)  # pyrefly: ignore[bad-argument-type]
+    return train_state.replace(model_state=model_state), params_axes  # pyrefly: ignore[missing-attribute]
   else:
     return train_state, None
 
@@ -308,9 +308,9 @@ def re_add_axis_names(train_state: TrainState,
     was removed (so it can be re-added).
   """
   if params_axes:
-    model_state = frozen_dict.unfreeze(train_state.model_state)
+    model_state = frozen_dict.unfreeze(train_state.model_state)  # pyrefly: ignore[bad-argument-type]
     model_state[axes_name] = params_axes
-    return train_state.replace(model_state=frozen_dict.freeze(model_state))
+    return train_state.replace(model_state=frozen_dict.freeze(model_state))  # pyrefly: ignore[missing-attribute]
   else:
     return train_state
 

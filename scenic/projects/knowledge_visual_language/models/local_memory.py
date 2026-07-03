@@ -106,7 +106,7 @@ class KnowledgeBase:
     self.n_data = self.n_data_per_shard * self.n_local_device
 
     self.specs = {
-        'image': dataset.meta_data['image_spec'],
+        'image': dataset.meta_data['image_spec'],  # pyrefly: ignore[unbound-name]
         'text': dataset.meta_data['knowledge_spec']
     }
 
@@ -166,8 +166,8 @@ class KnowledgeBase:
       self.memory_flatten[kw] = mem.reshape((mem.shape[0] * mem.shape[1],) +
                                             mem.shape[2:])
 
-    self.specs['keys'] = (keys_head.shape[2:], keys_head.dtype.name)
-    self.specs['values'] = (compressed_val.shape[2:], compressed_val.dtype.name)
+    self.specs['keys'] = (keys_head.shape[2:], keys_head.dtype.name)  # pyrefly: ignore[unbound-name]
+    self.specs['values'] = (compressed_val.shape[2:], compressed_val.dtype.name)  # pyrefly: ignore[unbound-name]
     # self.specs['masks'] = (mask.shape[2:], mask.dtype.name)
 
     self.local_ret_specs = [{
