@@ -124,7 +124,7 @@ def load_split_from_tfds(
   Returns:
     A `tf.data.Dataset`, and dataset info.
   """
-  ds = tf.data.TFRecordDataset(
+  ds = tf.data.TFRecordDataset(  # pyrefly: ignore[bad-instantiation]
       centernet_input_pipeline.decode_sharded_names(dataset_path))
   # Split datasets into machines. Otherwise multi-machine evaluation takes the
   # same images.
@@ -273,7 +273,7 @@ def dataset_builder(*,
         )
         train_ds.append(train_ds_i)
       train_ds = tf.data.Dataset.sample_from_datasets(
-          train_ds, dataset_configs['dataset_sample_weights'])
+          train_ds, dataset_configs['dataset_sample_weights'])  # pyrefly: ignore[bad-argument-type]
     else:
       train_ds, _ = input_utils.load_video_train_tfds(
           batch_size,

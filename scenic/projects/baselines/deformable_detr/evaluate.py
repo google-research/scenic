@@ -76,16 +76,16 @@ def get_eval_step(
                 batch: ArrayDict) -> Tuple[Any, Any, Any]:
     variables = {
         'params': train_state.params,
-        **train_state.model_state
+        **train_state.model_state  # pyrefly: ignore[invalid-argument]
     }
     predictions = flax_model.apply(
-        variables,
+        variables,  # pyrefly: ignore[bad-argument-type]
         batch['inputs'],
         padding_mask=batch['padding_mask'],
         train=False,
         mutable=False,
         debug=debug)
-    return metrics_fn(train_state, batch, predictions)
+    return metrics_fn(train_state, batch, predictions)  # pyrefly: ignore[bad-argument-type]
 
   return eval_step
 
@@ -118,7 +118,7 @@ def run_eval(
 
   for eval_step in range(steps_per_eval):
     logging.info('Running eval step %d', eval_step)
-    eval_batch = next(dataset.valid_iter)
+    eval_batch = next(dataset.valid_iter)  # pyrefly: ignore[bad-argument-type]
 
     # Do the eval step given the matches.
     (eval_batch_all_hosts, eval_predictions_all_hosts,

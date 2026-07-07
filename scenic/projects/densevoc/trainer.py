@@ -148,7 +148,7 @@ def train_and_evaluate(
   (params, model_state, num_trainable_params,
    gflops) = train_utils.initialize_model(
        model_def=model.flax_model,
-       input_spec=[(dataset.meta_data['input_shape'],
+       input_spec=[(dataset.meta_data['input_shape'],  # pyrefly: ignore[bad-argument-type]
                     dataset.meta_data.get('input_dtype', jnp.float32))],
        config=config,
        rngs=init_rng)
@@ -177,7 +177,7 @@ def train_and_evaluate(
         train_state, config)
     step0_log = {'num_trainable_params': num_trainable_params}
     if gflops:
-      step0_log['gflops'] = gflops
+      step0_log['gflops'] = gflops  # pyrefly: ignore[bad-assignment]
     writer.write_scalars(1, step0_log)
   train_state = jax_utils.replicate(train_state)
   del params  # Do not keep a copy of the initial params.
@@ -203,7 +203,7 @@ def train_and_evaluate(
   train_summary, eval_summary = None, None
   eval_batch_size = config.get('eval_batch_size', config.batch_size)
   chrono = train_utils.Chrono()
-  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)
+  chrono.inform(start_step, total_steps, config.batch_size, steps_per_epoch)  # pyrefly: ignore[bad-argument-type]
   def write_note(note):
     if is_host:
       platform.work_unit().set_notes(note)
@@ -219,7 +219,7 @@ def train_and_evaluate(
 
   for step in range(start_step + 1, total_steps + 1):
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
-      train_batch = next(dataset.train_iter)
+      train_batch = next(dataset.train_iter)  # pyrefly: ignore[bad-argument-type]
       train_state, lr, train_predictions, metrics = train_step_pmapped(
           train_state, train_batch)
       train_metrics.append(metrics)

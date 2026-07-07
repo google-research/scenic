@@ -259,7 +259,7 @@ def coco_load_split_from_tfds(
     end = ''
     decode_example_fn = lambda x: coco_decode_example(x, with_masks)
     class_id_base = 0
-    ds = tf.data.TFRecordDataset(decode_sharded_names(dataset_path, end=end))
+    ds = tf.data.TFRecordDataset(decode_sharded_names(dataset_path, end=end))  # pyrefly: ignore[bad-instantiation]
     # Split datasets into machines. Otherwise multi-machine evaluation takes the
     # same images.
     ds = ds.shard(jax.process_count(), jax.process_index())

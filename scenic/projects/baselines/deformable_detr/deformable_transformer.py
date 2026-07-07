@@ -568,7 +568,7 @@ class DeformableDETRTransformer(nn.Module):
     level_embeds = jnp.asarray(
         self.param('level_embed', nn.initializers.normal(stddev=1.0),
                    (num_levels, self.enc_embed_dim)))
-    (x, valid_ratios, pos_embeds, pad_masks) = prepare_encoder_input(
+    (x, valid_ratios, pos_embeds, pad_masks) = prepare_encoder_input(  # pyrefly: ignore[bad-assignment]
         inputs=inputs,
         masks=pad_masks,
         pos_embeds=pos_embeds,
@@ -579,7 +579,7 @@ class DeformableDETRTransformer(nn.Module):
 
     # Encoder.
     encoder = DeformableDETREncoder(
-        spatial_shapes=spatial_shapes,
+        spatial_shapes=spatial_shapes,  # pyrefly: ignore[bad-argument-type]
         embed_dim=self.enc_embed_dim,
         num_heads=self.num_heads,
         num_layers=self.num_enc_layers,
@@ -593,9 +593,9 @@ class DeformableDETRTransformer(nn.Module):
 
     x = encoder(
         src=x,
-        pos_embed=pos_embeds,
+        pos_embed=pos_embeds,  # pyrefly: ignore[bad-argument-type]
         ref_points=enc_ref_points,
-        pad_mask=pad_masks,
+        pad_mask=pad_masks,  # pyrefly: ignore[bad-argument-type]
         train=train)
 
     # Project encoder output to decoder embedding. Note that this layer does
@@ -622,7 +622,7 @@ class DeformableDETRTransformer(nn.Module):
     dec_init_ref_points = nn.sigmoid(dec_init_ref_points)
 
     x, ref_points = DeformableDETRDecoder(
-        spatial_shapes=spatial_shapes,
+        spatial_shapes=spatial_shapes,  # pyrefly: ignore[bad-argument-type]
         embed_dim=self.embed_dim,
         num_heads=self.num_heads,
         num_layers=self.num_dec_layers,
@@ -638,7 +638,7 @@ class DeformableDETRTransformer(nn.Module):
             query=query,
             query_pos=query_embed,
             ref_points=dec_init_ref_points,
-            pad_mask=pad_masks,
+            pad_mask=pad_masks,  # pyrefly: ignore[bad-argument-type]
             valid_ratios=valid_ratios,
             train=train)
 

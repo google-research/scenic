@@ -91,11 +91,11 @@ class Sam(nn.Module):
   def setup(self):
     # pylint: disable=not-a-mapping
     self.image_encoder = image_encoder.ImageEncoderViT(
-        **self.image_encoder_args, name='image_encoder')
+        **self.image_encoder_args, name='image_encoder')  # pyrefly: ignore[bad-unpacking]
     self.prompt_encoder = prompt_encoder.PromptEncoder(
-        **self.prompt_encoder_args, name='prompt_encoder')
+        **self.prompt_encoder_args, name='prompt_encoder')  # pyrefly: ignore[bad-unpacking]
     self.mask_decoder = mask_decoder.MaskDecoder(
-        **self.mask_decoder_args, name='mask_decoder')
+        **self.mask_decoder_args, name='mask_decoder')  # pyrefly: ignore[bad-unpacking]
     # pylint: enable=not-a-mapping
 
   @nn.compact
@@ -286,9 +286,9 @@ class Sam(nn.Module):
     assert image is None or image_embedding is None, msg
     if image_embedding is None:
       padding_mask = padding_mask if padding_mask is not None else (
-          jnp.ones((image.shape[0], image.shape[1]), dtype=jnp.float32))
+          jnp.ones((image.shape[0], image.shape[1]), dtype=jnp.float32))  # pyrefly: ignore[missing-attribute]
       image_embedding = self.get_image_embeddings(
-          image[None], padding_mask=padding_mask[None])[0]  # (H', W', D)
+          image[None], padding_mask=padding_mask[None])[0]  # (H', W', D)  # pyrefly: ignore[unsupported-operation]
     else:
       nopadding_msg = 'Padding_mask should be provided if using image_embedding'
       assert padding_mask is not None, nopadding_msg
@@ -314,7 +314,7 @@ class Sam(nn.Module):
       in_labels = point_labels[b * bs: (b + 1) * bs]
       sparse_embeddings_cur, dense_embeddings_cur = self.prompt_encoder(
           in_points, in_labels,
-          image_size=image.shape[:2],
+          image_size=image.shape[:2],  # pyrefly: ignore[missing-attribute]
           image_embedding_size=image_embedding.shape[:2])
       low_res_masks_cur, iou_predictions_cur = self.mask_decoder(
           image_embeddings=image_embedding,
@@ -373,7 +373,7 @@ class Sam(nn.Module):
     if upsample_mask:
       masks = (
           self.postprocess_masks(
-              low_res_masks[None], image.shape[0], image.shape[1]
+              low_res_masks[None], image.shape[0], image.shape[1]  # pyrefly: ignore[missing-attribute]
           )[0]
           > self.mask_threshold
       )

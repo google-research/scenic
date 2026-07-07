@@ -109,7 +109,7 @@ def init_from_pretrain_state(
   model_params = _replace_dict(train_state.params, restored_params,
                                ckpt_prefix_path, model_prefix_path,
                                name_mapping, skip_regex)
-  train_state = train_state.replace(params=model_params)
+  train_state = train_state.replace(params=model_params)  # pyrefly: ignore[missing-attribute]
   # TODO(scenic): Add support for optionally restoring optimizer state.
   if (restored_model_state is not None and
       train_state.model_state is not None and train_state.model_state):
@@ -194,7 +194,7 @@ def restore_pretrained_checkpoint(
         fail_if_extra=False,
         fail_if_missing=False,
         fail_if_shapes_mismatch=False)
-  train_state = train_state.replace(
+  train_state = train_state.replace(  # pyrefly: ignore[missing-attribute]
       # Inspect and compare the parameters of the model with the init-model.
       params=params,
       model_state=restored_model_state,
@@ -231,8 +231,8 @@ def inspect_params(*,
       items.append((parent_key, {}))
     return dict(items)
 
-  expected_flat = _flatten_params(flax.core.unfreeze(expected_params))
-  restored_flat = _flatten_params(flax.core.unfreeze(restored_params))
+  expected_flat = _flatten_params(flax.core.unfreeze(expected_params))  # pyrefly: ignore[bad-argument-type]
+  restored_flat = _flatten_params(flax.core.unfreeze(restored_params))  # pyrefly: ignore[bad-argument-type]
   missing_keys = expected_flat.keys() - restored_flat.keys()
   extra_keys = restored_flat.keys() - expected_flat.keys()
 

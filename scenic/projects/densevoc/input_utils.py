@@ -222,7 +222,7 @@ def load_video_val_tfds(
   options.threading.private_threadpool_size = 48
 
   if 'tfrecord' in dataset_path:
-    ds = tf.data.TFRecordDataset(
+    ds = tf.data.TFRecordDataset(  # pyrefly: ignore[bad-instantiation]
         centernet_input_pipeline.decode_sharded_names(dataset_path))
     ds = ds.shard(jax.process_count(), jax.process_index())
     ds = ds.map(
@@ -664,7 +664,7 @@ def build_detection_ds(dataset_path):
         'train', jax.process_count())[jax.process_index()]
     ds = builder.as_dataset(split=data_range)
   else:
-    ds = tf.data.TFRecordDataset(
+    ds = tf.data.TFRecordDataset(  # pyrefly: ignore[bad-instantiation]
         centernet_input_pipeline.decode_sharded_names(dataset_path))
     ds = ds.shard(jax.process_count(), jax.process_index())
     ds = ds.map(
@@ -720,7 +720,7 @@ def load_video_train_tfds(
   options.threading.private_threadpool_size = 48
 
   if dataset_format in ['full', 'videotracking']:
-    ds = tf.data.TFRecordDataset(
+    ds = tf.data.TFRecordDataset(  # pyrefly: ignore[bad-instantiation]
         centernet_input_pipeline.decode_sharded_names(dataset_path))
     ds = ds.shard(jax.process_count(), jax.process_index())
     ds = ds.map(
@@ -743,7 +743,7 @@ def load_video_train_tfds(
     ds = ds.map(lambda x: add_loss_mask(x, losses))
   elif dataset_format == 'videocap':
     if 'tfrecord' in dataset_path:
-      ds = tf.data.TFRecordDataset(
+      ds = tf.data.TFRecordDataset(  # pyrefly: ignore[bad-instantiation]
           centernet_input_pipeline.decode_sharded_names(dataset_path))
       ds = ds.shard(jax.process_count(), jax.process_index())
       ds = ds.map(
@@ -763,7 +763,7 @@ def load_video_train_tfds(
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
     ds = ds.map(lambda x: add_loss_mask(x, ['vidcap']))
   elif dataset_format in ['imagedensecap', 'imagedensecap-nodet']:
-    ds = tf.data.TFRecordDataset(
+    ds = tf.data.TFRecordDataset(  # pyrefly: ignore[bad-instantiation]
         centernet_input_pipeline.decode_sharded_names(dataset_path))
     ds = ds.shard(jax.process_count(), jax.process_index())
     ds = ds.map(

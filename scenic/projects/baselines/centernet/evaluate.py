@@ -120,7 +120,7 @@ def inference_on_dataset(
   for eval_step_i in range(total_eval_steps):
     if eval_step_i % 100 == 0:
       logging.info('Running eval step %d', eval_step_i)
-    eval_batch = next(dataset.valid_iter)
+    eval_batch = next(dataset.valid_iter)  # pyrefly: ignore[bad-argument-type]
 
     eval_batch_all_hosts, predictions_all_hosts, metrics = eval_step_pmapped(
         train_state, eval_batch)

@@ -143,7 +143,7 @@ class PromptEncoder(nn.Module):
       dense_embeddings: (num_prompts, H, W, embed_dim)
     """
     num_prompts = points.shape[0] if points is not None else (
-        boxes.shape[0] if boxes is not None else masks.shape[0])
+        boxes.shape[0] if boxes is not None else masks.shape[0])  # pyrefly: ignore[missing-attribute]
     sparse_embeddings = jnp.zeros(
         (num_prompts, 0, self.embed_dim), dtype=jnp.float32)
     if points is not None:
