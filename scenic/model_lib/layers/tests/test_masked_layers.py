@@ -160,30 +160,30 @@ class MaskedLayersTest(parameterized.TestCase):
         (self.INPUTS_PADDED.shape[0], 2))
 
     # Inferred spatial shape has the right values.
-    n_small, n_large = output_small.shape[0], output_large.shape[0]
+    n_small, n_large = output_small.shape[0], output_large.shape[0]  # pyrefly: ignore[missing-attribute]
     np.testing.assert_allclose(
         spatial_shape[:n_small, ...],
         np.stack([np.array(output_small.shape[1:-1])] * n_small, axis=0),
         atol=0)
     np.testing.assert_allclose(
         spatial_shape[-n_large:, ...],
-        np.stack([np.array(output_large.shape[1:-1])] * n_large, axis=0),
+        np.stack([np.array(output_large.shape[1:-1])] * n_large, axis=0),  # pyrefly: ignore[missing-attribute]
         atol=0)
 
     # Masked output has the right values in the *un*masked region.
     ind_small = [slice(s) for s in output_small.shape[1:-1]]
-    ind_large = [slice(s) for s in output_large.shape[1:-1]]
+    ind_large = [slice(s) for s in output_large.shape[1:-1]]  # pyrefly: ignore[missing-attribute]
     ind_small = tuple([slice(n_small)] + ind_small + [slice(None)])
     ind_large = tuple([slice(n_small, None)] + ind_large + [slice(None)])
 
     np.testing.assert_allclose(
         output_small, outputs_padded[ind_small], atol=1e-5)
-    np.testing.assert_allclose(
+    np.testing.assert_allclose(  # pyrefly: ignore[no-matching-overload]
         output_large, outputs_padded[ind_large], atol=1e-5)
 
     # Masked output has the right values in the masked region.
     ind_small = [slice(s, None) for s in output_small.shape[1:-1]]
-    ind_large = [slice(s, None) for s in output_large.shape[1:-1]]
+    ind_large = [slice(s, None) for s in output_large.shape[1:-1]]  # pyrefly: ignore[missing-attribute]
     ind_small = tuple([slice(n_small)] + ind_small + [slice(None)])
     ind_large = tuple([slice(n_small, None)] + ind_large + [slice(None)])
 
@@ -284,25 +284,25 @@ class MaskedLayersTest(parameterized.TestCase):
         self.INPUTS_LARGE, window_shape, strides, padding=padding)
 
     outputs_padded, spatial_shape = masked_pool_fn(
-        self.INPUTS_PADDED,
+        self.INPUTS_PADDED,  # pyrefly: ignore[bad-argument-type]
         window_shape,
         strides,
         padding=padding,
-        spatial_shape=self.SPATIAL_SHAPE)
+        spatial_shape=self.SPATIAL_SHAPE)  # pyrefly: ignore[bad-argument-type]
 
     # Inferred spatial shape has the right shape.
     self.assertEqual(
-        spatial_shape.shape,
+        spatial_shape.shape,  # pyrefly: ignore[missing-attribute]
         (self.INPUTS_PADDED.shape[0], 2))
 
     # Inferred spatial shape has the right values.
     n_small, n_large = output_small.shape[0], output_large.shape[0]
     np.testing.assert_allclose(
-        spatial_shape[:n_small, ...],
+        spatial_shape[:n_small, ...],  # pyrefly: ignore[unsupported-operation]
         np.stack([np.array(output_small.shape[1:-1])] * n_small, axis=0),
         atol=0)
     np.testing.assert_allclose(
-        spatial_shape[-n_large:, ...],
+        spatial_shape[-n_large:, ...],  # pyrefly: ignore[unsupported-operation]
         np.stack([np.array(output_large.shape[1:-1])] * n_large, axis=0),
         atol=0)
 
@@ -341,8 +341,8 @@ class MaskedLayersTest(parameterized.TestCase):
 
     with self.assertRaises(NotImplementedError):
       masked_pool_fn(
-          self.INPUTS_PADDED, window_shape, strides,
-          padding=padding, spatial_shape=self.SPATIAL_SHAPE)
+          self.INPUTS_PADDED, window_shape, strides,  # pyrefly: ignore[bad-argument-type]
+          padding=padding, spatial_shape=self.SPATIAL_SHAPE)  # pyrefly: ignore[bad-argument-type]
 
   @parameterized.named_parameters([
       # Batch Norm tests.

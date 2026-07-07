@@ -186,7 +186,7 @@ class DeformableRefinementBlock(nn.Module):
       patchsize_distribution = nn.softmax(self.est_maxps(ps_token), axis=-1)
 
       # Gather and save outputs
-      outputs = self.hidden2outputs(hidden_state, patchsize_distribution,
+      outputs = self.hidden2outputs(hidden_state, patchsize_distribution,  # pyrefly: ignore[not-callable]
                                     input_image, global_features,
                                     self.train_opts, train=train)
       outputs['patchsize_tokens'] = patchsize_tokens

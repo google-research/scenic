@@ -230,7 +230,7 @@ class NNOpsTest(parameterized.TestCase):
   def test_compute_1d_relative_distance_min_and_max(self):
     len_q = np.random.randint(0, 100, (1,))
     len_k = np.random.randint(0, 100, (1,))
-    relative_distance = nn_ops.compute_1d_relative_distance(len_q, len_k)
+    relative_distance = nn_ops.compute_1d_relative_distance(len_q, len_k)  # pyrefly: ignore[bad-argument-type]
     self.assertEqual(relative_distance.min(), 0)
     self.assertEqual(relative_distance.max(), len_q + len_k - 2)
 
@@ -241,7 +241,7 @@ class NNOpsTest(parameterized.TestCase):
     shape = (128, 128, 128)
     init_fn = nn_ops.truncated_normal_initializer(stddev=target_stddev)
     x = init_fn(key, shape, jnp.float32)
-    self.assertAlmostEqual(target_stddev, jnp.std(x), places=2)
+    self.assertAlmostEqual(target_stddev, jnp.std(x), places=2)  # pyrefly: ignore[no-matching-overload]
 
 if __name__ == '__main__':
   absltest.main()

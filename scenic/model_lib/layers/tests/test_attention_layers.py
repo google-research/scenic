@@ -58,7 +58,7 @@ class AttentionLayersTest(parameterized.TestCase):
     variables = layer.init(rng, x, x, deterministic=True)
     y = layer.apply(variables, x, x, deterministic=True)
     # Test outputs shape.
-    self.assertEqual(y.shape, x.shape)
+    self.assertEqual(y.shape, x.shape)  # pyrefly: ignore[missing-attribute]
 
   def test_multihead_attention_hidden_size_not_divisible_by_heads(self):
     """Tests MultiHeadAttention."""
@@ -78,7 +78,7 @@ class AttentionLayersTest(parameterized.TestCase):
                           (4, 7, 30))
     y = layer.apply(variables, x, x, deterministic=True)
     # Test outputs shape.
-    self.assertEqual(y.shape, x.shape)
+    self.assertEqual(y.shape, x.shape)  # pyrefly: ignore[missing-attribute]
 
   def test_multihead_attention_w_dropout(self):
     """Tests MultiHeadAttention with dropout."""
@@ -92,7 +92,7 @@ class AttentionLayersTest(parameterized.TestCase):
     y = layer.apply(
         variables, x, x, deterministic=False, rngs={'dropout': dropout_rng})
     # Test outputs shape.
-    self.assertEqual(y.shape, x.shape)
+    self.assertEqual(y.shape, x.shape)  # pyrefly: ignore[missing-attribute]
 
   @parameterized.named_parameters([
       ('test_learned', nn.initializers.ones),
@@ -110,13 +110,13 @@ class AttentionLayersTest(parameterized.TestCase):
     outputs = layer.apply(variables, inputs)
 
     # Test output shape.
-    self.assertEqual(outputs.shape, input_shape)
+    self.assertEqual(outputs.shape, input_shape)  # pyrefly: ignore[missing-attribute]
 
     if posemb_init is not None:
       # Test added learned embeddings.
       # Note that we initialize them with nn.initializers.ones.
       expected_added_pos_emb = jnp.ones(input_shape, dtype=inputs.dtype)
-      added_pos_emb = outputs - inputs
+      added_pos_emb = outputs - inputs  # pyrefly: ignore[unsupported-operation]
       np.testing.assert_allclose(
           added_pos_emb, expected_added_pos_emb, atol=1e-6)
 
@@ -137,12 +137,12 @@ class AttentionLayersTest(parameterized.TestCase):
     outputs = layer.apply(variables, inputs)
 
     # Test output shape.
-    self.assertEqual(outputs.shape, input_shape)
+    self.assertEqual(outputs.shape, input_shape)  # pyrefly: ignore[missing-attribute]
 
     # Test added embeddings.
     # Note that we initialize them with nn.initializers.ones.
     expected_added_pos_emb = jnp.ones(input_shape, dtype=inputs.dtype)
-    added_pos_emb = outputs - inputs
+    added_pos_emb = outputs - inputs  # pyrefly: ignore[unsupported-operation]
     np.testing.assert_allclose(added_pos_emb, expected_added_pos_emb, atol=1e-6)
 
     # Test embeddings shape.
@@ -185,9 +185,9 @@ class AttentionLayersTest(parameterized.TestCase):
     bias = bias_layer.apply(variables)
 
     length = np.prod(nd_shape)
-    self.assertEqual((num_heads, length, length), bias.shape)
+    self.assertEqual((num_heads, length, length), bias.shape)  # pyrefly: ignore[missing-attribute]
 
-    bias_nd = bias.reshape((num_heads,) + nd_shape + nd_shape)
+    bias_nd = bias.reshape((num_heads,) + nd_shape + nd_shape)  # pyrefly: ignore[missing-attribute]
     for i in range(len(nd_shape)):
       bias_crop = bias_nd
       for _ in range(i + 1, len(nd_shape)):

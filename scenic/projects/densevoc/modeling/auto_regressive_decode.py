@@ -95,7 +95,7 @@ def auto_regressive_decode(
         sum_log_prob=new_log_prob)
 
   init_state = State(  # pytype: disable=wrong-arg-types  # jax-devicearray
-      cur_index=1,
+      cur_index=1,  # pyrefly: ignore[bad-argument-type]
       predictions=begin_token,
       sum_log_prob=jnp.zeros((begin_token.shape[0],), dtype=jnp.float32))
   final_state = jax.lax.while_loop(cond_fn, body_fn, init_state)

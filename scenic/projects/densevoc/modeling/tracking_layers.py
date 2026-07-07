@@ -124,7 +124,7 @@ class GTREncoderLayer(nn.Module):
         name='mlp',
         mlp_dim=self.num_features,
         activation_fn=nn.relu,
-        dtype=self.dtype,
+        dtype=self.dtype,  # pyrefly: ignore[bad-argument-type]
         dropout_rate=self.dropout_rate,
     )
 
@@ -225,7 +225,7 @@ class GTRDecoderLayer(nn.Module):
         name='mlp',
         mlp_dim=self.num_features,
         activation_fn=nn.relu,
-        dtype=self.dtype,
+        dtype=self.dtype,  # pyrefly: ignore[bad-argument-type]
         dropout_rate=self.dropout_rate,
     )
 

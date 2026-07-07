@@ -84,7 +84,7 @@ class NNLayersTest(parameterized.TestCase):
     drop_half = nn_layers.StochasticDepth(rate=0.5)
     ones = jnp.ones_like(inputs)
     out_half = drop_half.apply({}, ones, deterministic=False, rngs=rngs)
-    self.assertAlmostEqual(jnp.mean(out_half), 1.0, places=1)
+    self.assertAlmostEqual(jnp.mean(out_half), 1.0, places=1)  # pyrefly: ignore[bad-argument-type, no-matching-overload]
 
     # Make sure that we always drop full samples.
     # Note that the samples kept are scaled by 1 / (1 - rate).

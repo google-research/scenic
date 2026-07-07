@@ -86,7 +86,7 @@ def train_step(
   """
 
   def loss_fn(params):
-    variables = {'params': params, **train_state.model_state}
+    variables = {'params': params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
     logits, new_model_state = linear_probe.apply(
         variables, representation_fn(batch), mutable=['batch_stats'], train=True
     )
@@ -112,11 +112,11 @@ def train_step(
     raise ValueError('train_state.tx, the Gradient Transformation, is None')
 
   updates, new_opt_state = tx.update(
-      grad, train_state.opt_state, train_state.params
+      grad, train_state.opt_state, train_state.params  # pyrefly: ignore[bad-argument-type]
   )
-  new_params = optax.apply_updates(train_state.params, updates)
+  new_params = optax.apply_updates(train_state.params, updates)  # pyrefly: ignore[bad-argument-type]
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=train_state.global_step + 1,
+      global_step=train_state.global_step + 1,  # pyrefly: ignore[unsupported-operation]
       opt_state=new_opt_state,
       params=new_params,
       model_state=new_model_state,
@@ -160,9 +160,9 @@ def eval_step(
   Returns:
     Calculated metrics.
   """
-  variables = {'params': train_state.params, **train_state.model_state}
-  logits = linear_probe.apply(variables, representation_fn(batch))
-  metrics = metrics_fn(logits, batch)
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
+  logits = linear_probe.apply(variables, representation_fn(batch))  # pyrefly: ignore[bad-argument-type]
+  metrics = metrics_fn(logits, batch)  # pyrefly: ignore[bad-argument-type]
   return metrics
 
 
@@ -234,7 +234,7 @@ class LinearEvaluator:
     """
     # Initialize model.
     input_shape = [1] + list(dataset.meta_data['input_shape'][1:])
-    dummy_reprs = representation_fn({
+    dummy_reprs = representation_fn({  # pyrefly: ignore[bad-argument-type]
         'inputs': jnp.zeros(input_shape),
         'label': None,
         'batch_mask': None
@@ -279,7 +279,7 @@ class LinearEvaluator:
     extra_train_logs = []
     prefix = f'linear_eval_train/{ds_name}/step_{repr_step}'
     for step in range(total_steps):
-      batch = next(dataset.train_iter)
+      batch = next(dataset.train_iter)  # pyrefly: ignore[bad-argument-type]
       train_state, metrics = p_train_step(train_state, batch)
       train_metrics.append(metrics)
       # TODO(scenic-dev): Figure out how to get the lr from the optimizer.
@@ -340,7 +340,7 @@ class LinearEvaluator:
     total_eval_steps = int(
         np.ceil(dataset.meta_data['num_eval_examples'] / eval_batch_size))
     for _ in range(total_eval_steps):
-      batch = next(dataset.valid_iter)
+      batch = next(dataset.valid_iter)  # pyrefly: ignore[bad-argument-type]
       metrics = p_eval_step(train_state, batch)
       eval_metrics.append(train_utils.unreplicate_and_get(metrics))
 

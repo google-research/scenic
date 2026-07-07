@@ -100,7 +100,7 @@ class ResidualBlock(nn.Module):
   @nn.compact
   def __call__(self, hidden_state, prev_state, train=True):
 
-    hidden_state = hidden_state + nn.Dense(self.hidden_dim,
+    hidden_state = hidden_state + nn.Dense(self.hidden_dim,  # pyrefly: ignore[bad-argument-type]
                                            name='Residual')(prev_state)
     hidden_state = nn.LayerNorm()(hidden_state)
 

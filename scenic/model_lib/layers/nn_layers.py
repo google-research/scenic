@@ -197,8 +197,8 @@ def get_constant_initializer(constant: float) -> Initializer:
 
   def init_fn(unused_key: jnp.ndarray,  # pytype: disable=annotation-type-mismatch  # jnp-type
               shape: Iterable[int],
-              dtype: jnp.dtype = np.float32) -> np.ndarray:
-    return constant * np.ones(shape, dtype=dtype)
+              dtype: jnp.dtype = np.float32) -> np.ndarray:  # pyrefly: ignore[bad-function-definition]
+    return constant * np.ones(shape, dtype=dtype)  # pyrefly: ignore[no-matching-overload]
 
   return init_fn  # pytype: disable=bad-return-type  # jax-ndarray
 
