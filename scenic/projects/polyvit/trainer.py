@@ -98,7 +98,7 @@ def train_step(
     Updated state of training, computed metrics, and learning rate for logging.
   """
   training_logs = {}
-  new_rng, rng = jax.random.split(train_state.rng)
+  new_rng, rng = jax.random.split(train_state.rng)  # pyrefly: ignore[bad-argument-type]
 
   mixup_config = config.get('mixups', ml_collections.ConfigDict()).get(dataset)
 
@@ -137,7 +137,7 @@ def train_step(
   )
 
   def training_loss_fn(params):
-    variables = {'params': params, **train_state.model_state}
+    variables = {'params': params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
     logits, new_model_state = flax_model.apply(
         variables,
         x=batch['inputs'],
@@ -176,10 +176,10 @@ def train_step(
   ):
     grad = jax_optimizers.clip_grads(grad, config.max_grad_norm)
 
-  updates, new_opt_state = train_state.tx.update(
+  updates, new_opt_state = train_state.tx.update(  # pyrefly: ignore[missing-attribute]
       grad, train_state.opt_state, train_state.params
   )
-  new_params = optax.apply_updates(train_state.params, updates)
+  new_params = optax.apply_updates(train_state.params, updates)  # pyrefly: ignore[bad-argument-type]
   training_logs['l2_grads'] = jnp.sqrt(
       sum([jnp.vdot(g, g) for g in jax.tree_util.tree_leaves(grad)])
   )
@@ -189,11 +189,11 @@ def train_step(
   training_logs['l2_updates'] = jnp.sqrt(sum([jnp.vdot(u, u) for u in us]))
   for name, lr_fn in lr_fns.items():
     lr_name = 'learning_rate' if name == 'all' else f'learning_rate_{name}'
-    training_logs[lr_name] = lr_fn(train_state.global_step)
+    training_logs[lr_name] = lr_fn(train_state.global_step)  # pyrefly: ignore[bad-argument-type]
 
   metrics = metrics_fn(logits, batch, dataset)
   new_train_state = train_state.replace(  # pytype: disable=attribute-error
-      global_step=train_state.global_step + 1,
+      global_step=train_state.global_step + 1,  # pyrefly: ignore[unsupported-operation]
       opt_state=new_opt_state,
       params=new_params,
       model_state=new_model_state,
@@ -250,9 +250,9 @@ def eval_step(
   if modality == polyvit_base_model.Modality.AUDIO:
     batch['inputs'] = batch['inputs']['spectrogram']
 
-  variables = {'params': train_state.params, **train_state.model_state}
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
   logits = flax_model.apply(
-      variables,
+      variables,  # pyrefly: ignore[bad-argument-type]
       x=batch['inputs'],
       targets=batch['label'],
       task=task,
@@ -262,9 +262,9 @@ def eval_step(
       mutable=False,
       debug=debug,
   )
-  metrics = metrics_fn(logits, batch, dataset)
+  metrics = metrics_fn(logits, batch, dataset)  # pyrefly: ignore[bad-argument-type]
 
-  return metrics, logits
+  return metrics, logits  # pyrefly: ignore[bad-return]
 
 
 def representation_fn(
@@ -294,12 +294,12 @@ def representation_fn(
   modality = 'image'
   task = polyvit_base_model.Task.FEWSHOT
 
-  variables = {'params': train_state.params, **train_state.model_state}
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
 
   representation_layer_parts = representation_layer.split('/')
   filter_rep = lambda mdl, _: mdl.name == representation_layer_parts[-1]
   _, model_state = flax_model.apply(
-      variables,
+      variables,  # pyrefly: ignore[bad-argument-type]
       x=batch['inputs'],
       targets=batch['label'],
       task=task,
@@ -456,8 +456,8 @@ def train(
     train_state, start_step = train_utils.restore_checkpoint(
         workdir, train_state
     )
-  chrono.load(train_state.metadata['chrono'])
-  train_state = train_state.replace(metadata={})
+  chrono.load(train_state.metadata['chrono'])  # pyrefly: ignore[unsupported-operation]
+  train_state = train_state.replace(metadata={})  # pyrefly: ignore[missing-attribute]
   if (
       start_step == 0  # Which means "no" checkpoint is restored!
       and config.get('init_from') is not None
@@ -485,7 +485,7 @@ def train(
           # have to specify this manually.
 
         train_state = model.init_from_vit_train_state(
-            train_state, restored_train_state, restored_model_cfg
+            train_state, restored_train_state, restored_model_cfg  # pyrefly: ignore[unbound-name]
         )
       elif config.init_from.get('init_from_polyvit', False):
         restored_train_state = pretrain_utils.restore_pretrained_checkpoint(
@@ -610,21 +610,21 @@ def train(
         eval_labels = []
         n_classes = ds.meta_data['num_classes']
       for _ in range(steps_per_eval):
-        eval_batch = next(val_iter)
+        eval_batch = next(val_iter)  # pyrefly: ignore[bad-argument-type]
         if is_one_hot:  # Which includes multi-hot.
           # Ignore the entries with all zero label for evaluation.
           eval_batch['batch_mask'] *= eval_batch['label'].max(axis=-1)
         e_metrics, logits = eval_step_pmapped(task, dataset, modality,
                                               train_state, eval_batch)
         if modality == polyvit_base_model.Modality.AUDIO:
-          eval_logits.append(
+          eval_logits.append(  # pyrefly: ignore[unbound-name]
               jax.device_get(
                   logits.reshape(  # pytype: disable=attribute-error
-                      [-1, n_classes]
+                      [-1, n_classes]  # pyrefly: ignore[unbound-name]
                   )
               )
           )
-          eval_labels.append(
+          eval_labels.append(  # pyrefly: ignore[unbound-name]
               jax.device_get(
                   eval_batch['label'].reshape(  # pytype: disable=attribute-error
                       [-1, n_classes]
@@ -636,9 +636,9 @@ def train(
         # Note that this is the Mean AP computed from the examples processed
         # by a single host.
         additional_summary = evaluation_lib.compute_mean_average_precision(
-            np.concatenate(eval_logits, axis=0),
-            np.concatenate(eval_labels, axis=0),
-            return_per_class_ap=n_classes < 10,
+            np.concatenate(eval_logits, axis=0),  # pyrefly: ignore[unbound-name]
+            np.concatenate(eval_labels, axis=0),  # pyrefly: ignore[unbound-name]
+            return_per_class_ap=n_classes < 10,  # pyrefly: ignore[unbound-name]
         )
       eval_summary.update(
           train_utils.log_eval_summary(
@@ -661,12 +661,12 @@ def train(
   logging.info('Starting training loop at step %d.', start_step)
 
   chrono.inform(
-      start_step,
+      start_step,  # pyrefly: ignore[bad-argument-type]
       total_steps,
       polyvit_train_utils.get_average_batch_size(config),
-      steps_per_epoch,
+      steps_per_epoch,  # pyrefly: ignore[bad-argument-type]
   )
-  logging.info('Starting training loop at step %d.', start_step + 1)
+  logging.info('Starting training loop at step %d.', start_step + 1)  # pyrefly: ignore[unsupported-operation]
   report_progress = periodic_actions.ReportProgress(
       num_train_steps=total_steps, writer=writer
   )
@@ -684,21 +684,21 @@ def train(
   if start_step == 0:
     step0_log = {'num_trainable_params': num_trainable_params}
     if gflops:
-      step0_log.update(gflops)
+      step0_log.update(gflops)  # pyrefly: ignore[no-matching-overload]
     writer.write_scalars(1, step0_log)
 
   def get_next_train_batch(step):
     dataset = get_dataset_at_step(step)
     ds = dataset_dict[dataset]
     return (
-        next(ds.train_iter),
+        next(ds.train_iter),  # pyrefly: ignore[bad-argument-type]
         ds.meta_data['task'],
         dataset,
         ds.meta_data['modality'],
     )
 
   write_note(f'First step compilations...\n{chrono.note}')
-  for step in range(start_step + 1, total_steps + 1):
+  for step in range(start_step + 1, total_steps + 1):  # pyrefly: ignore[unsupported-operation]
     with jax.profiler.StepTraceAnnotation('train', step_num=step):
       train_batch, train_task, train_ds, train_modality = get_next_train_batch(
           step
@@ -774,16 +774,16 @@ def train(
       if (step % config.fewshot.log_eval_steps == 1) or (step == total_steps):
         chrono.pause(wait_for=(train_state.params))
         with report_progress.timed('fewshot'):
-          results = fewshotter.run_all(train_state, config.fewshot.datasets)
+          results = fewshotter.run_all(train_state, config.fewshot.datasets)  # pyrefly: ignore[unbound-name]
           fewshotter.log_fewshot_summary(
               writer=writer, step=step, results=results
           )
           del results
-          writer.write_scalars(step, {'zz/epoch': step / steps_per_epoch})
+          writer.write_scalars(step, {'zz/epoch': step / steps_per_epoch})  # pyrefly: ignore[unsupported-operation]
         writer.flush()
         chrono.resume()  # Un-pause now.
 
   # Wait until computations are done before exiting.
   train_utils.barrier_across_hosts()
   # Return the train and eval summary after last step for regression testing.
-  return train_state, train_summary, eval_summary
+  return train_state, train_summary, eval_summary  # pyrefly: ignore[bad-return]

@@ -209,7 +209,7 @@ def cityscapes_load_split(
   split = cityscapes_variant_info['split']  # only supports validation
 
   # Load the preprocessing function
-  if 'cityscapes' in cityscapes_variant_info.get('tfds_name'):
+  if 'cityscapes' in cityscapes_variant_info.get('tfds_name'):  # pyrefly: ignore[not-iterable]
     if dataset_name == 'cityscapes':
       builder = tfds.builder(dataset_name, dtype=dtype)
     elif 'cityscapes_corrupted' in dataset_name:
@@ -226,7 +226,7 @@ def cityscapes_load_split(
     raise NotImplementedError(f'{dataset_name} not available')
 
   ds, ds_info = dataset_utils.load_split_from_tfds_builder(
-      builder=builder,
+      builder=builder,  # pyrefly: ignore[unbound-name]
       batch_size=batch_size,
       split=split,
       preprocess_example=preprocess_ex_eval,
@@ -290,7 +290,7 @@ def get_dataset(*,
     preprocess_example = preprocess_examples['fishyscapes']
 
   preprocess_ex_eval = functools.partial(
-      preprocess_example, train=False, dtype=dtype, resize=target_size)
+      preprocess_example, train=False, dtype=dtype, resize=target_size)  # pyrefly: ignore[unbound-name]
 
   logging.info('Loading validation split of the %s dataset.', dataset_name)
 
@@ -328,7 +328,7 @@ def get_dataset(*,
   meta_data = {
       'input_shape': input_shape,
       'num_train_examples': 0,
-      'num_eval_examples': cityscapes_variant_info['num_of_examples'],
+      'num_eval_examples': cityscapes_variant_info['num_of_examples'],  # pyrefly: ignore[unsupported-operation]
       'input_dtype': getattr(jnp, dtype_str),
       'target_is_onehot': False,
   }

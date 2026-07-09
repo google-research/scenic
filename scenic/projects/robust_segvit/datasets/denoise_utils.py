@@ -80,8 +80,8 @@ def cutout_bbox(image: tf.Tensor,
   del rng
 
   noise = get_mask(image, denoise_configs, dtype)
-  noised_image = image * (1 - noise) + 0.5 * noise
-  return noised_image, noise
+  noised_image = image * (1 - noise) + 0.5 * noise  # pyrefly: ignore[unsupported-operation]
+  return noised_image, noise  # pyrefly: ignore[bad-return]
 
 
 def cutout_checkerboard(
@@ -107,7 +107,7 @@ def cutout_checkerboard(
   """
   del rng
 
-  p = 1 - noise_magnitude
+  p = 1 - noise_magnitude  # pyrefly: ignore[unsupported-operation]
   h, w, _ = image.shape
   fh, fw = denoise_configs.patch_size
   gh, gw = h // fh, w // fw
@@ -176,7 +176,7 @@ def add_gaussian_noise(
   else:
     logging.info('Using ddpm noise and image scaling formulation')
     scale_img = tf.sqrt(noise_magnitude) * image
-    scale_noise = ((tf.sqrt(1 - noise_magnitude) * noise) -
+    scale_noise = ((tf.sqrt(1 - noise_magnitude) * noise) -  # pyrefly: ignore[unsupported-operation]
                    tf.sqrt(noise_magnitude) + 1.0) / 2
     noised_image = scale_img + scale_noise
     if denoise_configs.clip_values:
@@ -215,9 +215,9 @@ def patch_noise(
                                                        False, rng,
                                                        denoise_configs, dtype)
   mask = get_mask(image, denoise_configs, dtype)
-  noised_image = (noised_image_patch * mask) + (
-      noised_image_background * (1 - mask))
-  noise = (noise_patch * mask) + (noise_background * (1 - mask))
+  noised_image = (noised_image_patch * mask) + (  # pyrefly: ignore[unsupported-operation]
+      noised_image_background * (1 - mask))  # pyrefly: ignore[unsupported-operation]
+  noise = (noise_patch * mask) + (noise_background * (1 - mask))  # pyrefly: ignore[unsupported-operation]
 
   return noised_image, noise, (mask, patch_gamma)
 

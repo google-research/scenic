@@ -58,7 +58,7 @@ def restore_train_state(
   rng, init_rng = jax.random.split(rng)
   (params, model_state, _, _) = train_utils.initialize_model(
       model_def=model.flax_model,
-      input_spec=[(dataset.meta_data['input_shape'],
+      input_spec=[(dataset.meta_data['input_shape'],  # pyrefly: ignore[bad-argument-type]
                    dataset.meta_data.get('input_dtype', jnp.float32))],
       config=config,
       rngs=init_rng)
@@ -99,10 +99,10 @@ def inference_step(
     debug: Optional[bool] = False
 ):
   """Runs a single step of training."""
-  variables = {'params': train_state.params, **train_state.model_state}
+  variables = {'params': train_state.params, **train_state.model_state}  # pyrefly: ignore[invalid-argument]
   capture_intermediates = lambda mdl, _: mdl.name == 'pre_logits'
   logits, intermediate = flax_model.apply(
-      variables,
+      variables,  # pyrefly: ignore[bad-argument-type]
       batch['inputs'],
       train=False,
       mutable=False,
@@ -267,7 +267,7 @@ def evaluate(
   eval_metrics = []
   if not config.save_predictions_on_cns:
     for s in range(total_eval_steps):
-      eval_batch = next(dataset.valid_iter)
+      eval_batch = next(dataset.valid_iter)  # pyrefly: ignore[bad-argument-type]
       e_metrics, e_output, e_batch = eval_step_pmapped(train_state, eval_batch)
       eval_metrics.append(train_utils.unreplicate_and_get(e_metrics))
       logging.info('eval metircs at step %d', s)
@@ -276,7 +276,7 @@ def evaluate(
         # `lax.all_gather`, fetch to the host and add to the Evaluator:
         e_batch_mask = train_utils.unreplicate_and_get(
             e_batch['batch_mask']).astype(bool)
-        global_metrics_evaluator.add_batch_of_examples(
+        global_metrics_evaluator.add_batch_of_examples(  # pyrefly: ignore[unbound-name]
             target=train_utils.unreplicate_and_get(
                 e_batch['label'])[e_batch_mask],
             output=train_utils.unreplicate_and_get(e_output)[e_batch_mask])
@@ -284,7 +284,7 @@ def evaluate(
     eval_global_metrics_summary = None
     if compute_global_metrics:
       if dataset.meta_data['num_eval_examples'] != len(
-          global_metrics_evaluator):
+          global_metrics_evaluator):  # pyrefly: ignore[unbound-name]
         logging.warning(
             'Number of eval (valid/test) examples in the dataset metadata is '
             '%d, however the global evaluator captured only %d of them',

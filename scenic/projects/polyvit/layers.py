@@ -143,7 +143,7 @@ class AddPositionEmbs(nn.Module):
     if self.posemb_init is None:
       # Use a fixed (non-learned) sinusoidal position embedding.
       pos_embedding = sinusoidal_init(max_len=self.max_len)(None, pos_emb_shape,  # pytype: disable=wrong-arg-types  # jax-ndarray
-                                                            None)
+                                                            None)  # pyrefly: ignore[bad-argument-type]
     else:
       pos_embedding = self.param('pos_embedding',
                                  self.posemb_init,

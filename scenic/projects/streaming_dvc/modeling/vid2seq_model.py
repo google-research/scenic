@@ -223,7 +223,7 @@ class Vid2SeqDenseVideoCaptioningModule(nn.Module):
     encoder = CatEncoder(
         enc_type=enc_type,
         enc_config=enc_config,
-        embedder=embedder,
+        embedder=embedder,  # pyrefly: ignore[bad-argument-type]
         num_bins=num_bins,
         num_dense_outputs=self.num_dense_outputs,
         num_dense_outputs_test=self.num_dense_outputs_test,
@@ -242,7 +242,7 @@ class Vid2SeqDenseVideoCaptioningModule(nn.Module):
     decoder_embedder = t5_model.t5_layers.Embed(
         num_embeddings=t5_config['vocab_size'],
         features=t5_config['emb_dim'],
-        dtype=t5_config['dtype'],
+        dtype=t5_config['dtype'],  # pyrefly: ignore[bad-argument-type]
         attend_dtype=jnp.float32,  # For logit training stability.
         embedding_init=nn.initializers.normal(stddev=1.0),
         one_hot=True,
@@ -530,5 +530,5 @@ class Vid2SeqModel(base_model.BaseModel):
   def build_flax_model(self):
     return Vid2SeqDenseVideoCaptioningModule(**self.get_dict_from_config())
 
-  def loss_function(self, outputs, batch):
+  def loss_function(self, outputs, batch):  # pyrefly: ignore[bad-override]
     return self.flax_model.loss_function(outputs, batch)

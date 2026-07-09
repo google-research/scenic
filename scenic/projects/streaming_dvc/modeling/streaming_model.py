@@ -350,7 +350,7 @@ class DenseStreamingCaptioningFlaxModel(elcap_model.CaptioningFlaxModel):
       )  # (video_batch_size, num_frames, num_streaming_tokens, dim)
       if train:
         streaming_features = jnp.take_along_axis(
-            streaming_features_per_frame, checkpoint_inds[:, :, None, None],
+            streaming_features_per_frame, checkpoint_inds[:, :, None, None],  # pyrefly: ignore[unsupported-operation]
             axis=1,
         )  #  (video_batch_size, num_checkpoints, num_streaming_tokens, dim)
       else:

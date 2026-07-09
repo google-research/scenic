@@ -49,7 +49,7 @@ class CreateMosaic:
 
     # Merge images:
     features[modalities.IMAGE] = _image_tiles_to_mosaic(
-        features[modalities.IMAGE], self.mosaic_size)
+        features[modalities.IMAGE], self.mosaic_size)  # pyrefly: ignore[bad-argument-type]
 
     # Merge scalar features:
     instance_padding_mask = tf.not_equal(
@@ -57,49 +57,49 @@ class CreateMosaic:
 
     for k in self.instance_feature_keys:
       if k in features:
-        features[k] = _merge_instances(features[k], instance_padding_mask)
+        features[k] = _merge_instances(features[k], instance_padding_mask)  # pyrefly: ignore[bad-argument-type]
 
     # Special cases:
     if modalities.NEGATIVE_LABELS in features:
       features[modalities.NEGATIVE_LABELS] = _merge_instances(
-          features[modalities.NEGATIVE_LABELS],
+          features[modalities.NEGATIVE_LABELS],  # pyrefly: ignore[bad-argument-type]
           tf.not_equal(features[modalities.NEGATIVE_LABELS], -1))
 
       # Update negative labels to account for instances in all tiles:
       features[modalities.NEGATIVE_LABELS] = tf.sparse.to_dense(
           tf.sets.difference(
-              features[modalities.NEGATIVE_LABELS][tf.newaxis, ...],
-              tf.cast(features[modalities.INSTANCE_LABELS][tf.newaxis, ...],
+              features[modalities.NEGATIVE_LABELS][tf.newaxis, ...],  # pyrefly: ignore[bad-index]
+              tf.cast(features[modalities.INSTANCE_LABELS][tf.newaxis, ...],  # pyrefly: ignore[bad-index]
                       features[modalities.NEGATIVE_LABELS].dtype)))[0]  # pytype: disable=attribute-error  # allow-recursive-types
 
     if modalities.NEGATIVE_TEXT_LABELS in features:
       features[modalities.NEGATIVE_TEXT_LABELS] = _merge_instances(
-          features[modalities.NEGATIVE_TEXT_LABELS],
+          features[modalities.NEGATIVE_TEXT_LABELS],  # pyrefly: ignore[bad-argument-type]
           tf.not_equal(features[modalities.NEGATIVE_TEXT_LABELS], ''))
 
       # Update negative labels to account for instances in all tiles:
       features[modalities.NEGATIVE_TEXT_LABELS] = tf.sparse.to_dense(
           tf.sets.difference(
-              features[modalities.NEGATIVE_TEXT_LABELS][tf.newaxis, ...],
-              features[modalities.INSTANCE_TEXT_LABELS][tf.newaxis, ...]))[0]
+              features[modalities.NEGATIVE_TEXT_LABELS][tf.newaxis, ...],  # pyrefly: ignore[bad-index]
+              features[modalities.INSTANCE_TEXT_LABELS][tf.newaxis, ...]))[0]  # pyrefly: ignore[bad-index]
 
     if modalities.NOT_EXHAUSTIVE_LABELS in features:
       features[modalities.NOT_EXHAUSTIVE_LABELS] = _merge_instances(
-          features[modalities.NOT_EXHAUSTIVE_LABELS],
+          features[modalities.NOT_EXHAUSTIVE_LABELS],  # pyrefly: ignore[bad-argument-type]
           tf.not_equal(features[modalities.NOT_EXHAUSTIVE_LABELS], -1))
 
     if modalities.CROWD in features:
       features[modalities.CROWD] = _merge_instances(
-          features[modalities.CROWD],
+          features[modalities.CROWD],  # pyrefly: ignore[bad-argument-type]
           tf.not_equal(features[modalities.CROWD], -1))
 
     # Merge boxes:
     if modalities.BOXES in features:
       features[modalities.BOXES] = _box_tiles_to_mosaic(
-          features[modalities.BOXES], self.mosaic_size, instance_padding_mask)
+          features[modalities.BOXES], self.mosaic_size, instance_padding_mask)  # pyrefly: ignore[bad-argument-type]
 
     if image_ops.SEED_KEY in features:
-      features[image_ops.SEED_KEY] = features[image_ops.SEED_KEY][0]
+      features[image_ops.SEED_KEY] = features[image_ops.SEED_KEY][0]  # pyrefly: ignore[bad-index]
 
     return features
 

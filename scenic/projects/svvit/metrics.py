@@ -206,27 +206,27 @@ class TruvariGlobalEvaluator():
     if 'truvari_recall_events' in self.global_metrics:
       metrics.update(
           truvari_recall_events(
-              one_hot_targets=self.batches[0], logits=self.batches[1]))
+              one_hot_targets=self.batches[0], logits=self.batches[1]))  # pyrefly: ignore[unsupported-operation]
     if 'truvari_precision_events' in self.global_metrics:
       metrics.update(
           truvari_precision_events(
-              one_hot_targets=self.batches[0], logits=self.batches[1]))
+              one_hot_targets=self.batches[0], logits=self.batches[1]))  # pyrefly: ignore[unsupported-operation]
     if 'truvari_recall' in self.global_metrics:
       metrics.update(
           truvari_recall(
-              one_hot_targets=self.batches[0], logits=self.batches[1]))
+              one_hot_targets=self.batches[0], logits=self.batches[1]))  # pyrefly: ignore[unsupported-operation]
     if 'truvari_precision' in self.global_metrics:
       metrics.update(
           truvari_precision(
-              one_hot_targets=self.batches[0], logits=self.batches[1]))
+              one_hot_targets=self.batches[0], logits=self.batches[1]))  # pyrefly: ignore[unsupported-operation]
     if 'gt_concordance' in self.global_metrics:
       metrics.update(
           gt_concordance(
-              one_hot_targets=self.batches[0], logits=self.batches[1]))
+              one_hot_targets=self.batches[0], logits=self.batches[1]))  # pyrefly: ignore[unsupported-operation]
     if 'nonref_concordance' in self.global_metrics:
       metrics.update(
           nonref_concordance(
-              one_hot_targets=self.batches[0], logits=self.batches[1]))
+              one_hot_targets=self.batches[0], logits=self.batches[1]))  # pyrefly: ignore[unsupported-operation]
 
     if clear_annotations:
       self.clear()

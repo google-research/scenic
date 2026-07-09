@@ -95,7 +95,7 @@ def preprocess_example(
   if dataset_configs.denoise and not train:
     noised_image, noise, timestep, gamma, patch = denoise_utils.add_noise(
         image, rng, dataset_configs.denoise, dtype)
-    example = {
+    example = {  # pyrefly: ignore[bad-assignment]
         'inputs': noised_image,
         'label': noise,
         'image': image,
@@ -167,7 +167,7 @@ def get_dataset(
                                  dataset_configs.train_target_size),
       dataset_configs=dataset_configs,
       dataset_info=dataset_info,
-      rng=int(rng[0]))
+      rng=int(rng[0]))  # pyrefly: ignore[unsupported-operation]
 
   # TODO(kellybuchanan): merge cityscapes_c and ade20k_c
   eval_ds, _ = dataset_utils.load_split_from_tfds(

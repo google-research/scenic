@@ -70,7 +70,7 @@ def bow_classification_metrics_function(  # pytype: disable=annotation-type-mism
     logits: jnp.ndarray,
     batch: base_model.Batch,
     target_is_multihot: bool = False,
-    metrics: base_model.MetricNormalizerFnDict = _BOW_CLASSIFICATION_METRICS,
+    metrics: base_model.MetricNormalizerFnDict = _BOW_CLASSIFICATION_METRICS,  # pyrefly: ignore[bad-function-definition]
 ) -> Dict[str, Tuple[float, int]]:
   """Calcualte metrics for the Bag of Words classification task.
 
@@ -123,7 +123,7 @@ def bow_classification_metrics_function(  # pytype: disable=annotation-type-mism
 def multihead_classification_metrics_function(  # pytype: disable=annotation-type-mismatch
     logits,
     batch,
-    metrics: base_model.MetricNormalizerFnDict = _MULTIHEADLABEL_METRICS,
+    metrics: base_model.MetricNormalizerFnDict = _MULTIHEADLABEL_METRICS,  # pyrefly: ignore[bad-function-definition]
     class_splits: Optional[jnp.ndarray] = None,
     split_names: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
@@ -145,36 +145,36 @@ def multihead_classification_metrics_function(  # pytype: disable=annotation-typ
   one_hot_targets = batch['label']
   weights = batch.get('batch_mask')  # batch_mask might not be defined
 
-  logit_splits = jnp.split(logits, class_splits, axis=-1)[:-1]
+  logit_splits = jnp.split(logits, class_splits, axis=-1)[:-1]  # pyrefly: ignore[bad-argument-type]
   one_hot_target_splits = jnp.split(
-      one_hot_targets, class_splits, axis=-1)[:-1]
+      one_hot_targets, class_splits, axis=-1)[:-1]  # pyrefly: ignore[bad-argument-type]
 
   evaluated_metrics = {}
   total_loss = [0.0, 0]
   for logits_i, one_hot_targets_i, name in zip(logit_splits,
                                                one_hot_target_splits,
-                                               split_names):
+                                               split_names):  # pyrefly: ignore[bad-argument-type]
     for key, val in metrics.items():
       evaluated_metrics[
           f'{name}_{key}'] = model_utils.psum_metric_normalizer(  # pytype: disable=wrong-arg-types  # jax-ndarray
-              (val[0](logits_i, one_hot_targets_i,
-                      weights), val[1](logits_i, one_hot_targets_i,
+              (val[0](logits_i, one_hot_targets_i,  # pyrefly: ignore[bad-argument-type]
+                      weights), val[1](logits_i, one_hot_targets_i,  # pyrefly: ignore[bad-argument-type]
                                        weights)))
       if key == 'loss':
         total_loss[0] += evaluated_metrics[f'{name}_{key}'][0]
         total_loss[1] += evaluated_metrics[f'{name}_{key}'][1]
   evaluated_metrics['total_loss'] = tuple(total_loss)
 
-  if len(class_splits) == 2:
+  if len(class_splits) == 2:  # pyrefly: ignore[bad-argument-type]
     pairwise_acc = model_utils.psum_metric_normalizer(
-        (vivit_model_utils.joint_accuracy(logits, one_hot_targets, class_splits,
+        (vivit_model_utils.joint_accuracy(logits, one_hot_targets, class_splits,  # pyrefly: ignore[bad-argument-type]
                                           weights),
          model_utils.num_examples(logits, one_hot_targets, weights)))
     pairwise_top_five = model_utils.psum_metric_normalizer(
-        (vivit_model_utils.joint_top_k(
+        (vivit_model_utils.joint_top_k(  # pyrefly: ignore[bad-argument-type]
             logits, one_hot_targets, class_splits, k=5, weights=weights),
          model_utils.num_examples(logits, one_hot_targets, weights)))
-    eval_name = f'{split_names[0]}-{split_names[1]}'
+    eval_name = f'{split_names[0]}-{split_names[1]}'  # pyrefly: ignore[unsupported-operation]
     evaluated_metrics[f'{eval_name}_accuracy'] = pairwise_acc
     evaluated_metrics[f'{eval_name}_accuracy_top_5'] = pairwise_top_five
 
@@ -184,7 +184,7 @@ def multihead_classification_metrics_function(  # pytype: disable=annotation-typ
 def classification_metrics_function_with_acc_top_5(*args, **kwargs):
   """A wrapper over classification_metrics_function which has accuracy_top_5."""
   return classification_metrics_function(  # pytype: disable=wrong-arg-types
-            *args, metrics=_MULTIHEADLABEL_METRICS, **kwargs)
+            *args, metrics=_MULTIHEADLABEL_METRICS, **kwargs)  # pyrefly: ignore[bad-argument-type]
 
 
 _METRICS_FUNCTIONS = {
@@ -266,12 +266,12 @@ def compute_multihead_label_loss(logits: jnp.ndarray,
     Loss value.
   """
 
-  if logits.shape[-1] != class_splits[-1]:
+  if logits.shape[-1] != class_splits[-1]:  # pyrefly: ignore[unsupported-operation]
     raise AssertionError('Logit dimension must be equal to number of classes')
 
-  logit_splits = jnp.split(logits, class_splits, axis=-1)[:-1]
+  logit_splits = jnp.split(logits, class_splits, axis=-1)[:-1]  # pyrefly: ignore[bad-argument-type]
   one_hot_target_splits = jnp.split(
-      one_hot_targets, class_splits, axis=-1)[:-1]
+      one_hot_targets, class_splits, axis=-1)[:-1]  # pyrefly: ignore[bad-argument-type]
 
   sof_ce_losses = [
       model_utils.weighted_softmax_cross_entropy(
@@ -387,7 +387,7 @@ class PolyVitBaseModel(base_model.BaseModel):
       # vocab_size), while we actually need multi-hot of shape (bs, vocab_size).
       one_or_multi_hot_targets = one_or_multi_hot_targets.max(axis=-2)
 
-    loss = _LOSS_FUNCTIONS[task](
+    loss = _LOSS_FUNCTIONS[task](  # pyrefly: ignore[missing-argument]
         logits,
         one_or_multi_hot_targets,
         weights,
