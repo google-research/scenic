@@ -318,16 +318,16 @@ class DeformableEncoderWithRotaryEmbedding(nn.Module):
     # 4. Add rotary embedding to q as well as sampled keys and values
     sinusoid_inp = self.rot_embed.get_pos(sampling_locations)
 
-    sampled_keys_with_pos = self.rot_embed.apply_2d_rotary_pos_emb(
+    sampled_keys_with_pos = self.rot_embed.apply_2d_rotary_pos_emb(  # pytype: disable=wrong-arg-count  # pylint: disable=g-blanket-type-suppression
         sampled_keys, sinusoid_inp)
-    sampled_values_with_pos = self.rot_embed.apply_2d_rotary_pos_emb(
+    sampled_values_with_pos = self.rot_embed.apply_2d_rotary_pos_emb(  # pytype: disable=wrong-arg-count  # pylint: disable=g-blanket-type-suppression
         sampled_values, sinusoid_inp)
 
     xy_grid = jnp.expand_dims(
         jnp.stack(jnp.meshgrid(jnp.arange(hidden_state_q.shape[1]),
                                jnp.arange(hidden_state_q.shape[2]),
                                indexing='ij'), axis=-1), (0, 3,))
-    query_with_pos = self.rot_embed.calc_and_apply(query, xy_grid)
+    query_with_pos = self.rot_embed.calc_and_apply(query, xy_grid)  # pytype: disable=wrong-arg-count  # pylint: disable=g-blanket-type-suppression
 
     # Define attention block and update hidden state
     attention_block = RotaryAttentionBlock(hidden_state_q.shape[-1],
