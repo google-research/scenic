@@ -170,6 +170,33 @@ class RandomFlipLeftRight(RandomImagePreprocessOp):
     )
 
 
+@dataclasses.dataclass(frozen=True)
+class RandomFlipUpDown(RandomImagePreprocessOp):
+  """Randomly flips an image vertically (up to down)."""
+
+  def apply(self, image: tf.Tensor, seed: tf.Tensor) -> tf.Tensor:
+    return tf.cond(
+        _stateless_bernoulli_trial(seed, p=0.5),
+        lambda: tf.identity(image),
+        lambda: tf.image.flip_up_down(image),
+    )
+
+  def apply_boxes(self, boxes: tf.Tensor, *, image_size: transforms.SizeTuple,
+                  seed: tf.Tensor) -> tf.Tensor:
+    del image_size
+    y_min, x_min, y_max, x_max = tf.split(boxes, 4, axis=-1)
+    # To flip the boxes, swap the y coordinates and subtract them from 1:
+    y_min, y_max = 1.0 - y_max, 1.0 - y_min
+    flipped_boxes = tf.concat([y_min, x_min, y_max, x_max], axis=-1)
+    not_padding = tf.reduce_any(boxes != -1, axis=-1, keepdims=True)
+    new_boxes = tf.cond(
+        _stateless_bernoulli_trial(seed, p=0.5),
+        lambda: tf.identity(boxes),
+        lambda: flipped_boxes,
+    )
+    return tf.where(not_padding, new_boxes, boxes)
+
+
 class RandomCropBase(RandomImagePreprocessOp):
   """Randomly crops an image based on self._sample_random_crop_region."""
 
