@@ -19,6 +19,8 @@ from absl.testing import parameterized
 from grand_vision.preprocessing import image_ops
 from grand_vision.preprocessing import modalities
 import jax
+from jax._src import array as jax_array
+from jax.experimental import mesh_utils
 import ml_collections
 from scenic.dataset_lib.flexio import flexio
 import tensorflow as tf
@@ -92,6 +94,73 @@ class InputPipelineTest(tf.test.TestCase, parameterized.TestCase):
     self.assertDictEqual(
         jax.tree_util.tree_map(lambda x: x.shape, valid_data), expected_shapes)
 
+  @parameterized.named_parameters(
+      ('coco_coco', 'coco', 'coco'),
+  )
+  def test_sharded_tfds_datasets(self, train_tfds_name, eval_tfds_name):
+    """Test TFDS dataset loading."""
+    dataset_configs = D({
+        'train': {
+            'sources': [D({
+                'source': 'tfds',
+                'tfds_name': train_tfds_name,
+                'split': 'train',
+                'shuffle_buffer_size': 2,
+                'cache': False,
+                'preproc_spec': 'decode_coco_example|crop_or_pad(64, 16)',
+            })],
+            'preproc_spec': 'crop_or_pad_meta_data(16, 16)',
+        },
+        'eval': {
+            'sources': [D({
+                'source': 'tfds',
+                'tfds_name': eval_tfds_name,
+                'split': 'validation',
+                'shuffle_buffer_size': 1,
+                'cache': False,
+                'preproc_spec': 'decode_coco_example',
+            })],
+            'preproc_spec': ('central_crop(64)'
+                             '|crop_or_pad(64, 16)'
+                             '|crop_or_pad_meta_data(16, 16)'),
+        },
+        'pp_libs': [  # We override the default ops.
+            'grand_vision.preprocessing.image_ops']
+    })
+    rng = jax.random.PRNGKey(0)
+    devices = mesh_utils.create_device_mesh((jax.device_count(),))
+    ds = flexio.get_dataset(
+        batch_size=8,
+        eval_batch_size=8,
+        num_shards=jax.local_device_count(),
+        rng=rng,
+        dataset_configs=dataset_configs,
+        devices=devices)
+    prefix_shape = (8,)
+    expected_shapes = {
+        modalities.ANNOTATION_ID: prefix_shape + (16,),
+        modalities.AREA: prefix_shape + (16,),
+        modalities.BOXES: prefix_shape + (16, 4),
+        modalities.CROWD: prefix_shape + (16,),
+        modalities.IMAGE: prefix_shape + (64, 64, 3),
+        modalities.IMAGE_ID: prefix_shape,
+        modalities.IMAGE_PADDING_MASK: prefix_shape + (64, 64),
+        modalities.INSTANCE_LABELS: prefix_shape + (16,),
+        modalities.ORIGINAL_SIZE: prefix_shape + (2,),
+        image_ops.SEED_KEY: prefix_shape + (2,)
+    }
+    train_data = next(ds.train_iter)
+    valid_data = next(ds.valid_iter)
+    self.assertDictEqual(
+        jax.tree_util.tree_map(lambda x: x.shape, train_data), expected_shapes)
+    self.assertDictEqual(
+        jax.tree_util.tree_map(lambda x: x.shape, valid_data), expected_shapes)
+    self.assertDictEqual(
+        jax.tree_util.tree_map(type, train_data),
+        jax.tree_util.tree_map(lambda x: jax_array.ArrayImpl, train_data))
+    self.assertDictEqual(
+        jax.tree_util.tree_map(type, valid_data),
+        jax.tree_util.tree_map(lambda x: jax_array.ArrayImpl, valid_data))
 
 if __name__ == '__main__':
   absltest.main()
