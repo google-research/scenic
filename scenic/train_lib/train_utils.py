@@ -172,7 +172,11 @@ def initialize_model(
 
   if not isinstance(rngs, dict):
     rngs = {'params': rngs}  # pyrefly: ignore[bad-assignment]
-  init_params, init_model_state = _initialize_model(rngs)
+  if config.get('jit_initialize_model', True):
+    _initialize_model_fn = jax.jit(_initialize_model, backend='cpu')
+  else:
+    _initialize_model_fn = _initialize_model
+  init_params, init_model_state = _initialize_model_fn(rngs)
   # Pop out params rng:
   rngs.pop('params')
 
@@ -605,7 +609,7 @@ def sync_model_state_across_replicas(train_state: TrainState) -> TrainState:
         train_state.model_state,  # pyrefly: ignore[bad-argument-type]
         {'batch_stats': pmap_mean(train_state.model_state['batch_stats'])},  # pyrefly: ignore[unsupported-operation]
     )
-    return train_state.replace(  # pytype: disable=attribute-error
+    return train_state.replace(
         model_state=new_model_state
     )
   else:
@@ -833,7 +837,7 @@ def process_and_fetch_to_host(
   else:
     # Pred_or_tgt was dict of arrays, so convert dict of lists to list of dicts:
     keys, values = zip(*pred_or_tgt.items())
-    return [dict(zip(keys, v)) for v in zip(*values)]  # pytype: disable=bad-return-type  # jax-ndarray
+    return [dict(zip(keys, v)) for v in zip(*values)]
 
 
 @functools.partial(jax.pmap, axis_name='i')
