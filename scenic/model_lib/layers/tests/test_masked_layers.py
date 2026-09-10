@@ -20,6 +20,7 @@ from typing import Any, Callable, Dict, Sequence, Tuple, Type, Union
 from absl.testing import absltest
 from absl.testing import parameterized
 import flax.linen as nn
+import jax
 from jax import random
 import jax.numpy as jnp
 import numpy as np
@@ -76,6 +77,71 @@ class NormSpec:
   ctor_kwargs: Dict[str, Any]
   init_kwargs: Dict[str, Any]
   process_fn: Callable[[jnp.ndarray], Tuple[jnp.ndarray, Sequence[jnp.ndarray]]]
+
+
+class ParallelBatchNormTest(parameterized.TestCase):
+  """Checks named-axis reductions without requiring multiple devices."""
+
+  @parameterized.named_parameters(
+      ('VectorFeatures', (0, 1, 2)),
+      ('MultipleFeatureAxes', (0, 1)),
+  )
+  def test_parallel_statistics(self, reduction_axes):
+    inputs = np.arange(96, dtype=np.float32).reshape(2, 2, 3, 2, 4) / 10
+
+    def aggregate(x):
+      return masked._bn_agg_mean_var(
+          x, reduction_axes, True, axis_name='replicas')
+
+    mean, variance = jax.jit(jax.vmap(
+        aggregate, axis_name='replicas'))(jnp.asarray(inputs))
+    global_axes = (0,) + tuple(axis + 1 for axis in reduction_axes)
+    expected_mean = inputs.mean(axis=global_axes)
+    expected_variance = inputs.var(axis=global_axes)
+    np.testing.assert_allclose(
+        mean, np.broadcast_to(expected_mean, mean.shape), rtol=1e-5)
+    np.testing.assert_allclose(
+        variance, np.broadcast_to(expected_variance, variance.shape), rtol=1e-5)
+
+  @parameterized.parameters(False, True)
+  def test_parallel_masked_batch_norm(self, all_padding):
+    inputs = np.arange(24, dtype=np.float32).reshape(2, 1, 2, 3, 2)
+    spatial_shape = np.array([[[1, 1]], [[2, 3]]], dtype=np.int32)
+    valid = np.zeros(inputs.shape[:-1], dtype=bool)
+    valid[0, :, :1, :1] = True
+    valid[1] = True
+    if all_padding:
+      spatial_shape[:] = 0
+      valid[:] = False
+    inputs = np.where(valid[..., None], inputs, 0)
+    expected_mean = inputs[valid].mean(axis=0) if valid.any() else np.zeros(2)
+    expected_var = inputs[valid].var(axis=0) if valid.any() else np.zeros(2)
+    expected_output = np.where(
+        valid[..., None],
+        (inputs - expected_mean) / np.sqrt(expected_var + 1e-5), 0)
+
+    norm = masked.BatchNorm(
+        use_running_average=False, momentum=0., axis_name='replicas',
+        use_bias=False, use_scale=False)
+    variables = norm.init(
+        random.PRNGKey(0), jnp.asarray(inputs[0]),
+        spatial_shape=jnp.asarray(spatial_shape[0]))
+
+    def apply(x, shape):
+      return norm.apply(
+          variables, x, spatial_shape=shape, mutable=['batch_stats'])
+
+    (output, output_shape), state = jax.jit(jax.vmap(
+        apply, axis_name='replicas'))(
+            jnp.asarray(inputs), jnp.asarray(spatial_shape))
+    np.testing.assert_allclose(output, expected_output, atol=1e-6)
+    np.testing.assert_array_equal(output_shape, spatial_shape)
+    np.testing.assert_allclose(
+        state['batch_stats']['mean'],
+        np.broadcast_to(expected_mean, (2, 2)), rtol=1e-5)
+    np.testing.assert_allclose(
+        state['batch_stats']['var'],
+        np.broadcast_to(expected_var, (2, 2)), rtol=1e-5)
 
 
 class MaskedLayersTest(parameterized.TestCase):

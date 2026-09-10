@@ -154,12 +154,10 @@ def _bn_agg_mean_var(
     denom = jnp.sum(denom)
 
   if p_agg:
-    concatenated_acc_sum = jnp.concatenate([acc_sum, acc_sum2, denom])
-    acc_sum, acc_sum2, denom = jnp.split(
-        lax.psum(
-            concatenated_acc_sum,
-            axis_name=axis_name,
-            axis_index_groups=axis_index_groups), 3)
+    acc_sum, acc_sum2, denom = lax.psum(
+        (acc_sum, acc_sum2, denom),
+        axis_name=axis_name,
+        axis_index_groups=axis_index_groups)
 
   denom = jnp.maximum(denom, 1.)
   mean = acc_sum / denom
