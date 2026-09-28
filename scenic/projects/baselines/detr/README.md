@@ -13,7 +13,7 @@ In order to train DETR on COCO object detection, you can use the
 `detr_config.py`  in the [configs directory](configs):
 
 ```shell
-$ python scenic/projects/baselines/detr/main.py -- \
+$ python scenic/projects/baselines/detr/main.py \
   --config=scenic/projects/baselines/detr/configs/detr_config.py \
   --workdir=./
 ```
