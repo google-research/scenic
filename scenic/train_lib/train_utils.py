@@ -35,6 +35,7 @@ import jax.numpy as jnp
 import ml_collections
 import numpy as np
 import optax
+import orbax.checkpoint as ocp
 from scenic.common_lib import debug_utils
 from scenic.dataset_lib import dataset_utils
 from scenic.dataset_lib import datasets
@@ -618,6 +619,16 @@ def sync_model_state_across_replicas(train_state: TrainState) -> TrainState:
     return train_state
 
 
+def _single_host_orbax_checkpointer() -> ocp.Checkpointer:
+  idx = jax.process_index()
+  return ocp.Checkpointer(
+      ocp.PyTreeCheckpointHandler(),
+      multiprocessing_options=ocp.options.MultiprocessingOptions(
+          primary_host=idx, active_processes={idx}
+      ),
+  )
+
+
 def save_checkpoint(
     workdir: str,
     train_state: TrainState,
@@ -638,6 +649,11 @@ def save_checkpoint(
   if jax.process_index() == 0:
     # Get train state from the first replica.
     checkpoint_state = jax.device_get(train_state)
+    if (
+        flax.config.flax_use_orbax_checkpointing
+        and 'orbax_checkpointer' not in kwargs
+    ):
+      kwargs['orbax_checkpointer'] = _single_host_orbax_checkpointer()
     checkpoints.save_checkpoint(
         workdir,
         checkpoint_state,
@@ -707,7 +723,10 @@ def restore_checkpoint(
         'a checkpoint without providing a Scenic TrainState.'
     )
   train_state = checkpoints.restore_checkpoint(
-      checkpoint_path, train_state, step
+      checkpoint_path,
+      jax.device_get(train_state),
+      step,
+      orbax_checkpointer=_single_host_orbax_checkpointer(),
   )
   return train_state, int(train_state.global_step)
 
@@ -1266,10 +1285,10 @@ class Chrono:
     )
 
   def load(self, ckpt={}):  # pylint: disable=dangerous-default-value
-    self.accum_program_time = ckpt.get('accum_program_time', 0.0)
-    self.accum_train_time = ckpt.get('accum_train_time', 0.0)
-    self.accum_pause_time = ckpt.get('accum_pause_time', 0.0)
-    self.accum_examples_seen = ckpt.get('accum_examples_seen', 0)
+    self.accum_program_time = float(ckpt.get('accum_program_time', 0.0))
+    self.accum_train_time = float(ckpt.get('accum_train_time', 0.0))
+    self.accum_pause_time = float(ckpt.get('accum_pause_time', 0.0))
+    self.accum_examples_seen = int(ckpt.get('accum_examples_seen', 0))
 
   @contextlib.contextmanager
   def paused(self, wait_for: Iterable[Any] = ()):
@@ -1327,3 +1346,4 @@ def handle_checkpointing(
         workdir, unrep_train_state, max_to_keep=max_checkpoints_to_keep
     )
     del unrep_train_state
+  barrier_across_hosts()

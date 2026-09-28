@@ -15,6 +15,8 @@
 """Tests for the classification train script."""
 
 import functools
+import importlib
+import os
 import shutil
 import tempfile
 
@@ -23,6 +25,7 @@ from clu import metric_writers
 import flax
 from flax import jax_utils
 import flax.linen as nn
+from flax.training import checkpoints
 import jax.numpy as jnp
 import jax.random
 import ml_collections
@@ -222,6 +225,13 @@ class ClassificationTrainerTest(absltest.TestCase):
 
   def test_trainer(self):
     """Test training for two epochs on MNIST with a small model."""
+    prev_orbax_flag = flax.config.flax_use_orbax_checkpointing
+    self.addCleanup(
+        flax.config.update, 'flax_use_orbax_checkpointing', prev_orbax_flag
+    )
+    flax.config.update('flax_use_orbax_checkpointing', True)
+    importlib.reload(classification_trainer)
+    self.assertTrue(flax.config.flax_use_orbax_checkpointing)
 
     rng = jax.random.PRNGKey(0)
     np.random.seed(0)
@@ -238,16 +248,15 @@ class ClassificationTrainerTest(absltest.TestCase):
         'hid_sizes': [20, 10],
         'model_dtype_str': 'float32',
         'optimizer': 'momentum',
-        'optimizer_configs': {
-            'momentum': 0.9
-        },
+        'optimizer_configs': {'momentum': 0.9},
         'batch_size': 128,
         'eval_batch_size': 64,
-        'l2_decay_factor': .0005,
+        'l2_decay_factor': 0.0005,
         'max_grad_norm': None,
         'label_smoothing': None,
         'write_summary': None,  # no summary writing
-        'checkpoint': False,  # no checkpointing
+        'checkpoint': True,
+        'checkpoint_steps': 50,
         'debug_eval': False,
         'debug_train': False,
         'xprof': False,
@@ -263,17 +272,36 @@ class ClassificationTrainerTest(absltest.TestCase):
           num_shards=jax.local_device_count(),
           dtype_str=config.data_dtype_str)
 
-      config.num_training_steps = 100
+      config.num_training_steps = 50
       config.log_eval_steps = 50
       config.num_training_epochs = None
-      _, train_summary, eval_summary = classification_trainer.train(
+      classification_trainer.train(
           rng=rng,
           config=config,
           model_cls=model_cls,
           dataset=dataset,
           workdir=self.test_dir,
-          writer=metric_writers.LoggingWriter())
+          writer=metric_writers.LoggingWriter(),
+      )
+      self.assertTrue(
+          checkpoints._is_orbax_checkpoint(  # pylint: disable=protected-access
+              os.path.join(self.test_dir, 'checkpoint_50')
+          )
+      )
 
+      # Resume from checkpoint_50 to step 100 (exercises restore_checkpoint
+      # and Chrono.load + Chrono.tick).
+      config.num_training_steps = 100
+      train_state, train_summary, eval_summary = classification_trainer.train(
+          rng=rng,
+          config=config,
+          model_cls=model_cls,
+          dataset=dataset,
+          workdir=self.test_dir,
+          writer=metric_writers.LoggingWriter(),
+      )
+
+    self.assertEqual(int(jax_utils.unreplicate(train_state.global_step)), 100)
     self.assertGreaterEqual(train_summary['accuracy'], 0.0)
     self.assertLess(train_summary['loss'], 5.0)
     self.assertGreaterEqual(eval_summary['accuracy'], 0.0)
