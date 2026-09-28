@@ -33,9 +33,9 @@ def get_config(runlocal=''):
   config.dataset_name = 'verbs_in_action_tfrecord_dataset'
   config.dataset_configs = ml_collections.ConfigDict()
   config.data_dtype_str = 'float32'
-  The `train` split should contain hard negative captions in the
+  """The `train` split should contain hard negative captions in the
   `caption/string_neg` field and positive caption in the `caption/strin_pos`
-  field of the tfrecord.
+  field of the tfrecord."""
   config.dataset_configs.base_dir = 'your_base_directory'
   config.dataset_configs.tables = {
       'train': 'training_path',
