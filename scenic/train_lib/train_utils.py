@@ -35,6 +35,7 @@ import jax.numpy as jnp
 import ml_collections
 import numpy as np
 import optax
+import orbax.checkpoint as ocp
 from scenic.common_lib import debug_utils
 from scenic.dataset_lib import dataset_utils
 from scenic.dataset_lib import datasets
@@ -172,7 +173,13 @@ def initialize_model(
 
   if not isinstance(rngs, dict):
     rngs = {'params': rngs}  # pyrefly: ignore[bad-assignment]
-  init_params, init_model_state = _initialize_model(rngs)
+  if config.get('jit_initialize_model', False):
+    cpu_device = jax.local_devices(backend='cpu')[0]
+    with jax.default_device(cpu_device):
+      _initialize_model_fn = jax.jit(_initialize_model)
+      init_params, init_model_state = _initialize_model_fn(rngs)
+  else:
+    init_params, init_model_state = _initialize_model(rngs)
   # Pop out params rng:
   rngs.pop('params')
 
@@ -605,11 +612,21 @@ def sync_model_state_across_replicas(train_state: TrainState) -> TrainState:
         train_state.model_state,  # pyrefly: ignore[bad-argument-type]
         {'batch_stats': pmap_mean(train_state.model_state['batch_stats'])},  # pyrefly: ignore[unsupported-operation]
     )
-    return train_state.replace(  # pytype: disable=attribute-error
+    return train_state.replace(  # pyrefly: ignore[missing-attribute]
         model_state=new_model_state
     )
   else:
     return train_state
+
+
+def _single_host_orbax_checkpointer() -> ocp.Checkpointer:
+  idx = jax.process_index()
+  return ocp.Checkpointer(
+      ocp.PyTreeCheckpointHandler(),
+      multiprocessing_options=ocp.options.MultiprocessingOptions(
+          primary_host=idx, active_processes={idx}
+      ),
+  )
 
 
 def save_checkpoint(
@@ -632,6 +649,11 @@ def save_checkpoint(
   if jax.process_index() == 0:
     # Get train state from the first replica.
     checkpoint_state = jax.device_get(train_state)
+    if (
+        flax.config.flax_use_orbax_checkpointing
+        and 'orbax_checkpointer' not in kwargs
+    ):
+      kwargs['orbax_checkpointer'] = _single_host_orbax_checkpointer()
     checkpoints.save_checkpoint(
         workdir,
         checkpoint_state,
@@ -701,7 +723,10 @@ def restore_checkpoint(
         'a checkpoint without providing a Scenic TrainState.'
     )
   train_state = checkpoints.restore_checkpoint(
-      checkpoint_path, train_state, step
+      checkpoint_path,
+      jax.device_get(train_state),
+      step,
+      orbax_checkpointer=_single_host_orbax_checkpointer(),
   )
   return train_state, int(train_state.global_step)
 
@@ -833,7 +858,7 @@ def process_and_fetch_to_host(
   else:
     # Pred_or_tgt was dict of arrays, so convert dict of lists to list of dicts:
     keys, values = zip(*pred_or_tgt.items())
-    return [dict(zip(keys, v)) for v in zip(*values)]  # pytype: disable=bad-return-type  # jax-ndarray
+    return [dict(zip(keys, v)) for v in zip(*values)]  # pyrefly: ignore[bad-return]  # jax-ndarray
 
 
 @functools.partial(jax.pmap, axis_name='i')
@@ -1260,10 +1285,10 @@ class Chrono:
     )
 
   def load(self, ckpt={}):  # pylint: disable=dangerous-default-value
-    self.accum_program_time = ckpt.get('accum_program_time', 0.0)
-    self.accum_train_time = ckpt.get('accum_train_time', 0.0)
-    self.accum_pause_time = ckpt.get('accum_pause_time', 0.0)
-    self.accum_examples_seen = ckpt.get('accum_examples_seen', 0)
+    self.accum_program_time = float(ckpt.get('accum_program_time', 0.0))
+    self.accum_train_time = float(ckpt.get('accum_train_time', 0.0))
+    self.accum_pause_time = float(ckpt.get('accum_pause_time', 0.0))
+    self.accum_examples_seen = int(ckpt.get('accum_examples_seen', 0))
 
   @contextlib.contextmanager
   def paused(self, wait_for: Iterable[Any] = ()):
@@ -1321,3 +1346,4 @@ def handle_checkpointing(
         workdir, unrep_train_state, max_to_keep=max_checkpoints_to_keep
     )
     del unrep_train_state
+  barrier_across_hosts()
