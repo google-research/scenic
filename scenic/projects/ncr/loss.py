@@ -81,7 +81,7 @@ def pairwise_kl_loss(logits: Array,
 def l2_normalize(tensor: Array, axis: int = -1, epsilon: float = 1e-6):
   """L2 normalize an input tensor."""
 
-  return tensor / jnp.linalg.norm(tensor, axis=axis, keepdims=True + epsilon)
+  return tensor / (jnp.linalg.norm(tensor, axis=axis, keepdims=True) + epsilon)
 
 
 def get_knn(queries: Array, dataset: Array, k: int,
