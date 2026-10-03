@@ -986,7 +986,13 @@ def dice_loss(inputs: jnp.ndarray,
   Returns:
     If all_pairs == True, returns a [bs, n, m] pairwise matrix, of dice loss.
     If all_pairs == False, returns a [bs, n] matrix of dice loss.
+    Computation and output use at least float32 precision.
   """
+  # Mask reductions may exceed float16's range even for a 256x256 image.
+  # Promote before sigmoid and resizing so the loss and its gradients are stable.
+  dtype = jnp.result_type(inputs.dtype, targets.dtype, jnp.float32)
+  inputs = inputs.astype(dtype)
+  targets = targets.astype(dtype)
   _, n, h, w = inputs.shape
   b, m, _, _ = targets.shape
 
