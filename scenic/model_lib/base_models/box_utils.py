@@ -256,12 +256,13 @@ def corners_to_cxcywha(corners: jnp.ndarray,
       cornersx[..., 0] + cornersx[..., 1] - cornersx[..., 2] - cornersx[..., 3])
   wcornersy = (
       cornersy[..., 0] + cornersy[..., 1] - cornersy[..., 2] - cornersy[..., 3])
-  hcornersy = (-cornersy[..., 0,] + cornersy[..., 1] + cornersy[..., 2] -
-               cornersy[..., 3])
+  hcornersx = -cornersx[..., 0] + cornersx[..., 1] + cornersx[..., 2] - cornersx[..., 3]
+  hcornersy = -cornersy[..., 0] + cornersy[..., 1] + cornersy[..., 2] - cornersy[..., 3]
   a = -np_backbone.arctan2(wcornersy, wcornersx)
-  cos = np_backbone.cos(a)
-  w = wcornersx / (2 * cos)
-  h = hcornersy / (2 * cos)
+  cos, sin = np_backbone.cos(a), np_backbone.sin(a)
+  # Project the averaged edges instead of dividing by a vanishing cosine.
+  w = (wcornersx * cos - wcornersy * sin) / 2
+  h = (hcornersx * sin + hcornersy * cos) / 2
   cxcywha = np_backbone.stack([cx, cy, w, h, a], axis=-1)
 
   return cxcywha
