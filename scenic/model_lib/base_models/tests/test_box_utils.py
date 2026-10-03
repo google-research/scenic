@@ -326,5 +326,93 @@ class IoUTest(parameterized.TestCase):
     self.assertSequenceEqual(grad_in1.shape, in1.shape)
 
 
+class VerticalRBoxConversionTest(parameterized.TestCase):
+  """Recover rotated dimensions without division by the angle's cosine."""
+
+  @parameterized.product(backend=(np, jnp), dtype=(np.float32, np.float64))
+  def test_exact_vertical_corners_preserve_dimensions(self, backend, dtype):
+    with jax.enable_x64():
+      corners = backend.asarray(
+          [[2.5, 0.0], [3.5, 0.0], [3.5, 4.0], [2.5, 4.0]], dtype=dtype
+      )
+      original = np.array(corners)
+      result = box_utils.corners_to_cxcywha(corners, np_backbone=backend)
+      np.testing.assert_allclose(result[:4], [3.0, 2.0, 4.0, 1.0], atol=1e-6)
+      np.testing.assert_allclose(result[4], np.pi / 2, atol=1e-6)
+      np.testing.assert_allclose(
+          box_utils.cxcywha_to_corners(result, np_backbone=backend), corners, atol=1e-6
+      )
+      np.testing.assert_array_equal(corners, original)
+
+  @parameterized.product(backend=(np, jnp), dtype=(np.float32, np.float64))
+  def test_full_rotation_roundtrips_preserve_batched_rectangles(self, backend, dtype):
+    angles = np.array(
+        [
+            -np.pi,
+            -np.pi / 2,
+            -np.pi / 2 + 1e-5,
+            0.0,
+            np.pi / 4,
+            np.pi / 2 - 1e-5,
+            np.pi / 2,
+            np.pi,
+        ]
+    )
+    with jax.enable_x64():
+      boxes = backend.asarray(
+          np.stack(
+              [
+                  np.full_like(angles, 3.0),
+                  np.full_like(angles, 2.0),
+                  np.full_like(angles, 4.0),
+                  np.full_like(angles, 1.0),
+                  angles,
+              ],
+              axis=-1,
+          ),
+          dtype=dtype,
+      )
+      boxes = backend.reshape(boxes, (2, 4, 5))
+      corners = box_utils.cxcywha_to_corners(boxes, np_backbone=backend)
+      recovered = box_utils.corners_to_cxcywha(corners, np_backbone=backend)
+      np.testing.assert_allclose(
+          recovered[..., :4], boxes[..., :4], rtol=1e-6, atol=1e-6
+      )
+      np.testing.assert_allclose(
+          box_utils.cxcywha_to_corners(recovered, np_backbone=backend),
+          corners,
+          rtol=1e-6,
+          atol=1e-6,
+      )
+      self.assertEqual(recovered.shape, boxes.shape)
+      self.assertTrue(np.all(np.isfinite(recovered)))
+
+  def test_compiled_roundtrip_jacobian_is_identity_at_vertical_angles(self):
+    with jax.enable_x64():
+
+      def roundtrip(box):
+        return box_utils.corners_to_cxcywha(box_utils.cxcywha_to_corners(box))
+
+      evaluate = jax.jit(jax.vmap(jax.jacrev(roundtrip)))
+      boxes = jnp.array(
+          [[3.0, 2.0, 4.0, 1.0, np.pi / 2], [3.0, 2.0, 4.0, 1.0, -np.pi / 2]],
+          dtype=jnp.float64,
+      )
+      jacobian = evaluate(boxes)
+      np.testing.assert_allclose(
+          jacobian, np.broadcast_to(np.eye(5), (2, 5, 5)), atol=1e-12
+      )
+
+      def objective(width):
+        box = boxes[0].at[2].set(width)
+        recovered = roundtrip(box)
+        return (recovered[2] - 3.0) ** 2
+
+      loss, gradient = jax.jit(jax.value_and_grad(objective))(4.0)
+      self.assertAlmostEqual(float(loss), 1.0, places=12)
+      self.assertAlmostEqual(float(gradient), 2.0, places=12)
+      self.assertLess(float(objective(4.0 - 0.1 * gradient)), float(loss))
+
+
 if __name__ == '__main__':
   absltest.main()
