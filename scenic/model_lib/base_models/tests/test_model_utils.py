@@ -414,5 +414,101 @@ class MetricTest(parameterized.TestCase):
     self.is_valid(loss_sum, 'Loss value')
 
 
+class DiceLossPrecisionTest(parameterized.TestCase):
+  """Large segmentation masks must not overflow low-precision reductions."""
+
+  @parameterized.product(
+      dtype=(jnp.float16, jnp.bfloat16), all_pairs=(False, True)
+  )
+  def test_large_masks_match_analytical_dice(self, dtype, all_pairs):
+    inputs = jnp.zeros((2, 2, 256, 256), dtype=dtype)
+    count = 3 if all_pairs else 2
+    targets = jnp.ones((2, count, 256, 256), dtype=dtype)
+    expected = 1.0 - (256 * 256 + 1.0) / (1.5 * 256 * 256 + 1.0)
+
+    def call(x, y):
+      return model_utils.dice_loss(x, y, all_pairs=all_pairs)
+
+    for function in (call, jax.jit(call)):
+      result = function(inputs, targets)
+      self.assertEqual(result.dtype, jnp.float32)
+      self.assertEqual(result.shape, (2, 2, count) if all_pairs else (2, 2))
+      np.testing.assert_allclose(result, expected, atol=1e-7, rtol=1e-6)
+
+  @parameterized.product(
+      dtype=(jnp.float16, jnp.bfloat16), all_pairs=(False, True)
+  )
+  def test_masked_batches_and_resizing_match_float32_reference(
+      self, dtype, all_pairs
+  ):
+    inputs = jnp.linspace(-2.0, 2.0, 2 * 2 * 128 * 128).reshape(2, 2, 128, 128)
+    inputs = inputs.astype(dtype)
+    targets = (
+        jnp.arange(2 * 2 * 256 * 256).reshape(2, 2, 256, 256) % 3 == 0
+    ).astype(dtype)
+    weights = jnp.array([1.0, 0.0])
+    for interpolation in ('nearest', 'linear'):
+      with self.subTest(interpolation=interpolation):
+        expected = model_utils.dice_loss(
+            inputs.astype(jnp.float32),
+            targets.astype(jnp.float32),
+            weights=weights,
+            all_pairs=all_pairs,
+            interpolation=interpolation,
+        )
+        actual = jax.jit(
+            lambda x, y: model_utils.dice_loss(
+                x,
+                y,
+                weights=weights,
+                all_pairs=all_pairs,
+                interpolation=interpolation,
+            )
+        )(inputs, targets)
+        np.testing.assert_allclose(actual, expected, rtol=1e-6, atol=1e-7)
+        np.testing.assert_array_equal(actual[1], 0.0)
+
+  @parameterized.parameters(jnp.float16, jnp.bfloat16)
+  def test_compiled_gradient_and_update_remain_finite(self, dtype):
+    targets = jnp.ones((1, 1, 256, 256), dtype=dtype)
+
+    def objective(parameter):
+      logits = jnp.broadcast_to(parameter, targets.shape).astype(dtype)
+      return model_utils.dice_loss(logits, targets).sum()
+
+    parameter = jnp.asarray(0.0, dtype=jnp.float32)
+    loss, gradient = jax.jit(jax.value_and_grad(objective))(parameter)
+
+    def reference(p):
+      return model_utils.dice_loss(
+          jnp.broadcast_to(p, targets.shape), targets.astype(jnp.float32)
+      ).sum()
+
+    expected_loss, expected_gradient = jax.value_and_grad(reference)(
+        jnp.asarray(0.0)
+    )
+    np.testing.assert_allclose(loss, expected_loss, rtol=1e-6)
+    np.testing.assert_allclose(
+        gradient, expected_gradient, rtol=0.01, atol=1e-3
+    )
+    self.assertLess(float(gradient), 0.0)
+    updated_loss = objective(parameter - 0.1 * gradient)
+    self.assertLess(float(updated_loss), float(loss))
+
+  def test_float32_and_float64_computations_keep_their_precision(self):
+    previous = jax.config.x64_enabled
+    try:
+      jax.config.update('jax_enable_x64', True)
+      for dtype in (jnp.float32, jnp.float64):
+        with self.subTest(dtype=dtype):
+          logits = jnp.zeros((1, 1, 8, 8), dtype=dtype)
+          targets = jnp.ones_like(logits)
+          actual = model_utils.dice_loss(logits, targets, eps=0.0)
+          self.assertEqual(actual.dtype, dtype)
+          np.testing.assert_allclose(actual, 1.0 / 3.0, rtol=1e-6)
+    finally:
+      jax.config.update('jax_enable_x64', previous)
+
+
 if __name__ == '__main__':
   absltest.main()
