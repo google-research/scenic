@@ -34,17 +34,20 @@ def greedy_matcher(cost):
   if transposed:
     cost = jnp.transpose(cost)
 
-  # Max cost is used for masking:
+  # Keep availability separate: max_cost + 1 can round to max_cost or overflow.
   max_cost = jnp.max(cost)
 
-  def select(cost, _):
-    min_index_flat = jnp.argmin(cost)
+  def select(available, _):
+    min_cost = jnp.min(jnp.where(available, cost, max_cost))
+    min_index_flat = jnp.argmax(available & (cost == min_cost))
     min_row, min_col = jnp.unravel_index(min_index_flat, cost.shape)
-    cost = cost.at[min_row, :].set(max_cost + 1)
-    cost = cost.at[:, min_col].set(max_cost + 1)
-    return cost, jnp.array([min_row, min_col])
+    available = available.at[min_row, :].set(False)
+    available = available.at[:, min_col].set(False)
+    return available, jnp.array([min_row, min_col])
 
-  _, indices = jax.lax.scan(f=select, init=cost, xs=None, length=cost.shape[0])
+  _, indices = jax.lax.scan(
+      f=select, init=jnp.ones(cost.shape, dtype=bool), xs=None,
+      length=cost.shape[0])
 
   if transposed:
     indices = jnp.flip(indices, axis=1)
