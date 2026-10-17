@@ -242,7 +242,6 @@ def _improve_assignment(assignment: jnp.ndarray,
   # operating on a batch, not all examples in the batch may be active.
   simple_gather = jax.vmap(lambda x, idx: x[idx], in_axes=[0, 0], out_axes=0)
   active = simple_gather(state['new_jobs'], curr_job_idx)
-  batch_range = jnp.arange(0, b, dtype=jnp.int32)
 
   # Flip matrix tracks which assignments we need to flip - corresponding to the
   # augmenting path taken. We use an integer array here so that we can use
@@ -257,8 +256,11 @@ def _improve_assignment(assignment: jnp.ndarray,
 
   dimension_numbers = jax.lax.ScatterDimensionNumbers(
       update_window_dims=(),
-      inserted_window_dims=(0, 1, 2),
-      scatter_dims_to_operand_dims=(0, 1, 2))
+      inserted_window_dims=(1, 2),
+      scatter_dims_to_operand_dims=(1, 2),
+      operand_batching_dims=(0,),
+      scatter_indices_batching_dims=(0,),
+  )
 
   def _backtrack_one_step(arg):
     """Take one step in backtracking."""
@@ -267,8 +269,7 @@ def _improve_assignment(assignment: jnp.ndarray,
     # must exist by construction.
     curr_worker_idx = simple_gather(state['jobs_from_worker'], curr_job_idx) - 1
     curr_worker_idx = jnp.maximum(curr_worker_idx, 0)
-    update_indices = jnp.stack([batch_range, curr_worker_idx, curr_job_idx],
-                               axis=1)
+    update_indices = jnp.stack([curr_worker_idx, curr_job_idx], axis=1)
     update_indices = jnp.maximum(update_indices, 0)
     flip_matrix = jax.lax.scatter_add(
         flip_matrix,
@@ -284,8 +285,7 @@ def _improve_assignment(assignment: jnp.ndarray,
     # adjusting indices so that they are all >= 0 for gather).
     active = jnp.logical_and(active, curr_job_idx >= 0)
     curr_job_idx = jnp.maximum(curr_job_idx, 0)
-    update_indices = jnp.stack([batch_range, curr_worker_idx, curr_job_idx],
-                               axis=1)
+    update_indices = jnp.stack([curr_worker_idx, curr_job_idx], axis=1)
     update_indices = jnp.maximum(update_indices, 0)
     flip_matrix = jax.lax.scatter_add(
         flip_matrix,
