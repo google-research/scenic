@@ -56,7 +56,6 @@ def bilinear_interpolate(im: Array, grid: Array, w: int, h: int) -> jnp.ndarray:
   """
   im = im.reshape(h, w, -1)
   im = jnp.pad(im, ((1, 1), (1, 1), (0, 0)), mode='constant', constant_values=0)
-  im = im.reshape((h + 2) * (w + 2), -1)
 
   x = grid[..., 0] * w
   y = grid[..., 1] * h
@@ -76,17 +75,15 @@ def bilinear_interpolate(im: Array, grid: Array, w: int, h: int) -> jnp.ndarray:
   # sublanes.
 
   # prepare for packing
-  indices_y0_offset = (jnp.arange(h + 1) * (w + 2))[:, None]
-  indices_y1_offset = (jnp.arange(1, h + 2) * (w + 2))[:, None]
-  indices_x0 = jnp.arange(w + 1)
-  indices_x1 = jnp.arange(1, w + 2)
-  im00 = im[(indices_y0_offset + indices_x0).flatten()]
-  im10 = im[(indices_y1_offset + indices_x0).flatten()]
-  im01 = im[(indices_y0_offset + indices_x1).flatten()]
-  im11 = im[(indices_y1_offset + indices_x1).flatten()]
+  im00 = im[:h + 1, :w + 1]
+  im10 = im[1:h + 2, :w + 1]
+  im01 = im[:h + 1, 1:w + 2]
+  im11 = im[1:h + 2, 1:w + 2]
 
   # pack: (nembed * 4, (h + 1) * (w + 1))
-  im_packed = jnp.concatenate([im00, im10, im01, im11], axis=-1)
+  im_packed = jnp.concatenate([im00, im10, im01, im11], axis=-1).reshape(
+      (h + 1) * (w + 1), -1
+  )
 
   # gather
   indices11 = jnp.clip(y1, 0, h + 1) * (w + 1) + jnp.clip(x1, 0, w + 1)
@@ -172,10 +169,11 @@ def deform_attn_sampling_fn(values: Array, sampling_locations: Array,
   else:
     attention_fn = bilinear_interpolate
 
-  def attention_at_index_fn(i, level_idx):
+  def attention_at_index_fn(inputs, level_idx):
+    val, loc = inputs
     return attention_fn(
-        values_by_level[level_idx][i],
-        sampling_locations[:, level_idx][i],
+        val,
+        loc,
         shapes[level_idx][1],
         shapes[level_idx][0],
     )
@@ -186,7 +184,13 @@ def deform_attn_sampling_fn(values: Array, sampling_locations: Array,
   for level_idx in range(len(shapes)):
     fn = functools.partial(attention_at_index_fn, level_idx=level_idx)
     fn = _map(reshape_attn(fn), mode)
-    sampled_values_all_levels.append(fn(jnp.arange(values.shape[0])))
+    level_inputs = (
+        values_by_level[level_idx],
+        sampling_locations[:, level_idx],
+    )
+    if mode == 'loop':
+      level_inputs = list(zip(*level_inputs))
+    sampled_values_all_levels.append(fn(level_inputs))
 
   # (bs, nlevels * npoints, len_q, nembed)
   sampled_values_all_levels = jnp.concatenate(
